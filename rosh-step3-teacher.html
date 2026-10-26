@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A4BD6">
+<title>پلتفرم رشد | پنل معلم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Vazirmatn', 'sans-serif'] },
+  colors: { royal: '#0A4BD6', ink: '#0B1F4D', sky: '#1E90FF', sun: '#FFC531', mist: '#F5F8FF', line: '#DCE6FA', ok: '#12A150', late: '#E5484D' }
+} } }
+</script>
+<style>
+  :root { --royal:#0A4BD6; --ink:#0B1F4D; --sky:#1E90FF; --sun:#FFC531; --mist:#F5F8FF; --line:#DCE6FA; --ok:#12A150; --late:#E5484D; }
+  html { -webkit-tap-highlight-color: transparent; }
+  body { font-family:'Vazirmatn',sans-serif; font-size:16px; line-height:1.8; background:var(--mist); color:var(--ink); }
+  .is-hidden { display:none !important; }
+  :focus-visible { outline:3px solid var(--sky); outline-offset:2px; border-radius:12px; }
+  .muted { color:#5A6E99; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:24px; box-shadow:0 14px 36px -24px rgba(10,75,214,.55); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-height:48px; padding:0 1.25rem; border-radius:16px; font-weight:800; transition:transform .12s, box-shadow .2s; }
+  .btn:active { transform:scale(.97); }
+  .btn-royal { background:linear-gradient(180deg,#1457E6,#0A4BD6); color:#fff; box-shadow:0 8px 20px -6px rgba(10,75,214,.55), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn-sun { background:linear-gradient(180deg,#FFD25A,#FFC531); color:var(--ink); box-shadow:0 10px 24px -8px rgba(255,197,49,.8), inset 0 1px 0 rgba(255,255,255,.5); }
+  .btn-soft { background:#E8F0FF; color:var(--royal); }
+  .btn-sm { min-height:40px; padding:0 1rem; border-radius:12px; font-size:14px; }
+  .btn[disabled] { opacity:.45; pointer-events:none; box-shadow:none; }
+  .input { width:100%; min-height:52px; padding:0 16px; border-radius:16px; border:1.5px solid var(--line); background:#fff; transition:border-color .2s, box-shadow .2s; }
+  select.input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238AA0CC' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 14px center; padding-inline-end:16px; padding-left:38px; }
+  .input:focus { outline:none; border-color:var(--royal); box-shadow:0 0 0 4px rgba(10,75,214,.12); }
+  textarea.input { padding-top:12px; padding-bottom:12px; }
+  .lbl { display:block; font-weight:700; margin-bottom:6px; font-size:15px; }
+  .brand-bg { background:radial-gradient(900px 500px at 100% 0%, rgba(30,144,255,.55), transparent 60%), radial-gradient(600px 400px at 0% 100%, rgba(255,197,49,.18), transparent 60%), linear-gradient(160deg,#0A4BD6 0%, #0838A3 60%, #0B1F4D 100%); }
+  .dots { background-image:radial-gradient(rgba(255,255,255,.14) 1.3px, transparent 1.3px); background-size:22px 22px; }
+  .dock { box-shadow:0 -8px 30px -12px rgba(11,31,77,.25); }
+  .dock-item { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 0 8px; font-size:12px; font-weight:600; color:#7D90B8; }
+  .dock-item svg { width:24px; height:24px; }
+  .dock-item[aria-current="page"] { color:var(--royal); }
+  .dock-item[aria-current="page"]::before { content:""; position:absolute; top:0; width:30px; height:4px; border-radius:0 0 6px 6px; background:var(--sun); }
+  .seg-ctl { display:flex; background:#E3ECFF; border-radius:16px; padding:4px; gap:4px; }
+  .seg-ctl button { flex:1; min-height:42px; border-radius:12px; font-weight:700; color:#5A6E99; font-size:14px; }
+  .seg-ctl button[aria-pressed="true"] { background:#fff; color:var(--royal); box-shadow:0 4px 12px -4px rgba(10,75,214,.35); }
+  .chip { min-height:40px; padding:0 16px; border-radius:99px; border:1.5px solid var(--line); background:#fff; font-weight:700; font-size:14px; white-space:nowrap; color:#5A6E99; }
+  .chip[aria-pressed="true"] { background:var(--royal); border-color:var(--royal); color:#fff; }
+  .tag { display:inline-flex; align-items:center; gap:.3rem; border-radius:99px; padding:2px 12px; font-size:13px; font-weight:700; }
+  .bar { height:10px; border-radius:99px; background:#E3ECFF; overflow:hidden; }
+  .bar > span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#1E90FF,#0A4BD6); transition:width .5s; }
+  .att { display:flex; gap:4px; }
+  .att button { min-width:64px; min-height:44px; border-radius:12px; font-size:13px; font-weight:700; background:#F0F4FC; color:#7D90B8; transition:all .15s; }
+  .att button[data-s="p"][aria-pressed="true"] { background:var(--ok); color:#fff; }
+  .att button[data-s="a"][aria-pressed="true"] { background:var(--late); color:#fff; }
+  .att button[data-s="e"][aria-pressed="true"] { background:var(--sun); color:var(--ink); }
+  .bub { min-width:46px; min-height:40px; border-radius:12px; font-weight:700; font-size:13px; background:#F0F4FC; color:#7D90B8; }
+  .bub[aria-pressed="true"] { background:var(--royal); color:#fff; }
+  details > summary { list-style:none; cursor:pointer; }
+  details > summary::-webkit-details-marker { display:none; }
+  details[open] .chev { transform:rotate(180deg); }
+  @keyframes rise { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:none } }
+  .rise { animation:rise .35s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes scan { from { top:4% } to { top:94% } }
+  .scanline { position:absolute; left:6%; right:6%; height:3px; border-radius:3px; background:var(--sun); box-shadow:0 0 18px 4px rgba(255,197,49,.7); animation:scan 1.2s ease-in-out 1 forwards; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+
+<header class="brand-bg relative text-white">
+  <div class="dots absolute inset-0 opacity-50"></div>
+  <div class="relative max-w-3xl mx-auto px-4 pt-4 pb-24 flex items-center gap-3">
+    <div class="w-12 h-12 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center shrink-0"><i data-lucide="graduation-cap" class="w-6 h-6 text-sun"></i></div>
+    <div class="flex-1 min-w-0 leading-tight"><p class="font-extrabold truncate">کانون نخبه‌پروری شهید کاظم آشتیانی</p><p class="text-white/70 text-sm">پلتفرم رشد، پنل معلم</p></div>
+    <div class="w-11 h-11 rounded-2xl bg-sun text-ink flex items-center justify-center font-extrabold">ا.ا</div>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 -mt-[88px] relative pb-28">
+
+<!-- ================ کلاس‌ها ================ -->
+<section id="t-cls" class="tab space-y-4">
+  <div class="text-white px-1 min-h-[64px]"><p class="text-white/80 text-sm">دوشنبه ۴ آبان ۱۴۰۵</p><h2 class="text-[26px] font-extrabold leading-snug">سلام خانم احمدی</h2></div>
+  <div class="seg-ctl" data-seg="cl"><button data-v="att" aria-pressed="true">حضور و غیاب</button><button data-v="perf" aria-pressed="false">عملکرد دانش‌آموزان</button></div>
+  <div id="class-chips" class="flex gap-2 overflow-x-auto pb-1"></div>
+
+  <div data-panel="cl:att" class="space-y-3">
+    <div class="card p-4 flex items-center gap-3 flex-wrap">
+      <span class="tag bg-[#E6F7EE] text-ok">حاضر <b id="c-p"></b></span>
+      <span class="tag bg-[#FDECEC] text-late">غایب <b id="c-a"></b></span>
+      <span class="tag bg-sun/30 text-[#7A5600]">با اطلاع <b id="c-e"></b></span>
+      <button id="mark-all" class="btn btn-soft btn-sm mr-auto"><i data-lucide="check-check" class="w-4 h-4"></i> همه حاضر</button>
+    </div>
+    <div id="att-list" class="space-y-2.5"></div>
+    <div id="sms-note" class="rounded-[20px] p-4 flex items-start gap-3 bg-[#EEF4FF] text-royal"><i data-lucide="message-square-text" class="w-6 h-6 shrink-0"></i><p id="sms-text" class="font-semibold"></p></div>
+    <button id="att-save" class="btn btn-royal w-full" style="min-height:56px"><i data-lucide="save" class="w-5 h-5"></i> ثبت حضور و غیاب</button>
+  </div>
+
+  <div data-panel="cl:perf" id="perf-list" class="is-hidden space-y-3"></div>
+</section>
+
+<!-- ================ تکالیف ================ -->
+<section id="t-hw" class="tab is-hidden space-y-4">
+  <div class="text-white px-1 min-h-[64px]"><h2 class="text-[26px] font-extrabold">تکالیف</h2><p class="text-white/80 text-sm">بساز و پیگیری کن</p></div>
+  <div class="seg-ctl" data-seg="hw"><button data-v="new" aria-pressed="true">ساخت تکلیف</button><button data-v="rep" aria-pressed="false">گزارش تکلیف</button></div>
+
+  <div data-panel="hw:new" class="card p-5 space-y-4">
+    <div class="grid grid-cols-2 gap-3">
+      <div><label class="lbl" for="hw-grade">پایه</label><select id="hw-grade" class="input"><option>هفتم</option><option>هشتم</option><option>نهم</option></select></div>
+      <div><label class="lbl" for="hw-class">کلاس</label><select id="hw-class" class="input"><option>همه کلاس‌ها</option><option>الف</option><option>ب</option></select></div>
+    </div>
+    <div><label class="lbl" for="hw-title">عنوان تکلیف</label><input id="hw-title" class="input" placeholder="مثلاً حل تمرین‌های فصل ۴"></div>
+    <div><label class="lbl">مهلت ارسال</label>
+      <div class="grid grid-cols-4 gap-2" dir="rtl">
+        <select id="d-day" class="input !px-3 !pl-8" aria-label="روز"></select>
+        <select id="d-mon" class="input !px-3 !pl-8" aria-label="ماه"><option>آبان</option><option>آذر</option><option>دی</option></select>
+        <select id="d-h" class="input !px-3 !pl-8" aria-label="ساعت"></select>
+        <select id="d-m" class="input !px-3 !pl-8" aria-label="دقیقه"></select>
+      </div>
+      <p id="d-preview" class="text-sm muted mt-2 flex items-center gap-1.5"><i data-lucide="calendar-clock" class="w-4 h-4"></i><span></span></p>
+    </div>
+    <button id="hw-create" class="btn btn-royal w-full"><i data-lucide="plus" class="w-5 h-5"></i> ساخت تکلیف</button>
+  </div>
+
+  <div data-panel="hw:rep" class="is-hidden space-y-3">
+    <div class="grid grid-cols-2 gap-3">
+      <select id="f-grade" class="input" aria-label="فیلتر پایه"><option value="">همه پایه‌ها</option><option>هفتم</option><option>هشتم</option></select>
+      <select id="f-class" class="input" aria-label="فیلتر کلاس"><option value="">همه کلاس‌ها</option><option>الف</option><option>ب</option></select>
+    </div>
+    <div id="rep-list" class="space-y-3"></div>
+  </div>
+</section>
+
+<!-- ================ آزمون ================ -->
+<section id="t-exam" class="tab is-hidden space-y-4">
+  <div class="text-white px-1 min-h-[64px]"><h2 class="text-[26px] font-extrabold">آزمون تستی</h2><p class="text-white/80 text-sm">کلید را وارد کن یا پاسخ‌برگ را اسکن کن</p></div>
+  <div class="card p-5 space-y-4">
+    <div><label class="lbl" for="ex-title">عنوان آزمون</label><input id="ex-title" class="input" value="آزمون علوم فصل ۳"></div>
+    <div class="grid grid-cols-2 gap-3">
+      <div><label class="lbl" for="ex-class">کلاس</label><select id="ex-class" class="input"><option>هفتم الف</option><option>هفتم ب</option><option>هشتم الف</option></select></div>
+      <div><label class="lbl" for="ex-n">تعداد سؤال</label><select id="ex-n" class="input"><option>۱۰</option><option>۲۰</option></select></div>
+    </div>
+    <div>
+      <div class="flex items-center justify-between mb-2"><p class="lbl !mb-0">کلید پاسخ‌ها</p><span id="key-count" class="tag bg-[#E3ECFF] text-royal"></span></div>
+      <div id="key-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2"></div>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <button id="ex-save" class="btn btn-soft"><i data-lucide="save" class="w-5 h-5"></i> ذخیره آزمون</button>
+      <button id="ex-scan" class="btn btn-sun"><i data-lucide="scan-line" class="w-5 h-5"></i> اسکن پاسخ‌برگ با دوربین</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================ پیام ================ -->
+<section id="t-msg" class="tab is-hidden space-y-4">
+  <div class="text-white px-1 min-h-[64px]"><h2 class="text-[26px] font-extrabold">پیام‌ها</h2><p class="text-white/80 text-sm">گفتگو بدون نمایش شماره تلفن</p></div>
+  <div id="threads" class="space-y-3"></div>
+  <div class="rounded-[20px] p-4 flex items-start gap-3 bg-white border border-line muted"><i data-lucide="shield-check" class="w-6 h-6 shrink-0 text-ok"></i><p class="text-sm">همه پیام‌ها داخل پلتفرم می‌ماند و شماره تلفن والدین یا دانش‌آموزان نمایش داده نمی‌شود.</p></div>
+</section>
+</main>
+
+<nav class="dock fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="منوی اصلی">
+  <div class="max-w-3xl mx-auto grid grid-cols-4">
+    <button data-go="cls" class="dock-item" aria-current="page"><i data-lucide="users-round"></i>کلاس‌ها</button>
+    <button data-go="hw" class="dock-item"><i data-lucide="notebook-pen"></i>تکالیف</button>
+    <button data-go="exam" class="dock-item"><i data-lucide="clipboard-check"></i>آزمون</button>
+    <button data-go="msg" class="dock-item"><i data-lucide="messages-square"></i>پیام</button>
+  </div>
+</nav>
+
+<!-- دوربین -->
+<div id="cam" class="is-hidden fixed inset-0 z-50 text-white flex flex-col" style="background:radial-gradient(600px 500px at 50% 40%,#233252,#05070D)">
+  <div class="flex items-center justify-between p-4">
+    <button id="cam-close" class="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center" aria-label="بستن"><i data-lucide="x" class="w-5 h-5"></i></button>
+    <p class="font-bold">اسکن پاسخ‌برگ</p>
+    <button class="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center" aria-label="چراغ"><i data-lucide="zap" class="w-5 h-5"></i></button>
+  </div>
+  <div class="flex-1 flex items-center justify-center px-8">
+    <div id="frame" class="relative w-full max-w-[300px] aspect-[3/4]">
+      <span class="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-sun rounded-tr-2xl"></span>
+      <span class="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-sun rounded-tl-2xl"></span>
+      <span class="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-sun rounded-br-2xl"></span>
+      <span class="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-sun rounded-bl-2xl"></span>
+      <div class="absolute inset-8 flex flex-col justify-between opacity-30">
+        <div class="h-3 rounded bg-white/70 w-2/3"></div>
+        <div class="space-y-3"><div class="h-2 rounded bg-white/50"></div><div class="h-2 rounded bg-white/50"></div><div class="h-2 rounded bg-white/50"></div><div class="h-2 rounded bg-white/50"></div><div class="h-2 rounded bg-white/50"></div><div class="h-2 rounded bg-white/50"></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="text-center text-white/80 px-6">پاسخ‌برگ را داخل کادر بگذار و گوشی را ثابت نگه دار.</p>
+  <div class="flex justify-center py-6"><button id="shutter" class="w-[76px] h-[76px] rounded-full border-4 border-white flex items-center justify-center" aria-label="اسکن"><span class="w-[58px] h-[58px] rounded-full bg-white block"></span></button></div>
+
+  <div id="scan-result" class="is-hidden absolute inset-x-0 bottom-0 bg-white text-ink rounded-t-[28px] p-6 rise">
+    <div class="flex items-center gap-4">
+      <div class="w-16 h-16 rounded-full shrink-0 flex items-center justify-center" style="background:conic-gradient(#12A150 85%,#E3ECFF 0)"><div class="w-[50px] h-[50px] rounded-full bg-white flex items-center justify-center font-extrabold text-sm">۸۵٪</div></div>
+      <div class="flex-1"><p class="text-sm muted">نتیجه نمونه</p><p class="font-extrabold text-[18px]">سارا محمدی، ۱۷ از ۲۰</p><p class="text-sm muted">۱۷ درست، ۲ غلط، ۱ نزده</p></div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mt-5"><button id="scan-next" class="btn btn-soft"><i data-lucide="scan-line" class="w-5 h-5"></i> اسکن بعدی</button><button id="scan-save" class="btn btn-royal"><i data-lucide="check" class="w-5 h-5"></i> ذخیره نتیجه</button></div>
+  </div>
+</div>
+
+<!-- گفتگو -->
+<div id="chat" class="is-hidden fixed inset-0 z-50 bg-mist flex flex-col">
+  <div class="brand-bg text-white px-4 py-3 flex items-center gap-3">
+    <button id="chat-back" class="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center" aria-label="بازگشت"><i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+    <div class="w-11 h-11 rounded-2xl bg-sun text-ink flex items-center justify-center font-extrabold" id="chat-av"></div>
+    <div class="leading-tight"><p id="chat-name" class="font-extrabold"></p><p id="chat-role" class="text-sm text-white/75"></p></div>
+  </div>
+  <div id="chat-body" class="flex-1 overflow-y-auto p-4 space-y-3 max-w-2xl w-full mx-auto"></div>
+  <form id="chat-form" class="p-3 bg-white border-t border-line flex gap-2 max-w-2xl w-full mx-auto">
+    <input id="chat-input" class="input" placeholder="پیامت را بنویس" autocomplete="off">
+    <button class="btn btn-royal !px-4" aria-label="ارسال"><i data-lucide="send" class="w-5 h-5"></i></button>
+  </form>
+</div>
+
+<div id="toast" class="is-hidden fixed top-5 left-1/2 -translate-x-1/2 z-[80] bg-ink text-white rounded-2xl px-5 py-3 shadow-2xl font-semibold flex items-center gap-2"><i data-lucide="circle-check" class="w-5 h-5 text-sun"></i><span id="toast-text"></span></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const icons=()=>lucide.createIcons();
+const faNum=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+function toast(m){ $('#toast-text').textContent=m; $('#toast').classList.remove('is-hidden'); clearTimeout(window._t); window._t=setTimeout(()=>$('#toast').classList.add('is-hidden'),2400); }
+function go(t){ $$('.tab').forEach(x=>x.classList.add('is-hidden')); $('#t-'+t).classList.remove('is-hidden'); $$('.dock-item').forEach(b=>b.dataset.go===t?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')); scrollTo(0,0); }
+$$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+function pickSeg(name,v){ const g=document.querySelector(`[data-seg="${name}"]`); g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.v===v))); $$(`[data-panel^="${name}:"]`).forEach(p=>p.classList.toggle('is-hidden',p.dataset.panel!==`${name}:${v}`)); }
+$$('[data-seg]').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>pickSeg(g.dataset.seg,b.dataset.v)));
+
+/* ---------- حضور و غیاب ---------- */
+const classes={ 'هفتم الف':['سارا محمدی','امیرحسین کریمی','نیلوفر احمدی','مهدی صادقی','علی رضایی','هانیه موسوی','پارسا نجفی','ملیکا حسینی'],
+  'هفتم ب':['یاسمن فرهادی','کیان رستمی','آیلین باقری','آرین جعفری','دینا اکبری','رضا تقوی'],
+  'هشتم الف':['محمدطاها نوری','الینا سلیمانی','بردیا کاظمی','هستی طاهری','امیرعلی قاسمی','ترانه یزدانی'] };
+let curClass='هفتم الف'; const att={}; Object.keys(classes).forEach(k=>att[k]=classes[k].map(()=>'p')); att['هفتم الف'][2]='a'; att['هفتم الف'][5]='e';
+function renderChips(){ $('#class-chips').innerHTML=Object.keys(classes).map(c=>`<button class="chip" aria-pressed="${c===curClass}" data-c="${c}">${c}</button>`).join(''); $$('#class-chips .chip').forEach(b=>b.onclick=()=>{curClass=b.dataset.c;renderChips();renderAtt();renderPerf();}); }
+function renderAtt(){
+  const list=classes[curClass], st=att[curClass];
+  $('#att-list').innerHTML=list.map((n,i)=>`<div class="card !rounded-[20px] p-3 flex items-center gap-3 flex-wrap"><div class="w-11 h-11 rounded-2xl bg-[#E8F0FF] text-royal flex items-center justify-center font-extrabold shrink-0">${n[0]}</div><p class="font-bold flex-1 min-w-[110px]">${n}</p><div class="att" data-i="${i}"><button data-s="p" aria-pressed="${st[i]==='p'}">حاضر</button><button data-s="a" aria-pressed="${st[i]==='a'}">غایب</button><button data-s="e" aria-pressed="${st[i]==='e'}">با اطلاع</button></div></div>`).join('');
+  $$('#att-list .att button').forEach(b=>b.onclick=()=>{att[curClass][+b.parentElement.dataset.i]=b.dataset.s; renderAtt();});
+  const c=s=>st.filter(x=>x===s).length;
+  $('#c-p').textContent=faNum(c('p')); $('#c-a').textContent=faNum(c('a')); $('#c-e').textContent=faNum(c('e'));
+  $('#sms-text').textContent=c('a')?`با ثبت، پیامک غیبت برای والدین ${faNum(c('a'))} دانش‌آموز غایب ارسال می‌شود.`:'غایب بدون اطلاع نداری؛ پیامکی ارسال نمی‌شود.';
+}
+$('#mark-all').onclick=()=>{ att[curClass]=att[curClass].map(()=> 'p'); renderAtt(); };
+$('#att-save').onclick=()=>{ const a=att[curClass].filter(x=>x==='a').length; toast(a?`ثبت شد؛ پیامک غیبت برای والدین ${faNum(a)} نفر ارسال می‌شود`:'حضور و غیاب ثبت شد'); };
+
+/* ---------- عملکرد ---------- */
+const pts=[1480,1390,1310,1250,1220,1105,980,860];
+const paths=['حل مسئله‌های ترکیبی ریاضی، ۳ جلسه','مرور فصل ۳ علوم و ۱۰ تست','تقویت درک مطلب فارسی','تمرین کسرها و اعشار','مرور هندسه، صفحه ۴۰ تا ۵۰','تست‌زنی روزانه ریاضی','مطالعه روزانه ۴۵ دقیقه','جبران غیبت‌ها و مرور دو فصل'];
+const pstate={};
+function renderPerf(){
+  const list=classes[curClass].map((n,i)=>({n,p:pts[i]-(curClass==='هفتم الف'?0:i*37),path:paths[i],k:curClass+i})).sort((a,b)=>b.p-a.p);
+  $('#perf-list').innerHTML=list.map((s,r)=>{ const ok=pstate[s.k]==='ok', txt=pstate[s.k+'t']||s.path;
+    return `<div class="card p-4"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold ${r<3?'bg-sun text-ink':'bg-[#E8F0FF] text-royal'}">${faNum(r+1)}</div><div class="flex-1 min-w-0"><p class="font-extrabold">${s.n}</p><div class="bar mt-1.5"><span style="width:${Math.min(100,s.p/1500*100)}%"></span></div></div><p class="font-extrabold text-royal">${faNum(s.p)}</p></div>
+    <div class="mt-3 rounded-2xl bg-mist p-3"><div class="flex items-center gap-2 text-sm font-bold muted"><i data-lucide="sparkles" class="w-4 h-4 text-royal"></i> مسیر پیشنهادی هوش مصنوعی <span class="tag mr-auto ${ok?'bg-[#E6F7EE] text-ok':'bg-sun/30 text-[#7A5600]'} !text-xs">${ok?'تأیید شد':'منتظر تأیید'}</span></div>
+    <p class="mt-1" id="pt-${s.k}">${txt}</p>
+    <div class="flex gap-2 mt-2"><button class="btn btn-royal btn-sm" onclick="approve('${s.k}')" ${ok?'disabled':''}><i data-lucide="check" class="w-4 h-4"></i> تأیید</button><button class="btn btn-soft btn-sm" onclick="editPath('${s.k}')"><i data-lucide="pencil" class="w-4 h-4"></i> ویرایش</button></div></div></div>`; }).join('');
+  icons();
+}
+function approve(k){ pstate[k]='ok'; renderPerf(); toast('مسیر پیشنهادی تأیید شد'); }
+function editPath(k){ const cur=$('#pt-'+k).textContent; const v=prompt('مسیر پیشنهادی را ویرایش کن:',cur); if(v){ pstate[k+'t']=v; pstate[k]='ok'; renderPerf(); toast('مسیر ویرایش و تأیید شد'); } }
+
+/* ---------- تکلیف ---------- */
+$('#d-day').innerHTML=Array.from({length:30},(_,i)=>`<option value="${i+1}" ${i+1===10?'selected':''}>${faNum(i+1)}</option>`).join('');
+$('#d-h').innerHTML=Array.from({length:24},(_,i)=>`<option value="${i}" ${i===20?'selected':''}>${faNum(String(i).padStart(2,'0'))}</option>`).join('');
+$('#d-m').innerHTML=[0,15,30,45].map(m=>`<option value="${m}">${faNum(String(m).padStart(2,'0'))}</option>`).join('');
+const dueText=()=>`${faNum($('#d-day').value)} ${$('#d-mon').value} ۱۴۰۵، ساعت ${faNum(String($('#d-h').value).padStart(2,'0'))}:${faNum(String($('#d-m').value).padStart(2,'0'))}`;
+const upPrev=()=>$('#d-preview span').textContent='مهلت: '+dueText();
+['#d-day','#d-mon','#d-h','#d-m'].forEach(s=>$(s).onchange=upPrev); upPrev();
+const hws=[
+ {t:'حل تمرین‌های فصل ۳',g:'هفتم',c:'الف',due:'۵ آبان ۱۴۰۵، ساعت ۲۰:۰۰',sent:['سارا محمدی','امیرحسین کریمی','نیلوفر احمدی','مهدی صادقی','علی رضایی','هانیه موسوی'],un:['پارسا نجفی','ملیکا حسینی']},
+ {t:'انشا درباره طبیعت',g:'هفتم',c:'ب',due:'۴ آبان ۱۴۰۵، ساعت ۱۸:۳۰',sent:['یاسمن فرهادی','کیان رستمی','آیلین باقری','آرین جعفری'],un:['دینا اکبری','رضا تقوی']},
+ {t:'گزارش آزمایش جرم و حجم',g:'هشتم',c:'الف',due:'۳ آبان ۱۴۰۵، ساعت ۱۶:۰۰',sent:['محمدطاها نوری','الینا سلیمانی','بردیا کاظمی'],un:['هستی طاهری','امیرعلی قاسمی','ترانه یزدانی']}
+];
+function renderRep(){
+  const g=$('#f-grade').value, c=$('#f-class').value;
+  const l=hws.filter(h=>(!g||h.g===g)&&(!c||h.c===c));
+  $('#rep-list').innerHTML=l.map(h=>{ const tot=h.sent.length+h.un.length, p=Math.round(h.sent.length/tot*100);
+    return `<details class="card p-4"><summary class="flex items-start gap-3"><div class="flex-1 min-w-0"><p class="font-extrabold">${h.t}</p><p class="text-sm muted">پایه ${h.g}، کلاس ${h.c}</p><p class="text-sm muted flex items-center gap-1.5"><i data-lucide="calendar-clock" class="w-4 h-4"></i> ${h.due}</p></div><div class="text-center shrink-0"><p class="font-extrabold text-[20px] text-royal">${faNum(h.sent.length)}<span class="text-sm muted font-semibold"> از ${faNum(tot)}</span></p><p class="text-xs muted">ارسال‌شده</p></div><i data-lucide="chevron-down" class="chev w-5 h-5 muted mt-1 transition"></i></summary>
+    <div class="bar mt-3"><span style="width:${p}%"></span></div>
+    <div class="grid grid-cols-2 gap-3 mt-3 text-sm"><div><p class="font-bold text-ok mb-1">ارسال کرده‌اند</p>${h.sent.map(n=>`<p class="muted">${n}</p>`).join('')}</div><div><p class="font-bold text-late mb-1">ارسال نکرده‌اند</p>${h.un.map(n=>`<p class="muted">${n}</p>`).join('')}</div></div></details>`; }).join('')||'<div class="card p-6 text-center muted">تکلیفی با این فیلتر نیست.</div>';
+  icons();
+}
+$('#f-grade').onchange=renderRep; $('#f-class').onchange=renderRep;
+$('#hw-create').onclick=()=>{ const t=$('#hw-title').value.trim(); if(!t){ $('#hw-title').focus(); return toast('عنوان تکلیف را بنویس'); }
+  const c=$('#hw-class').value; hws.unshift({t,g:$('#hw-grade').value,c:c==='همه کلاس‌ها'?'الف':c,due:dueText(),sent:[],un:['سارا محمدی','امیرحسین کریمی','نیلوفر احمدی','مهدی صادقی']});
+  $('#hw-title').value=''; renderRep(); toast('تکلیف ساخته شد و برای دانش‌آموزان ارسال شد'); pickSeg('hw','rep'); };
+renderRep();
+
+/* ---------- آزمون و کلید ---------- */
+let nQ=10, key={};
+const L=['الف','ب','ج','د'];
+function renderKey(){
+  $('#key-grid').innerHTML=Array.from({length:nQ},(_,i)=>`<div class="flex items-center gap-2"><span class="w-7 text-center font-extrabold muted">${faNum(i+1)}</span><div class="flex gap-1.5" data-q="${i}">${L.map((l,j)=>`<button type="button" class="bub" aria-pressed="${key[i]===j}" data-j="${j}">${l}</button>`).join('')}</div></div>`).join('');
+  $$('#key-grid .bub').forEach(b=>b.onclick=()=>{ key[+b.parentElement.dataset.q]=+b.dataset.j; renderKey(); });
+  $('#key-count').textContent=`${faNum(Object.keys(key).filter(k=>k<nQ).length)} از ${faNum(nQ)} وارد شد`;
+}
+$('#ex-n').onchange=e=>{ nQ=e.target.value==='۲۰'?20:10; renderKey(); };
+$('#ex-save').onclick=()=>{ const f=Object.keys(key).filter(k=>k<nQ).length; f<nQ?toast(`هنوز ${faNum(nQ-f)} سؤال کلید ندارد`):toast('آزمون و کلید ذخیره شد'); };
+key={0:1,1:0,2:3,3:2,4:0}; renderKey();
+$('#ex-scan').onclick=()=>{ $('#cam').classList.remove('is-hidden'); $('#scan-result').classList.add('is-hidden'); };
+$('#cam-close').onclick=()=>$('#cam').classList.add('is-hidden');
+$('#shutter').onclick=()=>{ const f=$('#frame'); const s=document.createElement('div'); s.className='scanline'; f.appendChild(s); setTimeout(()=>{ s.remove(); $('#scan-result').classList.remove('is-hidden'); icons(); },1250); };
+$('#scan-next').onclick=()=>$('#scan-result').classList.add('is-hidden');
+$('#scan-save').onclick=()=>{ $('#scan-result').classList.add('is-hidden'); toast('نتیجه ذخیره شد'); };
+
+/* ---------- پیام ---------- */
+const threads=[
+ {n:'والدین سارا محمدی',r:'والدین',u:2,m:[['in','سلام خانم احمدی، سارا برای آزمون پنجشنبه چه فصل‌هایی را مرور کند؟'],['in','ممنون از راهنمایی‌تان.']]},
+ {n:'والدین امیرحسین کریمی',r:'والدین',u:0,m:[['out','سلام، امیرحسین این هفته در کلاس فعال بود. آفرین.'],['in','خیلی ممنون، تشویقش می‌کنیم.']]},
+ {n:'نیلوفر احمدی',r:'دانش‌آموز',u:1,m:[['in','خانم احمدی، تکلیف علوم را می‌شود تا فردا بفرستم؟']]},
+ {n:'مدیر کانون',r:'مدیر',u:0,m:[['in','لطفاً نمرات آزمون ماهانه را تا پنجشنبه ثبت کنید.'],['out','حتماً، تا چهارشنبه ثبت می‌کنم.']]}
+];
+let curT=null;
+function renderThreads(){
+  $('#threads').innerHTML=threads.map((t,i)=>`<button class="card w-full p-4 flex items-center gap-3 text-start" onclick="openChat(${i})"><div class="w-12 h-12 rounded-2xl bg-[#E8F0FF] text-royal flex items-center justify-center font-extrabold shrink-0">${t.n.replace('والدین ','')[0]}</div><div class="flex-1 min-w-0"><p class="font-extrabold truncate">${t.n}</p><p class="text-sm muted truncate">${t.m[t.m.length-1][1]}</p></div>${t.u?`<span class="w-7 h-7 rounded-full bg-royal text-white text-sm font-bold flex items-center justify-center">${faNum(t.u)}</span>`:''}</button>`).join('');
+}
+function renderChat(){ const t=threads[curT]; $('#chat-body').innerHTML=t.m.map(m=>`<div class="flex ${m[0]==='out'?'justify-start':'justify-end'}"><div class="max-w-[80%] rounded-3xl px-4 py-2.5 ${m[0]==='out'?'bg-royal text-white rounded-br-md':'bg-white border border-line rounded-bl-md'}">${m[1]}</div></div>`).join(''); $('#chat-body').scrollTop=1e6; }
+function openChat(i){ curT=i; const t=threads[i]; t.u=0; $('#chat-av').textContent=t.n.replace('والدین ','')[0]; $('#chat-name').textContent=t.n; $('#chat-role').textContent=t.r; $('#chat').classList.remove('is-hidden'); renderChat(); renderThreads(); }
+$('#chat-back').onclick=()=>$('#chat').classList.add('is-hidden');
+$('#chat-form').onsubmit=e=>{ e.preventDefault(); const v=$('#chat-input').value.trim(); if(!v) return; threads[curT].m.push(['out',v]); $('#chat-input').value=''; renderChat(); renderThreads(); };
+
+renderChips(); renderAtt(); renderPerf(); renderThreads(); icons();
+</script>
+</body>
+</html>

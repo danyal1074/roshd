@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A4BD6">
+<title>پلتفرم رشد | پنل مدیر</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Vazirmatn', 'sans-serif'] },
+  colors: { royal: '#0A4BD6', ink: '#0B1F4D', sky: '#1E90FF', sun: '#FFC531', mist: '#F5F8FF', line: '#DCE6FA', ok: '#12A150', late: '#E5484D' }
+} } }
+</script>
+<style>
+  :root { --royal:#0A4BD6; --ink:#0B1F4D; --sky:#1E90FF; --sun:#FFC531; --mist:#F5F8FF; --line:#DCE6FA; --ok:#12A150; --late:#E5484D; }
+  html { -webkit-tap-highlight-color: transparent; }
+  body { font-family:'Vazirmatn',sans-serif; font-size:16px; line-height:1.8; background:var(--mist); color:var(--ink); }
+  .is-hidden { display:none !important; }
+  :focus-visible { outline:3px solid var(--sky); outline-offset:2px; border-radius:12px; }
+  .muted { color:#5A6E99; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:24px; box-shadow:0 14px 36px -24px rgba(10,75,214,.55); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-height:48px; padding:0 1.25rem; border-radius:16px; font-weight:800; transition:transform .12s, box-shadow .2s; }
+  .btn:active { transform:scale(.97); }
+  .btn-royal { background:linear-gradient(180deg,#1457E6,#0A4BD6); color:#fff; box-shadow:0 8px 20px -6px rgba(10,75,214,.55), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn-sun { background:linear-gradient(180deg,#FFD25A,#FFC531); color:var(--ink); box-shadow:0 10px 24px -8px rgba(255,197,49,.8), inset 0 1px 0 rgba(255,255,255,.5); }
+  .btn-soft { background:#E8F0FF; color:var(--royal); }
+  .btn-ok { background:var(--ok); color:#fff; }
+  .btn-bad { background:#FDECEC; color:var(--late); }
+  .btn-sm { min-height:40px; padding:0 1rem; border-radius:12px; font-size:14px; }
+  .btn[disabled] { opacity:.45; pointer-events:none; box-shadow:none; }
+  .input { width:100%; min-height:52px; padding:0 16px; border-radius:16px; border:1.5px solid var(--line); background:#fff; transition:border-color .2s, box-shadow .2s; }
+  select.input { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238AA0CC' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 14px center; padding-left:38px; }
+  .input:focus { outline:none; border-color:var(--royal); box-shadow:0 0 0 4px rgba(10,75,214,.12); }
+  textarea.input { padding-top:12px; padding-bottom:12px; }
+  .lbl { display:block; font-weight:700; margin-bottom:6px; font-size:15px; }
+  .brand-bg { background:radial-gradient(900px 500px at 100% 0%, rgba(30,144,255,.55), transparent 60%), radial-gradient(600px 400px at 0% 100%, rgba(255,197,49,.18), transparent 60%), linear-gradient(160deg,#0A4BD6 0%, #0838A3 60%, #0B1F4D 100%); }
+  .dots { background-image:radial-gradient(rgba(255,255,255,.14) 1.3px, transparent 1.3px); background-size:22px 22px; }
+  .dock { box-shadow:0 -8px 30px -12px rgba(11,31,77,.25); }
+  .dock-item { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 0 8px; font-size:12px; font-weight:600; color:#7D90B8; }
+  .dock-item svg { width:24px; height:24px; }
+  .dock-item[aria-current="page"] { color:var(--royal); }
+  .dock-item[aria-current="page"]::before { content:""; position:absolute; top:0; width:30px; height:4px; border-radius:0 0 6px 6px; background:var(--sun); }
+  .side-item { display:flex; align-items:center; gap:12px; width:100%; padding:12px 14px; border-radius:16px; font-weight:700; color:rgba(255,255,255,.78); transition:background .2s; }
+  .side-item:hover { background:rgba(255,255,255,.1); }
+  .side-item[aria-current="page"] { background:#fff; color:var(--royal); box-shadow:0 10px 24px -12px rgba(0,0,0,.5); }
+  .seg-ctl { display:flex; background:#E3ECFF; border-radius:16px; padding:4px; gap:4px; }
+  .seg-ctl button { flex:1; min-height:42px; border-radius:12px; font-weight:700; color:#5A6E99; font-size:14px; white-space:nowrap; padding:0 10px; }
+  .seg-ctl button[aria-pressed="true"] { background:#fff; color:var(--royal); box-shadow:0 4px 12px -4px rgba(10,75,214,.35); }
+  .chip { min-height:40px; padding:0 16px; border-radius:99px; border:1.5px solid var(--line); background:#fff; font-weight:700; font-size:14px; white-space:nowrap; color:#5A6E99; }
+  .chip[aria-pressed="true"] { background:var(--royal); border-color:var(--royal); color:#fff; }
+  .tag { display:inline-flex; align-items:center; gap:.3rem; border-radius:99px; padding:2px 12px; font-size:13px; font-weight:700; white-space:nowrap; }
+  .bar { height:10px; border-radius:99px; background:#E3ECFF; overflow:hidden; }
+  .bar > span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#1E90FF,#0A4BD6); transition:width .5s; }
+  .stack { display:flex; height:14px; border-radius:99px; overflow:hidden; background:#E3ECFF; }
+  .stack span { display:block; height:100%; }
+  details > summary { list-style:none; cursor:pointer; }
+  details > summary::-webkit-details-marker { display:none; }
+  details[open] .chev { transform:rotate(180deg); }
+  .page-title { color:#fff; }
+  .page-sub { color:rgba(255,255,255,.8); }
+  @media (min-width:1024px) { .page-title { color:var(--ink); } .page-sub { color:#5A6E99; } }
+  @keyframes rise { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:none } }
+  .rise { animation:rise .35s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(18,161,80,.5) } 50% { box-shadow:0 0 0 7px rgba(18,161,80,0) } }
+  .live { width:10px; height:10px; border-radius:50%; background:var(--ok); animation:pulse 1.6s infinite; }
+  @keyframes flash { from { background:#FFF3CC } to { background:#fff } }
+  .moved { animation:flash 1.4s ease-out; }
+  @media print { body * { visibility:hidden } #print-area, #print-area * { visibility:visible } #print-area { position:absolute; inset:0; padding:12mm; background:#fff; } .no-print { display:none !important; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="lg:grid lg:grid-cols-[280px_1fr] min-h-screen">
+
+  <!-- نوار کناری دسکتاپ -->
+  <aside class="hidden lg:flex flex-col brand-bg relative text-white p-6 sticky top-0 h-screen overflow-hidden">
+    <div class="dots absolute inset-0 opacity-50"></div>
+    <div class="relative flex items-center gap-3 mb-8">
+      <div class="w-14 h-14 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center"><i data-lucide="graduation-cap" class="w-7 h-7 text-sun"></i></div>
+      <div class="leading-tight"><p class="font-extrabold">کانون نخبه‌پروری</p><p class="text-sm text-white/75">شهید کاظم آشتیانی</p></div>
+    </div>
+    <nav class="relative space-y-1.5 flex-1" aria-label="منوی مدیر">
+      <button data-go="dash" class="side-item" aria-current="page"><i data-lucide="layout-dashboard" class="w-5 h-5"></i> داشبورد</button>
+      <button data-go="stu" class="side-item"><i data-lucide="users" class="w-5 h-5"></i> دانش‌آموزان</button>
+      <button data-go="fee" class="side-item"><i data-lucide="wallet" class="w-5 h-5"></i> حق عضویت</button>
+      <button data-go="ann" class="side-item"><i data-lucide="megaphone" class="w-5 h-5"></i> اطلاعیه</button>
+      <button data-go="acc" class="side-item"><i data-lucide="calculator" class="w-5 h-5"></i> حسابداری</button>
+      <button data-go="exm" class="side-item"><i data-lucide="trophy" class="w-5 h-5"></i> آزمون جامع</button>
+    </nav>
+    <div class="relative flex items-center gap-3 bg-white/10 rounded-2xl p-3"><div class="w-11 h-11 rounded-xl bg-sun text-ink font-extrabold flex items-center justify-center">م.ک</div><div class="leading-tight"><p class="font-bold">مدیر کانون</p><p class="text-xs text-white/70">پلتفرم رشد</p></div></div>
+  </aside>
+
+  <div class="min-w-0">
+    <!-- هدر موبایل -->
+    <header class="lg:hidden brand-bg relative text-white">
+      <div class="dots absolute inset-0 opacity-50"></div>
+      <div class="relative px-4 pt-4 pb-20 flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center shrink-0"><i data-lucide="graduation-cap" class="w-6 h-6 text-sun"></i></div>
+        <div class="flex-1 min-w-0 leading-tight"><p class="font-extrabold truncate">کانون نخبه‌پروری شهید کاظم آشتیانی</p><p class="text-white/70 text-sm">پلتفرم رشد، پنل مدیر</p></div>
+        <div class="w-11 h-11 rounded-2xl bg-sun text-ink flex items-center justify-center font-extrabold">م.ک</div>
+      </div>
+    </header>
+
+    <main class="px-4 lg:px-10 -mt-[64px] lg:mt-0 lg:pt-10 pb-28 lg:pb-12 relative max-w-5xl mx-auto">
+
+<!-- ============ داشبورد ============ -->
+<section id="t-dash" class="tab space-y-4">
+  <div class="min-h-[56px]"><h2 class="page-title text-[26px] font-extrabold">داشبورد</h2><p class="page-sub text-sm">دوشنبه ۴ آبان ۱۴۰۵</p></div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="card p-5 rise"><div class="w-11 h-11 rounded-2xl bg-[#E8F0FF] text-royal flex items-center justify-center"><i data-lucide="users" class="w-6 h-6"></i></div><p class="text-[30px] font-extrabold leading-tight mt-3">۳۸۴</p><p class="muted text-sm">دانش‌آموز فعال</p></div>
+    <div class="card p-5 rise"><div class="w-11 h-11 rounded-2xl bg-[#E6F7EE] text-ok flex items-center justify-center"><i data-lucide="circle-check" class="w-6 h-6"></i></div><p class="text-[30px] font-extrabold leading-tight mt-3">۲۹۶</p><p class="muted text-sm">پرداخت‌شده</p></div>
+    <div class="card p-5 rise"><div class="w-11 h-11 rounded-2xl bg-sun/30 text-[#7A5600] flex items-center justify-center"><i data-lucide="hourglass" class="w-6 h-6"></i></div><p class="text-[30px] font-extrabold leading-tight mt-3">۵۲</p><p class="muted text-sm">در انتظار تأیید</p></div>
+    <div class="card p-5 rise"><div class="w-11 h-11 rounded-2xl bg-[#FDECEC] text-late flex items-center justify-center"><i data-lucide="user-x" class="w-6 h-6"></i></div><p class="text-[30px] font-extrabold leading-tight mt-3">۱۲</p><p class="muted text-sm">غایبان امروز</p></div>
+  </div>
+
+  <div class="grid lg:grid-cols-5 gap-4">
+    <div class="card p-5 lg:col-span-3">
+      <h3 class="font-extrabold text-[18px]">وضعیت پرداخت هر پایه</h3>
+      <div id="grade-stacks" class="space-y-4 mt-4"></div>
+      <div class="flex gap-4 mt-4 text-sm muted flex-wrap"><span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full bg-ok"></i> پرداخت‌شده</span><span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full bg-sun"></i> در انتظار</span><span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full bg-late"></i> پرداخت‌نشده</span></div>
+    </div>
+    <div class="card p-5 lg:col-span-2">
+      <div class="flex items-center justify-between"><h3 class="font-extrabold text-[18px]">غایبان امروز</h3><span class="tag bg-[#FDECEC] text-late">۱۲ نفر</span></div>
+      <div class="space-y-3 mt-4">
+        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-[#E8F0FF] text-royal font-extrabold flex items-center justify-center">ن</div><div class="flex-1"><p class="font-bold">نیلوفر احمدی</p><p class="text-xs muted">هفتم الف</p></div><span class="tag bg-[#E6F7EE] text-ok !text-xs">پیامک شد</span></div>
+        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-[#E8F0FF] text-royal font-extrabold flex items-center justify-center">پ</div><div class="flex-1"><p class="font-bold">پارسا نجفی</p><p class="text-xs muted">هشتم ب</p></div><span class="tag bg-[#E6F7EE] text-ok !text-xs">پیامک شد</span></div>
+        <div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl bg-[#E8F0FF] text-royal font-extrabold flex items-center justify-center">ه</div><div class="flex-1"><p class="font-bold">هستی طاهری</p><p class="text-xs muted">نهم الف</p></div><span class="tag bg-sun/30 text-[#7A5600] !text-xs">با اطلاع</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid sm:grid-cols-3 gap-3">
+    <button data-go="fee" class="card p-5 flex items-center gap-4 text-start"><div class="w-12 h-12 rounded-2xl bg-sun text-ink flex items-center justify-center"><i data-lucide="receipt" class="w-6 h-6"></i></div><div><p class="font-extrabold">۵۲ رسید منتظر توست</p><p class="text-sm muted">بررسی و تأیید</p></div></button>
+    <button data-go="ann" class="card p-5 flex items-center gap-4 text-start"><div class="w-12 h-12 rounded-2xl text-white flex items-center justify-center" style="background:linear-gradient(135deg,#1E90FF,#0A4BD6)"><i data-lucide="megaphone" class="w-6 h-6"></i></div><div><p class="font-extrabold">اطلاعیه جدید</p><p class="text-sm muted">برای همه یا چند کلاس</p></div></button>
+    <button data-go="exm" class="card p-5 flex items-center gap-4 text-start"><div class="w-12 h-12 rounded-2xl bg-[#E6F7EE] text-ok flex items-center justify-center"><i data-lucide="trophy" class="w-6 h-6"></i></div><div><p class="font-extrabold">آزمون جامع</p><p class="text-sm muted">رتبه‌بندی لحظه‌ای</p></div></button>
+  </div>
+</section>
+
+<!-- ============ دانش‌آموزان ============ -->
+<section id="t-stu" class="tab is-hidden space-y-4">
+  <div class="min-h-[56px] flex items-start justify-between gap-3">
+    <div><h2 class="page-title text-[26px] font-extrabold">دانش‌آموزان</h2><p class="page-sub text-sm" id="stu-count"></p></div>
+    <button id="btn-new-stu" class="btn btn-sun"><i data-lucide="user-plus" class="w-5 h-5"></i> ثبت‌نام</button>
+  </div>
+  <div class="card p-4 space-y-3">
+    <div class="relative"><i data-lucide="search" class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 muted"></i><input id="q" class="input !pr-12" placeholder="جستجوی نام یا کد ملی"></div>
+    <div class="grid grid-cols-3 gap-2">
+      <select id="fg" class="input !px-3 !pl-8" aria-label="پایه"><option value="">همه پایه‌ها</option><option>هفتم</option><option>هشتم</option><option>نهم</option></select>
+      <select id="fc" class="input !px-3 !pl-8" aria-label="کلاس"><option value="">همه کلاس‌ها</option><option>الف</option><option>ب</option></select>
+      <select id="fs" class="input !px-3 !pl-8" aria-label="مدرسه"><option value="">همه مدرسه‌ها</option><option>شهید بهشتی</option><option>فرزانگان</option><option>امام خمینی</option></select>
+    </div>
+  </div>
+  <div id="stu-list" class="space-y-2.5"></div>
+</section>
+
+<!-- ============ حق عضویت ============ -->
+<section id="t-fee" class="tab is-hidden space-y-4">
+  <div class="min-h-[56px]"><h2 class="page-title text-[26px] font-extrabold">حق عضویت</h2><p class="page-sub text-sm">مبلغ، رسیدها و گزارش کلاس‌ها</p></div>
+  <div class="seg-ctl" data-seg="fe"><button data-v="def" aria-pressed="true">تعریف مبلغ</button><button data-v="rec" aria-pressed="false">رسیدها <span id="rec-badge" class="tag bg-sun text-ink !py-0 mr-1"></span></button><button data-v="rep" aria-pressed="false">گزارش کلاس</button></div>
+
+  <div data-panel="fe:def" class="space-y-3">
+    <div id="fee-defs" class="grid lg:grid-cols-3 gap-3"></div>
+    <button id="fee-save" class="btn btn-royal w-full lg:w-auto"><i data-lucide="save" class="w-5 h-5"></i> ذخیره تنظیمات</button>
+  </div>
+
+  <div data-panel="fe:rec" id="rec-list" class="is-hidden space-y-3"></div>
+
+  <div data-panel="fe:rep" id="cls-rep" class="is-hidden grid lg:grid-cols-2 gap-3"></div>
+</section>
+
+<!-- ============ اطلاعیه ============ -->
+<section id="t-ann" class="tab is-hidden space-y-4">
+  <div class="min-h-[56px]"><h2 class="page-title text-[26px] font-extrabold">اطلاعیه</h2><p class="page-sub text-sm">بنویس و ببین چه کسانی دیده‌اند</p></div>
+  <div class="seg-ctl lg:max-w-md" data-seg="an"><button data-v="new" aria-pressed="true">اطلاعیه جدید</button><button data-v="rep" aria-pressed="false">گزارش دیده‌شده</button></div>
+
+  <div data-panel="an:new" class="card p-5 space-y-4 lg:max-w-2xl">
+    <div><label class="lbl" for="an-title">عنوان</label><input id="an-title" class="input" placeholder="مثلاً تغییر ساعت کلاس"></div>
+    <div><label class="lbl" for="an-body">متن اطلاعیه</label><textarea id="an-body" class="input" rows="4" placeholder="متن را کوتاه و روشن بنویس"></textarea></div>
+    <div><p class="lbl">مخاطبان</p><div id="aud" class="flex flex-wrap gap-2"></div><p id="aud-count" class="text-sm muted mt-2"></p></div>
+    <button id="an-send" class="btn btn-royal w-full"><i data-lucide="send" class="w-5 h-5"></i> ارسال اطلاعیه</button>
+  </div>
+  <div data-panel="an:rep" id="an-list" class="is-hidden space-y-3"></div>
+</section>
+
+<!-- ============ حسابداری ============ -->
+<section id="t-acc" class="tab is-hidden space-y-4">
+  <div class="min-h-[56px]"><h2 class="page-title text-[26px] font-extrabold">حسابداری</h2><p class="page-sub text-sm" id="range-cap"></p></div>
+  <div class="seg-ctl lg:max-w-xl" id="range-ctl"><button data-r="day" aria-pressed="true">روزانه</button><button data-r="week" aria-pressed="false">هفتگی</button><button data-r="month" aria-pressed="false">ماهانه</button><button data-r="custom" aria-pressed="false">بازه دلخواه</button></div>
+  <div id="custom-range" class="is-hidden card p-4 grid grid-cols-2 gap-3 lg:max-w-xl"><div><label class="lbl" for="r-from">از</label><select id="r-from" class="input"></select></div><div><label class="lbl" for="r-to">تا</label><select id="r-to" class="input"></select></div></div>
+
+  <div class="grid grid-cols-3 gap-3">
+    <div class="card p-4"><p class="text-sm muted flex items-center gap-1.5"><i data-lucide="arrow-down-to-line" class="w-4 h-4 text-ok"></i> درآمد</p><p id="s-in" class="text-[18px] lg:text-[22px] font-extrabold mt-1"></p></div>
+    <div class="card p-4"><p class="text-sm muted flex items-center gap-1.5"><i data-lucide="arrow-up-from-line" class="w-4 h-4 text-late"></i> هزینه</p><p id="s-out" class="text-[18px] lg:text-[22px] font-extrabold mt-1"></p></div>
+    <div class="card p-4"><p class="text-sm muted flex items-center gap-1.5"><i data-lucide="scale" class="w-4 h-4 text-royal"></i> مانده</p><p id="s-net" class="text-[18px] lg:text-[22px] font-extrabold mt-1"></p></div>
+  </div>
+
+  <div class="grid lg:grid-cols-5 gap-4">
+    <div class="card p-5 lg:col-span-3">
+      <div class="flex items-center justify-between"><h3 class="font-extrabold text-[18px]">درآمد در برابر هزینه</h3><div class="flex gap-3 text-sm muted"><span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full bg-royal"></i> درآمد</span><span class="flex items-center gap-1.5"><i class="w-3 h-3 rounded-full bg-sun"></i> هزینه</span></div></div>
+      <div id="chart" class="flex items-end gap-2 h-44 mt-5"></div>
+    </div>
+    <div class="card p-5 lg:col-span-2">
+      <h3 class="font-extrabold text-[18px] flex items-center gap-2"><i data-lucide="circle-plus" class="w-5 h-5 text-royal"></i> ثبت هزینه</h3>
+      <div class="space-y-3 mt-4">
+        <div><label class="lbl" for="x-amt">مبلغ (تومان)</label><input id="x-amt" class="input" inputmode="numeric" placeholder="مثلاً ۲٬۵۰۰٬۰۰۰"></div>
+        <div class="grid grid-cols-2 gap-3"><div><label class="lbl" for="x-day">تاریخ</label><select id="x-day" class="input"></select></div><div><label class="lbl" for="x-desc">شرح</label><input id="x-desc" class="input" placeholder="مثلاً چاپ جزوه"></div></div>
+        <button id="x-add" class="btn btn-royal w-full"><i data-lucide="plus" class="w-5 h-5"></i> ثبت هزینه</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="px-5 py-4 flex items-center justify-between border-b border-line"><h3 class="font-extrabold text-[18px]">دفتر واریزها و هزینه‌ها</h3><span id="led-count" class="tag bg-[#E3ECFF] text-royal"></span></div>
+    <div id="ledger" class="divide-y divide-line"></div>
+  </div>
+</section>
+
+<!-- ============ آزمون جامع ============ -->
+<section id="t-exm" class="tab is-hidden space-y-4">
+  <div class="min-h-[56px] flex items-start justify-between gap-3">
+    <div><h2 class="page-title text-[26px] font-extrabold">آزمون جامع</h2><p class="page-sub text-sm flex items-center gap-2"><span class="live"></span> نتایج لحظه‌ای <span id="live-time"></span></p></div>
+    <button id="btn-print" class="btn btn-sun"><i data-lucide="qr-code" class="w-5 h-5"></i> چاپ QR</button>
+  </div>
+  <div class="card p-3"><div id="rank-list" class="divide-y divide-line"></div></div>
+</section>
+    </main>
+  </div>
+</div>
+
+<nav class="lg:hidden dock fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="منوی اصلی">
+  <div class="grid grid-cols-5">
+    <button data-go="dash" class="dock-item" aria-current="page"><i data-lucide="layout-dashboard"></i>داشبورد</button>
+    <button data-go="stu" class="dock-item"><i data-lucide="users"></i>دانش‌آموزان</button>
+    <button data-go="fee" class="dock-item"><i data-lucide="wallet"></i>حق عضویت</button>
+    <button data-go="ann" class="dock-item"><i data-lucide="megaphone"></i>اطلاعیه</button>
+    <button data-go="acc" class="dock-item"><i data-lucide="calculator"></i>حسابداری</button>
+  </div>
+</nav>
+
+<!-- ثبت‌نام -->
+<div id="sheet-stu" class="is-hidden fixed inset-0 z-[60] bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
+  <form id="form-stu" class="w-full sm:max-w-xl bg-white rounded-t-[28px] sm:rounded-[28px] p-6 pb-8 max-h-[92vh] overflow-y-auto rise">
+    <div class="flex items-center justify-between"><h3 class="text-[22px] font-extrabold">ثبت‌نام دانش‌آموز</h3><button type="button" class="close-sheet w-10 h-10 rounded-xl bg-mist flex items-center justify-center" aria-label="بستن"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <div class="grid grid-cols-2 gap-3 mt-4">
+      <div><label class="lbl" for="s-fn">نام</label><input id="s-fn" class="input" required></div>
+      <div><label class="lbl" for="s-ln">نام خانوادگی</label><input id="s-ln" class="input" required></div>
+      <div class="col-span-2"><label class="lbl" for="s-nc">کد ملی</label><input id="s-nc" class="input" inputmode="numeric" maxlength="10" placeholder="۱۰ رقم" required></div>
+      <div class="col-span-2"><label class="lbl" for="s-ad">نشانی منزل</label><textarea id="s-ad" class="input" rows="2"></textarea></div>
+      <div class="col-span-2"><label class="lbl" for="s-sc">نام مدرسه</label><select id="s-sc" class="input"><option>شهید بهشتی</option><option>فرزانگان</option><option>امام خمینی</option></select></div>
+      <div><label class="lbl" for="s-g">پایه</label><select id="s-g" class="input"><option>هفتم</option><option>هشتم</option><option>نهم</option></select></div>
+      <div><label class="lbl" for="s-c">کلاس</label><select id="s-c" class="input"><option>الف</option><option>ب</option></select></div>
+      <div class="col-span-2"><p class="lbl">تاریخ تولد</p><div class="grid grid-cols-3 gap-2"><select id="b-d" class="input !px-3 !pl-8" aria-label="روز"></select><select id="b-m" class="input !px-3 !pl-8" aria-label="ماه"></select><select id="b-y" class="input !px-3 !pl-8" aria-label="سال"></select></div></div>
+      <div class="col-span-2"><label class="lbl" for="s-mo">موبایل والدین</label><input id="s-mo" class="input" inputmode="numeric" maxlength="11" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" style="text-align:right"></div>
+    </div>
+    <button class="btn btn-royal w-full mt-5" style="min-height:54px"><i data-lucide="user-plus" class="w-5 h-5"></i> ثبت دانش‌آموز</button>
+  </form>
+</div>
+
+<!-- رد رسید -->
+<div id="sheet-rej" class="is-hidden fixed inset-0 z-[60] bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
+  <div class="w-full sm:max-w-md bg-white rounded-t-[28px] sm:rounded-[28px] p-6 pb-8 rise">
+    <div class="flex items-center justify-between"><h3 class="text-[22px] font-extrabold">رد رسید</h3><button class="close-sheet w-10 h-10 rounded-xl bg-mist flex items-center justify-center" aria-label="بستن"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <p id="rej-who" class="muted mt-1"></p>
+    <p class="lbl mt-4">علت رد</p>
+    <div id="rej-reasons" class="flex flex-wrap gap-2"></div>
+    <textarea id="rej-text" class="input mt-3" rows="2" placeholder="توضیح بیشتر (اختیاری)"></textarea>
+    <button id="rej-ok" class="btn btn-bad w-full mt-4" disabled><i data-lucide="x-circle" class="w-5 h-5"></i> رد رسید و اطلاع به دانش‌آموز</button>
+  </div>
+</div>
+
+<!-- چاپ QR -->
+<div id="sheet-qr" class="is-hidden fixed inset-0 z-[60] bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
+  <div class="w-full sm:max-w-3xl bg-white rounded-t-[28px] sm:rounded-[28px] p-6 pb-8 max-h-[92vh] overflow-y-auto rise">
+    <div class="no-print flex items-center justify-between"><h3 class="text-[22px] font-extrabold">کارت ورود به آزمون جامع</h3><button class="close-sheet w-10 h-10 rounded-xl bg-mist flex items-center justify-center" aria-label="بستن"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <div class="no-print flex gap-3 mt-4"><div class="seg-ctl flex-1" id="code-ctl"><button data-k="qr" aria-pressed="true">QR</button><button data-k="bar" aria-pressed="false">بارکد</button></div><button id="do-print" class="btn btn-royal"><i data-lucide="printer" class="w-5 h-5"></i> چاپ</button></div>
+    <div id="print-area" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4"></div>
+  </div>
+</div>
+
+<div id="toast" class="is-hidden fixed top-5 left-1/2 -translate-x-1/2 z-[80] bg-ink text-white rounded-2xl px-5 py-3 shadow-2xl font-semibold flex items-center gap-2"><i data-lucide="circle-check" class="w-5 h-5 text-sun"></i><span id="toast-text"></span></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const icons=()=>lucide.createIcons();
+const faNum=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+const enNum=s=>String(s).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+const money=n=>faNum(Math.abs(n).toLocaleString('en-US')).replace(/,/g,'٬');
+function toast(m){ $('#toast-text').textContent=m; $('#toast').classList.remove('is-hidden'); clearTimeout(window._t); window._t=setTimeout(()=>$('#toast').classList.add('is-hidden'),2400); }
+let curTab='dash';
+function go(t){ curTab=t; $$('.tab').forEach(x=>x.classList.add('is-hidden')); $('#t-'+t).classList.remove('is-hidden'); $$('[data-go]').forEach(b=>b.dataset.go===t?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')); scrollTo(0,0); }
+$$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+function pickSeg(name,v){ const g=document.querySelector(`[data-seg="${name}"]`); g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.v===v))); $$(`[data-panel^="${name}:"]`).forEach(p=>p.classList.toggle('is-hidden',p.dataset.panel!==`${name}:${v}`)); }
+$$('[data-seg]').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>pickSeg(g.dataset.seg,b.dataset.v)));
+$$('.close-sheet').forEach(b=>b.onclick=()=>b.closest('.fixed').classList.add('is-hidden'));
+$$('#sheet-stu,#sheet-rej,#sheet-qr').forEach(s=>s.addEventListener('click',e=>{ if(e.target===s) s.classList.add('is-hidden'); }));
+
+/* ---------- داشبورد ---------- */
+const grades=[['هفتم',98,14,10],['هشتم',84,16,8],['نهم',72,12,10],['دهم',42,10,8]];
+$('#grade-stacks').innerHTML=grades.map(g=>{ const t=g[1]+g[2]+g[3]; return `<div><div class="flex justify-between text-sm mb-1.5"><span class="font-bold">پایه ${g[0]}</span><span class="muted">${faNum(t)} نفر</span></div><div class="stack"><span style="width:${g[1]/t*100}%;background:#12A150"></span><span style="width:${g[2]/t*100}%;background:#FFC531"></span><span style="width:${g[3]/t*100}%;background:#E5484D"></span></div><div class="flex gap-3 text-xs muted mt-1"><span>${faNum(g[1])} پرداخت‌شده</span><span>${faNum(g[2])} در انتظار</span><span>${faNum(g[3])} پرداخت‌نشده</span></div></div>`; }).join('');
+
+/* ---------- دانش‌آموزان ---------- */
+const stus=[
+ {n:'سارا محمدی',nc:'0012345671',g:'هفتم',c:'الف',s:'شهید بهشتی',pay:'paid'},{n:'امیرحسین کریمی',nc:'0023456782',g:'هفتم',c:'الف',s:'فرزانگان',pay:'paid'},
+ {n:'نیلوفر احمدی',nc:'0034567893',g:'هفتم',c:'ب',s:'امام خمینی',pay:'pending'},{n:'مهدی صادقی',nc:'0045678904',g:'هفتم',c:'ب',s:'شهید بهشتی',pay:'paid'},
+ {n:'علی رضایی',nc:'0056789015',g:'هشتم',c:'الف',s:'فرزانگان',pay:'unpaid'},{n:'هانیه موسوی',nc:'0067890126',g:'هشتم',c:'الف',s:'شهید بهشتی',pay:'paid'},
+ {n:'پارسا نجفی',nc:'0078901237',g:'هشتم',c:'ب',s:'امام خمینی',pay:'paid'},{n:'ملیکا حسینی',nc:'0089012348',g:'هشتم',c:'ب',s:'فرزانگان',pay:'pending'},
+ {n:'هستی طاهری',nc:'0090123459',g:'نهم',c:'الف',s:'شهید بهشتی',pay:'paid'},{n:'بردیا کاظمی',nc:'0101234560',g:'نهم',c:'ب',s:'امام خمینی',pay:'unpaid'}
+];
+const payTag={paid:['bg-[#E6F7EE] text-ok','پرداخت شده'],pending:['bg-sun/30 text-[#7A5600]','در انتظار'],unpaid:['bg-[#FDECEC] text-late','پرداخت نشده']};
+function renderStu(){
+  const q=enNum($('#q').value.trim()), g=$('#fg').value, c=$('#fc').value, s=$('#fs').value;
+  const l=stus.filter(x=>(!q||x.n.includes(q)||x.nc.includes(q))&&(!g||x.g===g)&&(!c||x.c===c)&&(!s||x.s===s));
+  $('#stu-count').textContent=`${faNum(l.length)} دانش‌آموز در فهرست`;
+  $('#stu-list').innerHTML=l.map(x=>`<div class="card !rounded-[20px] p-4 flex items-center gap-3 flex-wrap"><div class="w-12 h-12 rounded-2xl bg-[#E8F0FF] text-royal font-extrabold flex items-center justify-center shrink-0">${x.n[0]}</div><div class="flex-1 min-w-[150px]"><p class="font-extrabold">${x.n}</p><p class="text-sm muted">${x.g} ${x.c}، مدرسه ${x.s}</p></div><p class="text-sm muted" dir="ltr">${faNum(x.nc)}</p><span class="tag ${payTag[x.pay][0]}">${payTag[x.pay][1]}</span></div>`).join('')||'<div class="card p-8 text-center muted">دانش‌آموزی پیدا نشد. فیلترها را عوض کن.</div>';
+}
+['#q','#fg','#fc','#fs'].forEach(s=>$(s).oninput=renderStu);
+$('#b-d').innerHTML=Array.from({length:31},(_,i)=>`<option>${faNum(i+1)}</option>`).join('');
+$('#b-m').innerHTML=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'].map(m=>`<option>${m}</option>`).join('');
+$('#b-y').innerHTML=Array.from({length:8},(_,i)=>`<option>${faNum(1394-i)}</option>`).join('');
+$('#btn-new-stu').onclick=()=>$('#sheet-stu').classList.remove('is-hidden');
+$('#form-stu').onsubmit=e=>{ e.preventDefault(); const nc=enNum($('#s-nc').value);
+  if(!/^\d{10}$/.test(nc)) return toast('کد ملی باید ۱۰ رقم باشد');
+  stus.unshift({n:$('#s-fn').value+' '+$('#s-ln').value,nc,g:$('#s-g').value,c:$('#s-c').value,s:$('#s-sc').value,pay:'unpaid'});
+  $('#sheet-stu').classList.add('is-hidden'); $('#form-stu').reset(); renderStu(); toast('دانش‌آموز ثبت شد'); };
+renderStu();
+
+/* ---------- حق عضویت ---------- */
+const dayOpts=sel=>Array.from({length:30},(_,i)=>`<option value="${i+1}" ${i+1===sel?'selected':''}>${faNum(i+1)}</option>`).join('');
+const monOpts=sel=>['مهر','آبان','آذر','دی'].map(m=>`<option ${m===sel?'selected':''}>${m}</option>`).join('');
+$('#fee-defs').innerHTML=[['هفتم','۱٬۵۰۰٬۰۰۰',10,'آبان',20,'آبان'],['هشتم','۱٬۷۰۰٬۰۰۰',10,'آبان',20,'آبان'],['نهم','۲٬۰۰۰٬۰۰۰',15,'آبان',25,'آبان']].map(g=>`<div class="card p-5 space-y-3"><p class="font-extrabold text-[18px] flex items-center gap-2"><i data-lucide="graduation-cap" class="w-5 h-5 text-royal"></i> پایه ${g[0]}</p>
+ <div><label class="lbl">مبلغ (تومان)</label><input class="input" value="${g[1]}" inputmode="numeric"></div>
+ <div><label class="lbl">مهلت پرداخت</label><div class="grid grid-cols-2 gap-2"><select class="input !px-3 !pl-8">${dayOpts(g[2])}</select><select class="input !px-3 !pl-8">${monOpts(g[3])}</select></div></div>
+ <div><label class="lbl">تاریخ قفل پنل</label><div class="grid grid-cols-2 gap-2"><select class="input !px-3 !pl-8">${dayOpts(g[4])}</select><select class="input !px-3 !pl-8">${monOpts(g[5])}</select></div></div></div>`).join('');
+$('#fee-save').onclick=()=>toast('مبلغ و مهلت‌ها ذخیره شد');
+const recs=[
+ {id:1,n:'نیلوفر احمدی',c:'هفتم ب',amt:1500000,t:'امروز ۱۰:۱۵',st:'pending'},{id:2,n:'ملیکا حسینی',c:'هشتم ب',amt:1700000,t:'امروز ۰۹:۴۰',st:'pending'},
+ {id:3,n:'علی رضایی',c:'هشتم الف',amt:1700000,t:'دیروز ۲۱:۰۵',st:'pending'},{id:4,n:'بردیا کاظمی',c:'نهم ب',amt:2000000,t:'دیروز ۱۷:۲۲',st:'pending'}
+];
+function renderRecs(){
+  const p=recs.filter(r=>r.st==='pending').length; $('#rec-badge').textContent=faNum(p+48);
+  $('#rec-list').innerHTML=recs.map(r=>`<div class="card p-4 flex items-center gap-3 flex-wrap"><div class="w-14 h-14 rounded-2xl bg-[#E8F0FF] text-royal flex items-center justify-center shrink-0"><i data-lucide="receipt-text" class="w-7 h-7"></i></div><div class="flex-1 min-w-[150px]"><p class="font-extrabold">${r.n}</p><p class="text-sm muted">${r.c}، ${r.t}</p><p class="font-bold text-royal">${money(r.amt)} تومان</p></div>
+  ${r.st==='pending'?`<div class="flex gap-2"><button class="btn btn-ok btn-sm" onclick="approveRec(${r.id})"><i data-lucide="check" class="w-4 h-4"></i> تأیید</button><button class="btn btn-bad btn-sm" onclick="rejectRec(${r.id})"><i data-lucide="x" class="w-4 h-4"></i> رد</button></div>`
+  :r.st==='ok'?'<span class="tag bg-[#E6F7EE] text-ok"><i data-lucide="check" class="w-4 h-4"></i> تأیید شد</span>':`<div class="text-end"><span class="tag bg-[#FDECEC] text-late">رد شد</span><p class="text-xs muted mt-1">${r.why}</p></div>`}</div>`).join('');
+  icons();
+}
+function approveRec(id){ recs.find(r=>r.id===id).st='ok'; renderRecs(); toast('رسید تأیید شد و قفل پنل برداشته شد'); }
+let rejId=null, rejWhy='';
+const reasons=['تصویر ناخوانا','مبلغ اشتباه','رسید تکراری','سایر'];
+function rejectRec(id){ rejId=id; rejWhy=''; $('#rej-who').textContent=recs.find(r=>r.id===id).n; $('#rej-text').value=''; $('#rej-ok').disabled=true;
+  $('#rej-reasons').innerHTML=reasons.map(r=>`<button class="chip" aria-pressed="false">${r}</button>`).join('');
+  $$('#rej-reasons .chip').forEach(b=>b.onclick=()=>{ $$('#rej-reasons .chip').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); rejWhy=b.textContent; $('#rej-ok').disabled=false; });
+  $('#sheet-rej').classList.remove('is-hidden'); }
+$('#rej-ok').onclick=()=>{ const r=recs.find(x=>x.id===rejId); r.st='no'; r.why=rejWhy+($('#rej-text').value?'، '+$('#rej-text').value:''); $('#sheet-rej').classList.add('is-hidden'); renderRecs(); toast('رسید رد شد و علت برای دانش‌آموز نمایش داده می‌شود'); };
+const clsRep=[['هفتم الف',49,7,5],['هفتم ب',49,7,5],['هشتم الف',42,8,4],['هشتم ب',42,8,4],['نهم الف',36,6,5],['نهم ب',36,6,5],['دهم الف',42,10,8]];
+$('#cls-rep').innerHTML=clsRep.map(c=>{ const t=c[1]+c[2]+c[3]; return `<div class="card p-5"><div class="flex justify-between"><p class="font-extrabold">${c[0]}</p><p class="text-sm muted">${faNum(t)} نفر</p></div><div class="stack mt-3"><span style="width:${c[1]/t*100}%;background:#12A150"></span><span style="width:${c[2]/t*100}%;background:#FFC531"></span><span style="width:${c[3]/t*100}%;background:#E5484D"></span></div><div class="grid grid-cols-3 text-center mt-3 text-sm"><div><p class="font-extrabold text-ok">${faNum(c[1])}</p><p class="text-xs muted">پرداخت‌شده</p></div><div><p class="font-extrabold text-[#B07A00]">${faNum(c[2])}</p><p class="text-xs muted">در انتظار</p></div><div><p class="font-extrabold text-late">${faNum(c[3])}</p><p class="text-xs muted">پرداخت‌نشده</p></div></div></div>`; }).join('');
+renderRecs();
+
+/* ---------- اطلاعیه ---------- */
+const classSize={'هفتم الف':61,'هفتم ب':61,'هشتم الف':54,'هشتم ب':54,'نهم الف':47,'نهم ب':47,'دهم الف':60};
+let aud=new Set(['همه']);
+function renderAud(){
+  $('#aud').innerHTML=['همه',...Object.keys(classSize)].map(c=>`<button class="chip" aria-pressed="${aud.has(c)}" data-c="${c}">${c==='همه'?'همه کلاس‌ها':c}</button>`).join('');
+  $$('#aud .chip').forEach(b=>b.onclick=()=>{ const c=b.dataset.c; if(c==='همه'){aud=new Set(['همه']);} else { aud.delete('همه'); aud.has(c)?aud.delete(c):aud.add(c); if(!aud.size) aud=new Set(['همه']); } renderAud(); });
+  $('#aud-count').textContent=`این اطلاعیه برای ${faNum(audN())} نفر ارسال می‌شود.`;
+}
+const audN=()=>aud.has('همه')?384:[...aud].reduce((s,c)=>s+classSize[c],0);
+const anns=[
+ {t:'تغییر ساعت کلاس ریاضی',d:'امروز ۰۹:۰۰',n:384,seen:341,un:['علی رضایی','ملیکا حسینی','بردیا کاظمی']},
+ {t:'آزمون جامع پنجشنبه',d:'دیروز ۱۸:۳۰',n:384,seen:298,un:['نیلوفر احمدی','پارسا نجفی','هستی طاهری']},
+ {t:'جزوه‌های جدید بارگذاری شد',d:'۱ آبان',n:122,seen:109,un:['مهدی صادقی','سارا محمدی']}
+];
+function renderAnns(){
+  $('#an-list').innerHTML=anns.map(a=>{ const p=Math.round(a.seen/a.n*100); return `<details class="card p-5"><summary class="flex items-center gap-4"><div class="w-14 h-14 rounded-full shrink-0 flex items-center justify-center" style="background:conic-gradient(#0A4BD6 ${p}%,#E3ECFF 0)"><div class="w-[44px] h-[44px] rounded-full bg-white flex items-center justify-center font-extrabold text-sm">${faNum(p)}٪</div></div><div class="flex-1 min-w-0"><p class="font-extrabold truncate">${a.t}</p><p class="text-sm muted">${a.d}</p></div><div class="text-center"><p class="font-extrabold text-ok">${faNum(a.seen)} دیده</p><p class="text-xs text-late font-bold">${faNum(a.n-a.seen)} دیده‌نشده</p></div><i data-lucide="chevron-down" class="chev w-5 h-5 muted transition"></i></summary>
+  <div class="mt-4 pt-4 border-t border-line"><p class="font-bold text-sm mb-2">دیده‌نشده‌ها</p><div class="flex flex-wrap gap-2">${a.un.map(n=>`<span class="tag bg-[#FDECEC] text-late">${n}</span>`).join('')}${a.n-a.seen>a.un.length?`<span class="tag bg-mist muted">و ${faNum(a.n-a.seen-a.un.length)} نفر دیگر</span>`:''}</div></div></details>`; }).join('');
+  icons();
+}
+$('#an-send').onclick=()=>{ const t=$('#an-title').value.trim(); if(!t){ $('#an-title').focus(); return toast('عنوان اطلاعیه را بنویس'); }
+  anns.unshift({t,d:'همین الان',n:audN(),seen:0,un:['سارا محمدی','امیرحسین کریمی','نیلوفر احمدی']}); $('#an-title').value=''; $('#an-body').value=''; renderAnns(); pickSeg('an','rep'); toast('اطلاعیه ارسال شد؛ بعد از ورود، تمام‌صفحه نمایش داده می‌شود'); };
+renderAud(); renderAnns();
+
+/* ---------- حسابداری ---------- */
+const dLabel=d=>d>=1?`${faNum(d)} آبان`:`${faNum(30+d)} مهر`;
+const tx=[
+ {d:4,t:'in',s:'حق عضویت، سارا محمدی',a:1500000},{d:4,t:'in',s:'حق عضویت، مهدی صادقی',a:1500000},{d:4,t:'out',s:'چاپ جزوه‌ها',a:1850000},
+ {d:3,t:'in',s:'حق عضویت، هانیه موسوی',a:1700000},{d:3,t:'in',s:'حق عضویت، پارسا نجفی',a:1700000},{d:2,t:'out',s:'قبض برق و آب',a:960000},
+ {d:1,t:'in',s:'حق عضویت، هستی طاهری',a:2000000},{d:1,t:'in',s:'حق عضویت، امیرحسین کریمی',a:1500000},{d:-1,t:'out',s:'حقوق معلمان',a:12500000},
+ {d:-2,t:'in',s:'حق عضویت، ۶ دانش‌آموز',a:9300000},{d:-5,t:'out',s:'لوازم‌التحریر',a:640000},{d:-8,t:'in',s:'فروش جزوه',a:2200000},
+ {d:-11,t:'out',s:'اجاره ساختمان',a:8000000},{d:-14,t:'in',s:'حق عضویت، ۱۱ دانش‌آموز',a:17400000},{d:-18,t:'out',s:'تعمیر پروژکتور',a:1100000},
+ {d:-21,t:'in',s:'حق عضویت، ۸ دانش‌آموز',a:12800000},{d:-24,t:'out',s:'خدمات پیامکی',a:780000}
+];
+let range='day', rFrom=-5, rTo=4;
+const bounds=()=>range==='day'?[4,4]:range==='week'?[-2,4]:range==='month'?[-25,4]:[Math.min(rFrom,rTo),Math.max(rFrom,rTo)];
+const capOf={day:'امروز',week:'۷ روز اخیر',month:'۳۰ روز اخیر',custom:'بازه دلخواه'};
+const dayList=Array.from({length:30},(_,i)=>4-i);
+$('#r-from').innerHTML=dayList.map(d=>`<option value="${d}" ${d===-5?'selected':''}>${dLabel(d)}</option>`).join('');
+$('#r-to').innerHTML=dayList.map(d=>`<option value="${d}">${dLabel(d)}</option>`).join('');
+$('#x-day').innerHTML=dayList.map(d=>`<option value="${d}">${dLabel(d)}</option>`).join('');
+function renderAcc(){
+  const [a,b]=bounds(); const l=tx.filter(x=>x.d>=a&&x.d<=b).sort((x,y)=>y.d-x.d);
+  const inc=l.filter(x=>x.t==='in').reduce((s,x)=>s+x.a,0), out=l.filter(x=>x.t==='out').reduce((s,x)=>s+x.a,0);
+  $('#range-cap').textContent=`${capOf[range]}، از ${dLabel(a)} تا ${dLabel(b)}`;
+  $('#s-in').textContent=money(inc); $('#s-out').textContent=money(out); const net=inc-out;
+  $('#s-net').innerHTML=`<span class="${net>=0?'text-ok':'text-late'}">${net<0?'−':''}${money(net)}</span>`;
+  let buckets=[]; const span=b-a+1;
+  if(span<=10){ for(let d=a;d<=b;d++) buckets.push({l:dLabel(d).split(' ')[0],lo:d,hi:d}); }
+  else { for(let s=a,i=1;s<=b;s+=7,i++) buckets.push({l:'هفته '+faNum(i),lo:s,hi:Math.min(b,s+6)}); }
+  buckets.forEach(k=>{ const q=tx.filter(x=>x.d>=k.lo&&x.d<=k.hi); k.i=q.filter(x=>x.t==='in').reduce((s,x)=>s+x.a,0); k.o=q.filter(x=>x.t==='out').reduce((s,x)=>s+x.a,0); });
+  const mx=Math.max(1,...buckets.map(k=>Math.max(k.i,k.o)));
+  $('#chart').innerHTML=buckets.map(k=>`<div class="flex-1 flex flex-col items-center justify-end h-full min-w-0"><div class="flex items-end gap-1 w-full justify-center flex-1"><div class="w-1/2 max-w-[22px] rounded-t-lg bg-royal" style="height:${k.i/mx*100}%;min-height:${k.i?4:0}px"></div><div class="w-1/2 max-w-[22px] rounded-t-lg bg-sun" style="height:${k.o/mx*100}%;min-height:${k.o?4:0}px"></div></div><p class="text-[11px] muted mt-1.5 truncate w-full text-center">${k.l}</p></div>`).join('');
+  $('#led-count').textContent=faNum(l.length)+' مورد';
+  $('#ledger').innerHTML=l.map(x=>`<div class="flex items-center gap-3 px-5 py-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${x.t==='in'?'bg-[#E6F7EE] text-ok':'bg-[#FDECEC] text-late'}"><i data-lucide="${x.t==='in'?'arrow-down-left':'arrow-up-right'}" class="w-5 h-5"></i></div><div class="flex-1 min-w-0"><p class="font-bold truncate">${x.s}</p><p class="text-xs muted">${dLabel(x.d)} ۱۴۰۵</p></div><p class="font-extrabold ${x.t==='in'?'text-ok':'text-late'}">${x.t==='in'?'+':'−'}${money(x.a)}</p></div>`).join('')||'<p class="p-8 text-center muted">در این بازه تراکنشی ثبت نشده.</p>';
+  icons();
+}
+$$('#range-ctl button').forEach(b=>b.onclick=()=>{ range=b.dataset.r; $$('#range-ctl button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); $('#custom-range').classList.toggle('is-hidden',range!=='custom'); renderAcc(); });
+$('#r-from').onchange=e=>{rFrom=+e.target.value;renderAcc();}; $('#r-to').onchange=e=>{rTo=+e.target.value;renderAcc();};
+$('#x-add').onclick=()=>{ const a=+enNum($('#x-amt').value.replace(/[٬,\s]/g,'')); if(!a){ $('#x-amt').focus(); return toast('مبلغ را وارد کن'); }
+  tx.push({d:+$('#x-day').value,t:'out',s:$('#x-desc').value.trim()||'هزینه',a}); $('#x-amt').value=''; $('#x-desc').value=''; renderAcc(); toast('هزینه ثبت شد'); };
+renderAcc();
+
+/* ---------- آزمون جامع ---------- */
+let ex=stus.map((s,i)=>({n:s.n,c:s.g+' '+s.c,code:'RSH-'+(1405000+i*37),s:[96,93,91,88,85,82,79,74,70,66][i],mv:0}));
+function renderRank(flash){
+  $('#rank-list').innerHTML=ex.map((e,i)=>`<div class="flex items-center gap-3 px-3 py-3 rounded-2xl ${flash===e.code?'moved':''}"><div class="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold ${i<3?'bg-sun text-ink':'bg-[#E8F0FF] text-royal'}">${faNum(i+1)}</div><div class="flex-1 min-w-0"><div class="flex justify-between"><p class="font-bold truncate">${e.n} <span class="text-xs muted font-normal">${e.c}</span></p><p class="font-extrabold">${faNum(e.s)}٪</p></div><div class="bar mt-1.5"><span style="width:${e.s}%"></span></div></div><span class="w-6 text-center">${e.mv>0?'<i data-lucide="trending-up" class="w-5 h-5 text-ok"></i>':e.mv<0?'<i data-lucide="trending-down" class="w-5 h-5 text-late"></i>':''}</span></div>`).join('');
+  const d=new Date(); $('#live-time').textContent='، آخرین به‌روزرسانی '+faNum(String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'));
+  icons();
+}
+setInterval(()=>{ if(curTab!=='exm') return; const before=ex.map(e=>e.code); const e=ex[Math.floor(Math.random()*ex.length)]; e.s=Math.max(40,Math.min(100,e.s+Math.floor(Math.random()*9)-3));
+  ex.sort((a,b)=>b.s-a.s); ex.forEach((x,i)=>x.mv=before.indexOf(x.code)-i); renderRank(e.code); },3500);
+renderRank();
+
+/* QR و بارکد */
+const hash=s=>{let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;};
+const rng=seed=>{let a=seed;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};};
+function qr(code){ const N=25,r=rng(hash(code)); let o=''; const F=(x,y)=>{o+=`<rect x="${x}" y="${y}" width="7" height="7" fill="#0B1F4D"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#0B1F4D"/>`;};
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){ if((x<8&&y<8)||(x>N-9&&y<8)||(x<8&&y>N-9)) continue; if(r()>.52) o+=`<rect x="${x}" y="${y}" width="1" height="1" fill="#0B1F4D"/>`; }
+  F(0,0);F(N-7,0);F(0,N-7); return `<svg viewBox="-1 -1 27 27" shape-rendering="crispEdges" style="width:100%;height:100%">${o}</svg>`; }
+function bar(code){ const r=rng(hash(code)); let x=0,o=''; while(x<100){ const w=1+Math.floor(r()*3); if(r()>.4) o+=`<rect x="${x}" y="0" width="${w}" height="40" fill="#0B1F4D"/>`; x+=w+1; } return `<svg viewBox="0 0 100 40" preserveAspectRatio="none" style="width:100%;height:100%">${o}</svg>`; }
+let codeKind='qr';
+function renderCards(){ $('#print-area').innerHTML=ex.map(e=>`<div class="rounded-2xl border border-line p-3 text-center" style="break-inside:avoid"><div class="mx-auto bg-white ${codeKind==='qr'?'w-28 h-28':'w-32 h-16 mt-6 mb-6'}">${codeKind==='qr'?qr(e.code):bar(e.code)}</div><p class="font-extrabold mt-2">${e.n}</p><p class="text-xs muted">${e.c}</p><p class="text-xs font-bold tracking-wider mt-1" dir="ltr">${e.code}</p></div>`).join(''); }
+$('#btn-print').onclick=()=>{ renderCards(); $('#sheet-qr').classList.remove('is-hidden'); };
+$$('#code-ctl button').forEach(b=>b.onclick=()=>{ codeKind=b.dataset.k; $$('#code-ctl button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); renderCards(); });
+$('#do-print').onclick=()=>window.print();
+icons();
+</script>
+</body>
+</html>

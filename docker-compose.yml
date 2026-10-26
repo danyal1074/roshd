@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  rosh-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rosh-platform-app
+    restart: always
+    ports:
+      - "80:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - HOST=0.0.0.0
+      - DB_PATH=/app/data/rosh.db
+      - UPLOADS_PATH=/app/data/uploads
+    volumes:
+      # Persistent storage for SQLite database & uploaded media (videos, images, homeworks)
+      - rosh_db_data:/app/data
+      - ./backend/rosh.db:/app/data/rosh.db
+      - ./backend/uploads:/app/data/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  rosh_db_data:
+    driver: local

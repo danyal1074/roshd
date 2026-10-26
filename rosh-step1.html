@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A4BD6">
+<title>پلتفرم رشد | ورود</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Vazirmatn', 'sans-serif'] },
+  colors: { royal: '#0A4BD6', ink: '#0B1F4D', sky: '#1E90FF', sun: '#FFC531', mist: '#F5F8FF', line: '#DCE6FA', ok: '#12A150', late: '#E5484D' }
+} } }
+</script>
+<style>
+  :root { --royal:#0A4BD6; --ink:#0B1F4D; --sky:#1E90FF; --sun:#FFC531; --mist:#F5F8FF; --line:#DCE6FA; }
+  html { -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Vazirmatn', sans-serif; font-size: 16px; line-height: 1.8; background: var(--mist); color: var(--ink); }
+  .is-hidden { display: none !important; }
+  :focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; border-radius: 12px; }
+
+  /* دکمه‌ها */
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.6rem; min-height:52px; padding:0 1.5rem; border-radius:16px; font-weight:800; transition: transform .12s, box-shadow .2s, background .2s; }
+  .btn:active { transform: scale(.97); }
+  .btn-royal { background: linear-gradient(180deg,#1457E6,#0A4BD6); color:#fff; box-shadow: 0 8px 20px -6px rgba(10,75,214,.55), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn-royal:hover { box-shadow: 0 12px 26px -6px rgba(10,75,214,.6), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn-sun { background: linear-gradient(180deg,#FFD25A,#FFC531); color: var(--ink); box-shadow: 0 10px 24px -8px rgba(255,197,49,.8), inset 0 1px 0 rgba(255,255,255,.5); }
+  .btn-soft { background:#E8F0FF; color: var(--royal); }
+  .btn[disabled] { opacity:.45; pointer-events:none; box-shadow:none; }
+
+  /* فیلدها */
+  .field { position:relative; }
+  .field > i, .field > svg.lead { position:absolute; inset-inline-start:16px; top:50%; transform:translateY(-50%); color:#8AA0CC; width:20px; height:20px; pointer-events:none; }
+  .input { width:100%; min-height:54px; padding-inline:48px 16px; border-radius:16px; border:1.5px solid var(--line); background:#fff; font-size:16px; transition: border-color .2s, box-shadow .2s; }
+  .input:focus { outline:none; border-color: var(--royal); box-shadow: 0 0 0 4px rgba(10,75,214,.12); }
+  .input::placeholder { color:#9DB0D6; }
+
+  /* انتخاب نقش */
+  .role { display:flex; flex-direction:column; align-items:center; gap:.35rem; padding:.85rem .25rem; border-radius:16px; border:1.5px solid var(--line); background:#fff; font-weight:600; font-size:14px; color:#5A6E99; transition: all .2s; }
+  .role i { width:22px; height:22px; }
+  .role[aria-pressed="true"] { border-color: var(--royal); background: #EEF4FF; color: var(--royal); box-shadow: 0 0 0 3px rgba(10,75,214,.1); }
+
+  /* پس‌زمینه برند */
+  .brand-bg { background:
+      radial-gradient(900px 500px at 100% 0%, rgba(30,144,255,.55), transparent 60%),
+      radial-gradient(600px 400px at 0% 100%, rgba(255,197,49,.18), transparent 60%),
+      linear-gradient(160deg,#0A4BD6 0%, #0838A3 60%, #0B1F4D 100%); }
+  .dots { background-image: radial-gradient(rgba(255,255,255,.14) 1.3px, transparent 1.3px); background-size: 22px 22px; }
+
+  /* صفحه اطلاعیه */
+  .notice-bg { background:
+      radial-gradient(700px 420px at 50% -10%, rgba(30,144,255,.6), transparent 70%),
+      linear-gradient(180deg,#0A4BD6 0%, #0B1F4D 100%); }
+  .seg { height:5px; border-radius:99px; background: rgba(255,255,255,.25); overflow:hidden; flex:1; }
+  .seg > span { display:block; height:100%; width:0; background:#fff; border-radius:99px; transition: width .45s ease; }
+  .seg.done > span { width:100%; }
+  @keyframes slideIn { from { opacity:0; transform: translateX(-28px) } to { opacity:1; transform:none } }
+  .slide-in { animation: slideIn .35s cubic-bezier(.2,.8,.2,1); }
+  @keyframes rise { from { opacity:0; transform: translateY(14px) } to { opacity:1; transform:none } }
+  .rise { animation: rise .4s ease both; }
+
+  /* کاغذ رنگی تولد */
+  .confetti { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+  .confetti i { position:absolute; top:-14px; width:8px; height:14px; border-radius:2px; opacity:.9; animation: fall 3.2s ease-in 1 forwards; }
+  @keyframes fall { to { transform: translateY(190px) rotate(540deg); opacity:0; } }
+
+  /* نوار پایین */
+  .dock { box-shadow: 0 -8px 30px -12px rgba(11,31,77,.25); }
+  .dock-item { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 0 8px; font-size:12px; font-weight:600; color:#7D90B8; transition: color .2s; }
+  .dock-item i { width:24px; height:24px; }
+  .dock-item[aria-current="page"] { color: var(--royal); }
+  .dock-item[aria-current="page"]::before { content:""; position:absolute; top:0; width:30px; height:4px; border-radius:0 0 6px 6px; background: var(--sun); }
+
+  /* مراحل */
+  .step-dot { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid var(--line); background:#fff; color:#9DB0D6; }
+  .step-dot.done { background: var(--ok); border-color: var(--ok); color:#fff; }
+  .step-dot.cur { background:#fff; border-color: var(--royal); color: var(--royal); box-shadow: 0 0 0 5px rgba(10,75,214,.12); }
+  .step-line { flex:1; height:3px; border-radius:3px; background: var(--line); margin-top:18px; }
+  .step-line.done { background: var(--ok); }
+
+  .sheet-enter { animation: rise .3s cubic-bezier(.2,.8,.2,1); }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<!-- ============ ۱) ورود ============ -->
+<section id="screen-login" class="min-h-screen grid lg:grid-cols-2">
+  <aside class="brand-bg relative overflow-hidden text-white px-6 pt-10 pb-24 lg:py-14 lg:px-14 flex flex-col">
+    <div class="dots absolute inset-0 opacity-60"></div>
+    <div class="relative flex items-center gap-3">
+      <div class="logo-slot w-14 h-14 rounded-2xl bg-white/15 backdrop-blur border border-white/25 flex items-center justify-center">
+        <i data-lucide="graduation-cap" class="w-7 h-7 text-sun"></i>
+      </div>
+      <div class="leading-tight">
+        <p class="font-extrabold text-lg">کانون نخبه‌پروری</p>
+        <p class="text-white/75 text-sm">شهید کاظم آشتیانی</p>
+      </div>
+    </div>
+
+    <div class="relative mt-10 lg:mt-auto lg:mb-6 max-w-md">
+      <h1 class="text-[32px] lg:text-[46px] font-extrabold leading-[1.35]">هر روز، یک پله بالاتر.</h1>
+      <p class="mt-3 text-white/80 text-[17px] max-w-sm">تکالیف، آزمون‌ها و برنامه مطالعه‌ات را یک‌جا ببین و رشدت را دنبال کن.</p>
+    </div>
+
+    <svg class="hidden lg:block relative mt-6 w-full max-w-md self-start" viewBox="0 0 420 250" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="gStep" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity=".15"/></linearGradient>
+      </defs>
+      <rect x="350" y="170" width="52" height="70" rx="14" fill="url(#gStep)" opacity=".5"/>
+      <rect x="282" y="140" width="52" height="100" rx="14" fill="url(#gStep)" opacity=".6"/>
+      <rect x="214" y="104" width="52" height="136" rx="14" fill="url(#gStep)" opacity=".72"/>
+      <rect x="146" y="64" width="52" height="176" rx="14" fill="url(#gStep)" opacity=".85"/>
+      <rect x="78" y="22" width="52" height="218" rx="14" fill="url(#gStep)"/>
+      <path d="M376 150 C 330 110, 270 100, 240 80 S 150 40, 104 6" stroke="#FFC531" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+      <path d="M104 -14 l7 15 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z" transform="translate(0 12)" fill="#FFC531"/>
+    </svg>
+  </aside>
+
+  <main class="relative -mt-12 lg:mt-0 rounded-t-[32px] lg:rounded-none bg-mist flex items-center justify-center px-5 pb-10 pt-8 lg:p-14">
+    <div class="w-full max-w-[440px] rise">
+      <h2 class="text-[28px] font-extrabold">ورود به پلتفرم رشد</h2>
+      <p class="text-[#5A6E99] mt-1">نقشت را انتخاب کن و وارد شو.</p>
+
+      <div class="grid grid-cols-4 gap-2.5 mt-6" role="group" aria-label="نقش">
+        <button class="role" data-role="دانش‌آموز" aria-pressed="true"><i data-lucide="backpack"></i>دانش‌آموز</button>
+        <button class="role" data-role="معلم" aria-pressed="false"><i data-lucide="presentation"></i>معلم</button>
+        <button class="role" data-role="والدین" aria-pressed="false"><i data-lucide="users"></i>والدین</button>
+        <button class="role" data-role="مدیر" aria-pressed="false"><i data-lucide="building-2"></i>مدیر</button>
+      </div>
+
+      <form id="form-login" class="mt-6 space-y-4" autocomplete="off">
+        <div>
+          <label for="user" class="block font-semibold mb-1.5">کد ملی یا شماره موبایل</label>
+          <div class="field"><i data-lucide="user-round"></i>
+            <input id="user" class="input" inputmode="numeric" placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr" style="text-align:right"></div>
+        </div>
+        <div>
+          <label for="pass" class="block font-semibold mb-1.5">رمز عبور</label>
+          <div class="field"><i data-lucide="lock-keyhole"></i>
+            <input id="pass" type="password" class="input" placeholder="رمزت را بنویس" style="padding-inline-end:52px">
+            <button type="button" id="toggle-pass" class="absolute top-1/2 -translate-y-1/2 left-3 w-10 h-10 flex items-center justify-center text-[#8AA0CC]" aria-label="نمایش رمز"><i data-lucide="eye" class="w-5 h-5"></i></button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-royal w-full text-[17px]">ورود به پنل <i data-lucide="log-in" class="w-5 h-5"></i></button>
+      </form>
+
+      <p class="mt-5 text-center text-sm text-[#5A6E99]">رمزت را فراموش کرده‌ای؟ از مدیر کانون بخواه رمز جدید بسازد.</p>
+    </div>
+  </main>
+</section>
+
+<!-- ============ ۲) اطلاعیه‌های دیده‌نشده (تمام‌صفحه) ============ -->
+<section id="screen-notice" class="is-hidden fixed inset-0 z-50 notice-bg text-white flex flex-col overflow-y-auto" role="dialog" aria-modal="true" aria-label="اطلاعیه جدید">
+  <div class="w-full max-w-xl mx-auto flex-1 flex flex-col px-5 pt-6 pb-6">
+    <div id="segs" class="flex gap-2" dir="rtl"></div>
+    <div class="flex items-center justify-between mt-4 text-white/85">
+      <span class="inline-flex items-center gap-2 font-semibold"><i data-lucide="megaphone" class="w-5 h-5 text-sun"></i> اطلاعیه جدید</span>
+      <span id="notice-counter" class="text-sm bg-white/15 rounded-full px-3 py-0.5"></span>
+    </div>
+
+    <article id="notice-card" class="slide-in mt-5 flex-1 bg-white text-ink rounded-[28px] p-6 sm:p-8 flex flex-col shadow-[0_30px_60px_-20px_rgba(0,0,0,.5)]">
+      <div class="flex items-center justify-between">
+        <div id="notice-icon" class="w-16 h-16 rounded-[20px] flex items-center justify-center text-white" style="background:linear-gradient(135deg,#1E90FF,#0A4BD6)"><i data-lucide="calendar-clock" class="w-8 h-8"></i></div>
+        <span id="notice-tag" class="text-sm font-bold rounded-full px-3 py-1 bg-sun/30 text-[#7A5600]">مهم</span>
+      </div>
+      <h2 id="notice-title" class="text-[28px] font-extrabold leading-[1.5] mt-5"></h2>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <span class="inline-flex items-center gap-1.5 text-sm bg-mist rounded-full px-3 py-1 text-[#4A5E8A]"><i data-lucide="calendar" class="w-4 h-4"></i><span id="notice-date"></span></span>
+        <span class="inline-flex items-center gap-1.5 text-sm bg-mist rounded-full px-3 py-1 text-[#4A5E8A]"><i data-lucide="map-pin" class="w-4 h-4"></i><span id="notice-place"></span></span>
+      </div>
+      <p id="notice-body" class="text-[18px] leading-9 mt-5 text-[#2B3F6B] flex-1"></p>
+    </article>
+
+    <button id="btn-seen" class="btn btn-sun w-full mt-5 text-[22px]" style="min-height:64px"><i data-lucide="check-check" class="w-6 h-6"></i> دیدم</button>
+    <p class="text-center text-white/70 text-sm mt-3">بعد از دیدن همه اطلاعیه‌ها وارد پنل می‌شوی.</p>
+  </div>
+</section>
+
+<!-- ============ ۳) پنل ============ -->
+<section id="screen-app" class="is-hidden min-h-screen pb-28">
+  <header class="brand-bg relative text-white">
+    <div class="dots absolute inset-0 opacity-50"></div>
+    <div class="relative max-w-3xl mx-auto px-4 pt-4 pb-24 flex items-center gap-3">
+      <div class="logo-slot w-12 h-12 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center shrink-0"><i data-lucide="graduation-cap" class="w-6 h-6 text-sun"></i></div>
+      <div class="flex-1 min-w-0 leading-tight">
+        <p class="font-extrabold truncate">کانون نخبه‌پروری شهید کاظم آشتیانی</p>
+        <p class="text-white/70 text-sm">پلتفرم رشد</p>
+      </div>
+      <button id="btn-logout" class="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center" aria-label="خروج"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 -mt-[72px] relative space-y-4">
+
+    <!-- خانه -->
+    <div id="tab-home" class="tab space-y-4">
+      <div class="px-1 text-white">
+        <p class="text-white/80 text-sm"><span id="today">دوشنبه ۴ آبان ۱۴۰۵</span></p>
+        <h2 class="text-[26px] font-extrabold leading-snug">سلام، <span id="user-name">علی رضایی</span></h2>
+        <span id="role-label" class="inline-block mt-1 text-sm font-semibold bg-white/20 rounded-full px-3 py-0.5">دانش‌آموز</span>
+      </div>
+
+      <div id="birthday" class="relative overflow-hidden rounded-[26px] p-5 flex items-center gap-4 text-ink rise" style="background:linear-gradient(120deg,#FFD25A,#FFC531 55%,#FFB020)">
+        <div class="confetti" id="confetti"></div>
+        <div class="w-16 h-16 rounded-2xl bg-white/60 flex items-center justify-center shrink-0"><i data-lucide="cake" class="w-9 h-9"></i></div>
+        <div class="relative">
+          <p class="text-[22px] font-extrabold">تولدت مبارک 🎉</p>
+          <p class="text-[15px] text-[#5A4000]">امروز روز توئه. کانون برایت یک سال پر از پیشرفت آرزو می‌کند.</p>
+        </div>
+      </div>
+
+      <div id="lock-banner" class="is-hidden rounded-[26px] bg-white border border-[#F6C9CB] p-5 shadow-[0_14px_30px_-18px_rgba(229,72,77,.6)] rise">
+        <div class="flex items-start gap-3">
+          <div id="lock-ico" class="w-12 h-12 rounded-2xl bg-[#FDECEC] text-late flex items-center justify-center shrink-0"><i data-lucide="lock" class="w-6 h-6"></i></div>
+          <div class="flex-1">
+            <p id="lock-title" class="font-extrabold text-[18px]">پنل شما قفل است</p>
+            <p id="lock-text" class="text-[#5A6E99]">مهلت پرداخت حق عضویت گذشته است.</p>
+          </div>
+        </div>
+        <button id="lock-btn" class="btn btn-royal w-full mt-4 open-receipt"><i data-lucide="upload" class="w-5 h-5"></i> بارگذاری رسید</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <button data-go="notices" class="go col-span-1 text-start rounded-[24px] p-5 bg-white shadow-[0_10px_30px_-18px_rgba(10,75,214,.5)] border border-line">
+          <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white" style="background:linear-gradient(135deg,#1E90FF,#0A4BD6)"><i data-lucide="megaphone" class="w-6 h-6"></i></div>
+          <p class="font-extrabold mt-3">اطلاعیه‌ها</p><p class="text-sm text-[#5A6E99]">همه را دیده‌ای</p>
+        </button>
+        <button data-go="pay" class="go col-span-1 text-start rounded-[24px] p-5 bg-white shadow-[0_10px_30px_-18px_rgba(10,75,214,.5)] border border-line">
+          <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-sun text-ink"><i data-lucide="wallet" class="w-6 h-6"></i></div>
+          <p class="font-extrabold mt-3">حق عضویت</p><p id="home-pay-text" class="text-sm text-[#5A6E99]">پرداخت شده</p>
+        </button>
+        <button data-go="homework" class="go relative text-start rounded-[20px] p-4 bg-white/70 border border-line">
+          <i data-lucide="lock" class="lock-badge is-hidden absolute top-3 left-3 w-4 h-4 text-late"></i>
+          <i data-lucide="notebook-pen" class="w-6 h-6 text-royal"></i><p class="font-bold mt-2">تکالیف</p>
+        </button>
+        <button data-go="me" class="go relative text-start rounded-[20px] p-4 bg-white/70 border border-line">
+          <i data-lucide="lock" class="lock-badge is-hidden absolute top-3 left-3 w-4 h-4 text-late"></i>
+          <i data-lucide="timer" class="w-6 h-6 text-royal"></i><p class="font-bold mt-2">آزمون و مطالعه</p>
+        </button>
+      </div>
+    </div>
+
+    <!-- اطلاعیه‌ها -->
+    <div id="tab-notices" class="tab is-hidden space-y-3 pt-24">
+      <h2 class="text-[24px] font-extrabold text-white -mt-20 mb-16">اطلاعیه‌ها</h2>
+      <div id="notice-list" class="space-y-3"></div>
+    </div>
+
+    <!-- پرداخت -->
+    <div id="tab-pay" class="tab is-hidden space-y-4 pt-24">
+      <h2 class="text-[24px] font-extrabold text-white -mt-20 mb-16">حق عضویت</h2>
+
+      <div class="rounded-[26px] bg-white border border-line p-5 shadow-[0_14px_36px_-20px_rgba(10,75,214,.5)]">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-[#5A6E99] text-sm">مبلغ این دوره</p>
+            <p class="text-[32px] font-extrabold leading-tight">۱٬۵۰۰٬۰۰۰ <span class="text-base font-semibold text-[#5A6E99]">تومان</span></p>
+          </div>
+          <span id="pay-chip" class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold"></span>
+        </div>
+        <div class="flex items-center gap-2 mt-3 text-[#4A5E8A]"><i data-lucide="calendar-clock" class="w-5 h-5"></i><span>مهلت: ۳۰ مهر ۱۴۰۵، ساعت ۲۳:۵۹</span></div>
+        <div id="steps-pay" class="steps flex items-start mt-6"></div>
+      </div>
+
+      <div id="pay-transfer" class="rounded-[26px] bg-white border border-line p-5">
+        <p class="font-extrabold">پرداخت کارت‌به‌کارت</p>
+        <div class="mt-3 rounded-[22px] p-5 text-white relative overflow-hidden" style="background:linear-gradient(135deg,#0A4BD6,#0B1F4D)">
+          <div class="dots absolute inset-0 opacity-40"></div>
+          <div class="relative flex items-center justify-between"><i data-lucide="landmark" class="w-6 h-6 text-sun"></i><span class="text-sm text-white/75">کانون نخبه‌پروری</span></div>
+          <p id="card-num" class="relative text-[24px] font-extrabold tracking-[.12em] mt-6" dir="ltr">۶۰۳۷ ۹۹۷۰ ۰۰۰۰ ۰۰۰۰</p>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-4">
+          <button id="btn-copy" class="btn btn-soft"><i data-lucide="copy" class="w-5 h-5"></i> کپی شماره</button>
+          <button class="btn btn-royal open-receipt" id="pay-upload-btn"><i data-lucide="upload" class="w-5 h-5"></i> بارگذاری رسید</button>
+        </div>
+      </div>
+
+      <div id="pay-note" class="is-hidden rounded-[22px] p-4 flex items-start gap-3"></div>
+    </div>
+
+    <!-- قفل -->
+    <div id="tab-locked" class="tab is-hidden pt-24">
+      <div class="-mt-6 rounded-[28px] bg-white border border-line p-8 text-center shadow-[0_14px_36px_-20px_rgba(10,75,214,.5)]">
+        <div class="w-20 h-20 mx-auto rounded-[26px] bg-[#FDECEC] text-late flex items-center justify-center"><i data-lucide="lock" class="w-10 h-10"></i></div>
+        <p class="text-[22px] font-extrabold mt-4">این بخش فعلاً قفل است</p>
+        <p class="text-[#5A6E99] mt-1">با پرداخت حق عضویت و تأیید مدیر، همه بخش‌ها باز می‌شود.</p>
+        <button data-go="pay" class="go btn btn-sun w-full mt-6"><i data-lucide="wallet" class="w-5 h-5"></i> رفتن به پرداخت</button>
+      </div>
+    </div>
+
+    <!-- بخش‌های مرحله بعد -->
+    <div id="tab-soon" class="tab is-hidden pt-24">
+      <div class="-mt-6 rounded-[28px] bg-white border border-line p-8 text-center">
+        <div class="w-20 h-20 mx-auto rounded-[26px] bg-mist text-royal flex items-center justify-center"><i data-lucide="hammer" class="w-10 h-10"></i></div>
+        <p id="soon-title" class="text-[22px] font-extrabold mt-4"></p>
+        <p class="text-[#5A6E99] mt-1">این بخش در مرحله بعد طراحی می‌شود.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- حالت نمونه -->
+  <div class="fixed top-3 left-3 z-30 bg-white/95 backdrop-blur rounded-2xl border border-line shadow-lg p-1 flex text-xs font-bold" role="group" aria-label="حالت نمونه">
+    <button id="demo-normal" class="px-3 py-1.5 rounded-xl">پنل عادی</button>
+    <button id="demo-lock" class="px-3 py-1.5 rounded-xl">پنل قفل</button>
+  </div>
+
+  <!-- منوی پایین -->
+  <nav class="dock fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="منوی اصلی">
+    <div class="max-w-3xl mx-auto grid grid-cols-5">
+      <button data-go="home" class="go dock-item" aria-current="page"><i data-lucide="house"></i>خانه</button>
+      <button data-go="homework" class="go dock-item"><i data-lucide="notebook-pen"></i>تکالیف</button>
+      <button data-go="notices" class="go dock-item"><i data-lucide="megaphone"></i>اطلاعیه</button>
+      <button data-go="pay" class="go dock-item"><i data-lucide="wallet"></i>پرداخت</button>
+      <button data-go="me" class="go dock-item"><i data-lucide="circle-user-round"></i>من</button>
+    </div>
+  </nav>
+</section>
+
+<!-- ============ مودال رسید ============ -->
+<div id="modal-receipt" class="is-hidden fixed inset-0 z-[60] bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="بارگذاری رسید">
+  <div class="sheet-enter w-full sm:max-w-md bg-white rounded-t-[28px] sm:rounded-[28px] p-6 pb-8">
+    <div class="w-12 h-1.5 rounded-full bg-line mx-auto mb-4 sm:hidden"></div>
+    <div class="flex items-center justify-between">
+      <h3 class="text-[22px] font-extrabold">بارگذاری رسید</h3>
+      <button id="close-receipt" class="w-10 h-10 rounded-xl bg-mist flex items-center justify-center" aria-label="بستن"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <p class="text-[#5A6E99] text-sm mt-1">عکس رسید کارت‌به‌کارت را بفرست تا مدیر بررسی کند.</p>
+
+    <label id="dropzone" class="mt-4 block rounded-[22px] border-2 border-dashed border-sky/60 bg-mist p-5 text-center cursor-pointer hover:bg-[#EAF2FF] transition">
+      <div id="dz-empty">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-white flex items-center justify-center text-royal shadow"><i data-lucide="image-up" class="w-7 h-7"></i></div>
+        <p class="font-bold mt-3">عکس رسید را انتخاب کن</p>
+        <p class="text-sm text-[#5A6E99]">فرمت JPG یا PNG</p>
+      </div>
+      <div id="dz-filled" class="is-hidden">
+        <img id="dz-img" alt="پیش‌نمایش رسید" class="mx-auto max-h-40 rounded-xl object-contain">
+        <p id="dz-name" class="text-sm font-semibold mt-2 truncate"></p>
+        <p class="text-sm text-royal font-semibold">برای تغییر، دوباره بزن</p>
+      </div>
+      <input id="receipt-file" type="file" accept="image/*" class="sr-only">
+    </label>
+
+    <div class="grid grid-cols-2 gap-3 mt-4 text-sm">
+      <div class="rounded-2xl bg-mist p-3"><p class="text-[#5A6E99]">مبلغ</p><p class="font-extrabold">۱٬۵۰۰٬۰۰۰ تومان</p></div>
+      <div class="rounded-2xl bg-mist p-3"><p class="text-[#5A6E99]">تاریخ ارسال</p><p class="font-extrabold">۴ آبان ۱۴۰۵</p></div>
+    </div>
+    <button id="send-receipt" class="btn btn-royal w-full mt-5 text-[17px]" disabled><i data-lucide="send" class="w-5 h-5"></i> ارسال رسید</button>
+  </div>
+</div>
+
+<!-- پیام کوتاه -->
+<div id="toast" class="is-hidden fixed top-5 left-1/2 -translate-x-1/2 z-[70] bg-ink text-white rounded-2xl px-5 py-3 shadow-2xl font-semibold flex items-center gap-2"><i data-lucide="circle-check" class="w-5 h-5 text-sun"></i><span id="toast-text"></span></div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => document.querySelectorAll(s);
+const icons = () => lucide.createIcons();
+const faNum = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+
+const notices = [
+  { icon:'calendar-clock', tag:'مهم', tagClass:'bg-sun/30 text-[#7A5600]', grad:'linear-gradient(135deg,#1E90FF,#0A4BD6)', title:'تغییر ساعت کلاس ریاضی', date:'۴ آبان ۱۴۰۵، ساعت ۱۶:۰۰', place:'کلاس ۳', body:'کلاس ریاضی این هفته یک ساعت زودتر شروع می‌شود. لطفاً ساعت ۱۶:۰۰ در کانون حاضر باش و دفتر تمرین را همراه بیاور.' },
+  { icon:'trophy', tag:'آزمون', tagClass:'bg-[#E3F0FF] text-royal', grad:'linear-gradient(135deg,#FFC531,#FF9F1C)', title:'آزمون جامع پنجشنبه', date:'۷ آبان ۱۴۰۵، ساعت ۱۰:۰۰', place:'سالن آزمون', body:'آزمون جامع همه پایه‌ها پنجشنبه برگزار می‌شود. کارت ورود به جلسه را همراه داشته باش و ۱۵ دقیقه زودتر بیا.' },
+  { icon:'book-open-check', tag:'جزوه', tagClass:'bg-[#E6F7EE] text-ok', grad:'linear-gradient(135deg,#12A150,#0B7A3B)', title:'جزوه‌های جدید بارگذاری شد', date:'۳ آبان ۱۴۰۵، ساعت ۱۰:۱۵', place:'بخش جزوه‌ها', body:'جزوه‌های فصل سوم علوم و فارسی اضافه شد. می‌توانی بعد از ورود به پنل آن‌ها را دانلود کنی.' }
+];
+const names = { 'دانش‌آموز':'علی رضایی', 'معلم':'خانم احمدی', 'والدین':'آقای رضایی', 'مدیر':'مدیر کانون' };
+let ni = 0, locked = false, payStatus = 'paid';
+
+function show(id) { ['login','notice','app'].forEach(x => $('#screen-'+x).classList.toggle('is-hidden', x !== id)); window.scrollTo(0,0); }
+
+/* اطلاعیه تمام‌صفحه */
+function renderNotice() {
+  const n = notices[ni];
+  $('#segs').innerHTML = notices.map((_, i) => `<div class="seg ${i < ni ? 'done' : ''}"><span style="${i === ni ? 'width:100%' : ''}"></span></div>`).join('');
+  $('#notice-counter').textContent = `${faNum(ni+1)} از ${faNum(notices.length)}`;
+  const ic = $('#notice-icon'); ic.style.background = n.grad; ic.innerHTML = `<i data-lucide="${n.icon}" class="w-8 h-8"></i>`;
+  const tg = $('#notice-tag'); tg.textContent = n.tag; tg.className = 'text-sm font-bold rounded-full px-3 py-1 ' + n.tagClass;
+  $('#notice-title').textContent = n.title; $('#notice-date').textContent = n.date;
+  $('#notice-place').textContent = n.place; $('#notice-body').textContent = n.body;
+  $('#btn-seen').innerHTML = `<i data-lucide="check-check" class="w-6 h-6"></i> ${ni === notices.length-1 ? 'دیدم و ورود به پنل' : 'دیدم'}`;
+  const c = $('#notice-card'); c.classList.remove('slide-in'); void c.offsetWidth; c.classList.add('slide-in');
+  icons();
+}
+function renderNoticeList() {
+  $('#notice-list').innerHTML = notices.map(n => `
+    <div class="flex items-center gap-4 bg-white rounded-[22px] border border-line p-4">
+      <div class="w-14 h-14 rounded-2xl text-white flex items-center justify-center shrink-0" style="background:${n.grad}"><i data-lucide="${n.icon}" class="w-7 h-7"></i></div>
+      <div class="flex-1 min-w-0"><p class="font-extrabold truncate">${n.title}</p><p class="text-sm text-[#5A6E99]">${n.date}</p></div>
+      <span class="inline-flex items-center gap-1 text-xs font-bold text-ok bg-[#E6F7EE] rounded-full px-2.5 py-1"><i data-lucide="check" class="w-3.5 h-3.5"></i> دیده شد</span>
+    </div>`).join('');
+}
+
+/* مراحل پرداخت */
+function renderSteps() {
+  const defs = [['wallet','پرداخت'],['upload','بارگذاری رسید'],['shield-check','تأیید مدیر']];
+  const st = payStatus === 'paid' ? ['done','done','done'] : payStatus === 'pending' ? ['done','done','cur'] : ['cur','todo','todo'];
+  let html = '';
+  defs.forEach((d, i) => {
+    html += `<div class="flex flex-col items-center text-center w-20"><div class="step-dot ${st[i]}"><i data-lucide="${st[i]==='done' ? 'check' : d[0]}" class="w-5 h-5"></i></div><p class="text-xs font-semibold mt-2 ${st[i]==='todo' ? 'text-[#9DB0D6]' : ''}">${d[1]}</p></div>`;
+    if (i < 2) html += `<div class="step-line ${st[i]==='done' && st[i+1]!=='todo' ? 'done' : ''}"></div>`;
+  });
+  $$('.steps').forEach(el => el.innerHTML = html);
+}
+
+/* اعمال وضعیت */
+function applyState() {
+  $('#lock-banner').classList.toggle('is-hidden', !locked);
+  $('#birthday').classList.toggle('is-hidden', locked);
+  $$('.lock-badge').forEach(b => b.classList.toggle('is-hidden', !locked));
+  $('#demo-normal').className = 'px-3 py-1.5 rounded-xl ' + (!locked ? 'bg-royal text-white' : 'text-[#5A6E99]');
+  $('#demo-lock').className = 'px-3 py-1.5 rounded-xl ' + (locked ? 'bg-royal text-white' : 'text-[#5A6E99]');
+
+  const chip = $('#pay-chip');
+  const map = {
+    paid:    ['bg-[#E6F7EE] text-ok', 'circle-check', 'پرداخت شده', 'پرداخت شده'],
+    pending: ['bg-sun/30 text-[#7A5600]', 'hourglass', 'در انتظار تأیید', 'در انتظار تأیید'],
+    unpaid:  ['bg-[#FDECEC] text-late', 'circle-alert', 'پرداخت نشده', 'مهلت گذشته']
+  }[payStatus];
+  chip.className = 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ' + map[0];
+  chip.innerHTML = `<i data-lucide="${map[1]}" class="w-4 h-4"></i> ${map[2]}`;
+  $('#home-pay-text').textContent = map[3];
+
+  const lb = $('#lock-banner'), pending = payStatus === 'pending';
+  lb.style.borderColor = pending ? '#F3DFA2' : '#F6C9CB';
+  $('#lock-ico').className = 'w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ' + (pending ? 'bg-sun/30 text-[#7A5600]' : 'bg-[#FDECEC] text-late');
+  $('#lock-ico').innerHTML = `<i data-lucide="${pending ? 'hourglass' : 'lock'}" class="w-6 h-6"></i>`;
+  $('#lock-title').textContent = pending ? 'رسید شما در حال بررسی است' : 'پنل شما قفل است';
+  $('#lock-text').textContent = pending ? 'بعد از تأیید مدیر، همه بخش‌ها باز می‌شود.' : 'مهلت پرداخت حق عضویت گذشته است.';
+  $('#lock-btn').classList.toggle('is-hidden', pending);
+
+  $('#pay-transfer').classList.toggle('is-hidden', payStatus !== 'unpaid');
+  const note = $('#pay-note');
+  note.classList.toggle('is-hidden', payStatus === 'unpaid');
+  note.className = 'rounded-[22px] p-4 flex items-start gap-3 ' + (payStatus === 'unpaid' ? 'is-hidden' : '') + (pending ? ' bg-[#FFF6DA] text-[#7A5600]' : ' bg-[#E6F7EE] text-ok');
+  note.innerHTML = pending
+    ? `<i data-lucide="hourglass" class="w-6 h-6 shrink-0"></i><div><p class="font-extrabold">رسید ارسال شد</p><p class="text-sm">مدیر کانون به‌زودی آن را بررسی می‌کند. اگر رد شود، علت را همین‌جا می‌بینی.</p></div>`
+    : `<i data-lucide="circle-check" class="w-6 h-6 shrink-0"></i><div><p class="font-extrabold">حق عضویت این دوره پرداخت شده است</p><p class="text-sm">همه بخش‌ها برایت باز است.</p></div>`;
+  renderSteps(); icons();
+}
+
+/* ناوبری */
+function go(tab) {
+  let target = tab;
+  const soon = { homework:'تکالیف', me:'من' };
+  if (soon[tab]) {
+    if (locked) target = 'locked';
+    else { target = 'soon'; $('#soon-title').textContent = soon[tab]; }
+  }
+  $$('.tab').forEach(t => t.classList.add('is-hidden'));
+  $('#tab-' + target).classList.remove('is-hidden');
+  $$('.dock-item').forEach(b => b.dataset.go === tab ? b.setAttribute('aria-current','page') : b.removeAttribute('aria-current'));
+  window.scrollTo(0, 0);
+}
+function setMode(isLocked) { locked = isLocked; payStatus = isLocked ? 'unpaid' : 'paid'; applyState(); go('home'); }
+
+function toast(msg) {
+  $('#toast-text').textContent = msg; $('#toast').classList.remove('is-hidden');
+  clearTimeout(window._t); window._t = setTimeout(() => $('#toast').classList.add('is-hidden'), 2200);
+}
+function makeConfetti() {
+  const colors = ['#0A4BD6','#fff','#1E90FF','#0B1F4D','#FF7A59'];
+  $('#confetti').innerHTML = Array.from({length: 16}, (_, i) =>
+    `<i style="left:${(i*6.4+3)%100}%;background:${colors[i%5]};animation-delay:${(i%7)*0.18}s;transform:rotate(${i*23}deg)"></i>`).join('');
+}
+
+/* رویدادها */
+$$('.role').forEach(b => b.onclick = () => {
+  $$('.role').forEach(x => x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true');
+  $('#role-label').textContent = b.dataset.role; $('#user-name').textContent = names[b.dataset.role];
+});
+$('#toggle-pass').onclick = () => {
+  const p = $('#pass'), show = p.type === 'password'; p.type = show ? 'text' : 'password';
+  $('#toggle-pass').innerHTML = `<i data-lucide="${show ? 'eye-off' : 'eye'}" class="w-5 h-5"></i>`; icons();
+};
+$('#form-login').onsubmit = e => { e.preventDefault(); ni = 0; renderNotice(); show('notice'); };
+$('#btn-seen').onclick = () => {
+  if (ni < notices.length - 1) { ni++; renderNotice(); }
+  else { show('app'); setMode(false); makeConfetti(); }
+};
+$('#btn-logout').onclick = () => show('login');
+$$('.go').forEach(b => b.onclick = () => go(b.dataset.go));
+$('#demo-normal').onclick = () => { setMode(false); makeConfetti(); };
+$('#demo-lock').onclick = () => setMode(true);
+
+$$('.open-receipt').forEach(b => b.onclick = () => $('#modal-receipt').classList.remove('is-hidden'));
+const closeModal = () => $('#modal-receipt').classList.add('is-hidden');
+$('#close-receipt').onclick = closeModal;
+$('#modal-receipt').onclick = e => { if (e.target.id === 'modal-receipt') closeModal(); };
+$('#receipt-file').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = ev => { $('#dz-img').src = ev.target.result; };
+  r.readAsDataURL(f);
+  $('#dz-name').textContent = f.name;
+  $('#dz-empty').classList.add('is-hidden'); $('#dz-filled').classList.remove('is-hidden');
+  $('#send-receipt').disabled = false;
+};
+$('#send-receipt').onclick = () => {
+  closeModal(); payStatus = 'pending'; applyState(); go('pay'); toast('رسید ارسال شد');
+  $('#dz-empty').classList.remove('is-hidden'); $('#dz-filled').classList.add('is-hidden');
+  $('#receipt-file').value = ''; $('#send-receipt').disabled = true;
+};
+$('#btn-copy').onclick = () => { try { navigator.clipboard.writeText('6037997000000000'); } catch(e) {} toast('شماره کارت کپی شد'); };
+
+renderNoticeList(); icons();
+</script>
+</body>
+</html>

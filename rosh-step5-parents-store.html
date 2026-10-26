@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A4BD6">
+<title>پلتفرم رشد | والدین و فروشگاه</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Vazirmatn', 'sans-serif'] },
+  colors: { royal: '#0A4BD6', ink: '#0B1F4D', sky: '#1E90FF', sun: '#FFC531', mist: '#F5F8FF', line: '#DCE6FA', ok: '#12A150', late: '#E5484D' }
+} } }
+</script>
+<style>
+  :root { --royal:#0A4BD6; --ink:#0B1F4D; --sky:#1E90FF; --sun:#FFC531; --mist:#F5F8FF; --line:#DCE6FA; --ok:#12A150; --late:#E5484D; }
+  html { -webkit-tap-highlight-color:transparent; scroll-behavior:smooth; }
+  body { font-family:'Vazirmatn',sans-serif; font-size:16px; line-height:1.8; background:var(--mist); color:var(--ink); }
+  .is-hidden { display:none !important; }
+  :focus-visible { outline:3px solid var(--sky); outline-offset:2px; border-radius:12px; }
+  .muted { color:#5A6E99; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:24px; box-shadow:0 14px 36px -24px rgba(10,75,214,.55); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-height:48px; padding:0 1.25rem; border-radius:16px; font-weight:800; transition:transform .12s, box-shadow .2s; }
+  .btn:active { transform:scale(.97); }
+  .btn-royal { background:linear-gradient(180deg,#1457E6,#0A4BD6); color:#fff; box-shadow:0 8px 20px -6px rgba(10,75,214,.55), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn-sun { background:linear-gradient(180deg,#FFD25A,#FFC531); color:var(--ink); box-shadow:0 10px 24px -8px rgba(255,197,49,.8), inset 0 1px 0 rgba(255,255,255,.5); }
+  .btn-soft { background:#E8F0FF; color:var(--royal); }
+  .btn-sm { min-height:40px; padding:0 1rem; border-radius:12px; font-size:14px; }
+  .btn[disabled] { opacity:.45; pointer-events:none; box-shadow:none; }
+  .input { width:100%; min-height:52px; padding:0 16px; border-radius:16px; border:1.5px solid var(--line); background:#fff; transition:border-color .2s, box-shadow .2s; }
+  .input:focus { outline:none; border-color:var(--royal); box-shadow:0 0 0 4px rgba(10,75,214,.12); }
+  .brand-bg { background:radial-gradient(900px 500px at 100% 0%, rgba(30,144,255,.55), transparent 60%), radial-gradient(600px 400px at 0% 100%, rgba(255,197,49,.18), transparent 60%), linear-gradient(160deg,#0A4BD6 0%, #0838A3 60%, #0B1F4D 100%); }
+  .dots { background-image:radial-gradient(rgba(255,255,255,.14) 1.3px, transparent 1.3px); background-size:22px 22px; }
+  .chip { min-height:40px; padding:0 16px; border-radius:99px; border:1.5px solid var(--line); background:#fff; font-weight:700; font-size:14px; white-space:nowrap; color:#5A6E99; }
+  .chip[aria-pressed="true"], .chip.on { background:var(--royal); border-color:var(--royal); color:#fff; }
+  .tag { display:inline-flex; align-items:center; gap:.3rem; border-radius:99px; padding:2px 12px; font-size:13px; font-weight:700; white-space:nowrap; }
+  .bar { height:10px; border-radius:99px; background:#E3ECFF; overflow:hidden; }
+  .bar > span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#1E90FF,#0A4BD6); }
+  .sec { scroll-margin-top:72px; }
+  .nav-link { font-weight:700; color:#5A6E99; padding:8px 14px; border-radius:12px; }
+  .nav-link[aria-current="page"] { color:var(--royal); background:#E8F0FF; }
+  .cover { position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; color:#fff; }
+  .cover::after { content:""; position:absolute; inset:0; background-image:radial-gradient(rgba(255,255,255,.18) 1.3px, transparent 1.3px); background-size:20px 20px; }
+  .cover > * { position:relative; z-index:1; }
+  .pcard { transition:transform .2s, box-shadow .2s; }
+  .pcard:hover { transform:translateY(-4px); box-shadow:0 22px 44px -22px rgba(10,75,214,.6); }
+  @keyframes rise { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:none } }
+  .rise { animation:rise .35s cubic-bezier(.2,.8,.2,1) both; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+</style>
+</head>
+<body>
+
+<!-- جابه‌جایی نمونه -->
+<div class="fixed bottom-4 left-4 z-50 bg-white/95 backdrop-blur rounded-2xl border border-line shadow-xl p-1 flex text-sm font-bold" role="group" aria-label="نمایش نمونه">
+  <button id="m-parent" class="px-4 py-2 rounded-xl flex items-center gap-1.5"><i data-lucide="users" class="w-4 h-4"></i> پنل والدین</button>
+  <button id="m-store" class="px-4 py-2 rounded-xl flex items-center gap-1.5"><i data-lucide="store" class="w-4 h-4"></i> فروشگاه</button>
+</div>
+
+<!-- ====================== پنل والدین ====================== -->
+<div id="app-parent">
+  <header class="brand-bg relative text-white">
+    <div class="dots absolute inset-0 opacity-50"></div>
+    <div class="relative max-w-3xl mx-auto px-4 pt-4 pb-24">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center shrink-0"><i data-lucide="graduation-cap" class="w-6 h-6 text-sun"></i></div>
+        <div class="flex-1 min-w-0 leading-tight"><p class="font-extrabold truncate">کانون نخبه‌پروری شهید کاظم آشتیانی</p><p class="text-white/70 text-sm">پلتفرم رشد، پنل والدین</p></div>
+        <div class="w-11 h-11 rounded-2xl bg-sun text-ink flex items-center justify-center font-extrabold">پ</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 -mt-[84px] relative pb-24 space-y-4">
+    <div class="px-1 text-white">
+      <p class="text-white/80 text-sm">دوشنبه ۴ آبان ۱۴۰۵</p>
+      <h2 class="text-[26px] font-extrabold leading-snug">سلام، خانواده رضایی</h2>
+      <div id="kids" class="flex gap-2 mt-3"></div>
+    </div>
+
+    <div id="kpis" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+
+    <nav class="sticky top-0 z-20 -mx-4 px-4 py-2 bg-mist/90 backdrop-blur flex gap-2 overflow-x-auto" aria-label="بخش‌ها">
+      <a href="#s-abs" class="chip flex items-center">غیبت‌ها</a><a href="#s-card" class="chip flex items-center">کارنامه</a><a href="#s-hw" class="chip flex items-center">تکالیف</a><a href="#s-ann" class="chip flex items-center">اطلاعیه‌ها</a><a href="#s-prog" class="chip flex items-center">پیشرفت</a>
+    </nav>
+
+    <section id="s-abs" class="sec card p-5"><h3 class="font-extrabold text-[18px] flex items-center gap-2"><i data-lucide="user-x" class="w-5 h-5 text-late"></i> غیبت‌ها</h3><div id="abs-list" class="mt-4 space-y-3"></div></section>
+
+    <section id="s-card" class="sec card p-5">
+      <div class="flex items-start justify-between gap-3"><h3 class="font-extrabold text-[18px] flex items-center gap-2"><i data-lucide="file-badge" class="w-5 h-5 text-royal"></i> کارنامه دیجیتال</h3><button class="btn btn-soft btn-sm" id="dl-card"><i data-lucide="download" class="w-4 h-4"></i> دانلود</button></div>
+      <p class="text-sm muted">آزمون ماهانه آبان ۱۴۰۵</p>
+      <div id="card-rows" class="mt-4 space-y-4"></div>
+      <div class="mt-5 rounded-2xl bg-mist p-4 flex items-center justify-between"><div><p class="text-sm muted">میانگین کل</p><p id="card-avg" class="text-[26px] font-extrabold text-royal leading-tight"></p></div><div class="text-center"><p class="text-sm muted">رتبه در پایه</p><p id="card-rank" class="text-[20px] font-extrabold"></p></div></div>
+    </section>
+
+    <section id="s-hw" class="sec card p-5">
+      <div class="flex items-center gap-4"><div id="hw-ring" class="w-[72px] h-[72px] rounded-full shrink-0 flex items-center justify-center"><div class="w-[56px] h-[56px] rounded-full bg-white flex items-center justify-center font-extrabold" id="hw-pct"></div></div><div><h3 class="font-extrabold text-[18px]">وضعیت تکالیف</h3><p id="hw-sum" class="text-sm muted"></p></div></div>
+      <div id="hw-list" class="mt-4 space-y-3"></div>
+    </section>
+
+    <section id="s-ann" class="sec card p-5"><h3 class="font-extrabold text-[18px] flex items-center gap-2"><i data-lucide="megaphone" class="w-5 h-5 text-royal"></i> اطلاعیه‌ها</h3>
+      <div class="mt-4 space-y-3">
+        <div class="flex items-start gap-3"><div class="w-11 h-11 rounded-2xl text-white flex items-center justify-center shrink-0" style="background:linear-gradient(135deg,#1E90FF,#0A4BD6)"><i data-lucide="calendar-clock" class="w-5 h-5"></i></div><div><p class="font-bold">تغییر ساعت کلاس ریاضی</p><p class="text-sm muted">امروز ۰۹:۰۰</p></div></div>
+        <div class="flex items-start gap-3"><div class="w-11 h-11 rounded-2xl text-ink bg-sun flex items-center justify-center shrink-0"><i data-lucide="trophy" class="w-5 h-5"></i></div><div><p class="font-bold">آزمون جامع پنجشنبه ۷ آبان</p><p class="text-sm muted">دیروز ۱۸:۳۰</p></div></div>
+        <div class="flex items-start gap-3"><div class="w-11 h-11 rounded-2xl bg-[#E6F7EE] text-ok flex items-center justify-center shrink-0"><i data-lucide="book-open-check" class="w-5 h-5"></i></div><div><p class="font-bold">جزوه‌های جدید بارگذاری شد</p><p class="text-sm muted">۳ آبان</p></div></div>
+      </div></section>
+
+    <section id="s-prog" class="sec card p-5">
+      <h3 class="font-extrabold text-[18px] flex items-center gap-2"><i data-lucide="trending-up" class="w-5 h-5 text-ok"></i> گزارش پیشرفت دوره‌ای</h3>
+      <div id="prog-chart" class="flex items-end gap-4 h-40 mt-5 px-2"></div>
+      <div class="mt-5 rounded-2xl bg-[#EEF4FF] p-4 flex gap-3"><i data-lucide="message-square-quote" class="w-6 h-6 text-royal shrink-0"></i><div><p class="font-bold text-sm">نظر معلم</p><p id="prog-note" class="text-[15px]"></p></div></div>
+    </section>
+  </main>
+</div>
+
+<!-- ====================== فروشگاه ====================== -->
+<div id="app-store" class="is-hidden bg-white min-h-screen">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-line">
+    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center gap-3">
+      <button data-v="home" class="flex items-center gap-3 shrink-0"><div class="w-11 h-11 rounded-2xl brand-bg flex items-center justify-center"><i data-lucide="graduation-cap" class="w-6 h-6 text-sun"></i></div><div class="leading-tight text-start hidden sm:block"><p class="font-extrabold">کانون نخبه‌پروری</p><p class="text-xs muted">شهید کاظم آشتیانی</p></div></button>
+      <nav class="flex-1 flex gap-1 justify-center sm:justify-start sm:mr-6" aria-label="منوی فروشگاه">
+        <button data-v="home" class="nav-link">خانه</button><button data-v="catalog" data-f="course" class="nav-link">دوره‌ها</button><button data-v="catalog" data-f="booklet" class="nav-link">جزوه‌ها</button>
+      </nav>
+      <button data-v="cart" class="relative w-12 h-12 rounded-2xl bg-[#E8F0FF] text-royal flex items-center justify-center" aria-label="سبد خرید"><i data-lucide="shopping-cart" class="w-6 h-6"></i><span id="cart-badge" class="is-hidden absolute -top-1 -left-1 min-w-[22px] h-[22px] px-1 rounded-full bg-sun text-ink text-xs font-extrabold flex items-center justify-center"></span></button>
+    </div>
+  </header>
+
+  <main id="store-main" class="max-w-6xl mx-auto px-4 py-8"></main>
+
+  <footer class="mt-12 brand-bg relative text-white">
+    <div class="dots absolute inset-0 opacity-40"></div>
+    <div class="relative max-w-6xl mx-auto px-4 py-10 grid sm:grid-cols-3 gap-6 text-sm">
+      <div><p class="font-extrabold text-[18px]">کانون نخبه‌پروری شهید کاظم آشتیانی</p><p class="text-white/75 mt-1">دوره‌های آموزشی و جزوه‌های رسمی کانون</p></div>
+      <div class="space-y-1 text-white/85"><p class="flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-sun"></i> نشانی کانون</p><p class="flex items-center gap-2"><i data-lucide="phone" class="w-4 h-4 text-sun"></i> تلفن پشتیبانی</p></div>
+      <p class="text-white/60 sm:text-left">نمونه طراحی، پرداخت واقعی متصل نیست.</p>
+    </div>
+  </footer>
+</div>
+
+<!-- پرداخت موفق -->
+<div id="modal-pay" class="is-hidden fixed inset-0 z-[70] bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-white rounded-[28px] p-8 max-w-sm w-full text-center rise">
+    <div class="w-20 h-20 mx-auto rounded-[26px] bg-[#E6F7EE] text-ok flex items-center justify-center"><i data-lucide="party-popper" class="w-10 h-10"></i></div>
+    <h3 class="text-[24px] font-extrabold mt-4">پرداخت نمونه انجام شد</h3>
+    <p class="muted mt-1">در نسخه نهایی، اینجا به درگاه پرداخت وصل می‌شود.</p>
+    <button id="pay-close" class="btn btn-royal w-full mt-6">بازگشت به فروشگاه</button>
+  </div>
+</div>
+
+<div id="toast" class="is-hidden fixed top-5 left-1/2 -translate-x-1/2 z-[80] bg-ink text-white rounded-2xl px-5 py-3 shadow-2xl font-semibold flex items-center gap-2"><i data-lucide="circle-check" class="w-5 h-5 text-sun"></i><span id="toast-text"></span></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const icons=()=>lucide.createIcons();
+const faNum=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+const enNum=s=>String(s).replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+const money=n=>faNum(Math.round(n).toLocaleString('en-US')).replace(/,/g,'٬');
+const dec=n=>faNum(String(n).replace('.','٫'));
+function toast(m){ $('#toast-text').textContent=m; $('#toast').classList.remove('is-hidden'); clearTimeout(window._t); window._t=setTimeout(()=>$('#toast').classList.add('is-hidden'),2300); }
+
+/* جابه‌جایی حالت */
+function setMode(m){
+  $('#app-parent').classList.toggle('is-hidden',m!=='parent'); $('#app-store').classList.toggle('is-hidden',m!=='store');
+  $('#m-parent').className='px-4 py-2 rounded-xl flex items-center gap-1.5 '+(m==='parent'?'bg-royal text-white':'text-[#5A6E99]');
+  $('#m-store').className='px-4 py-2 rounded-xl flex items-center gap-1.5 '+(m==='store'?'bg-royal text-white':'text-[#5A6E99]');
+  scrollTo(0,0);
+}
+$('#m-parent').onclick=()=>setMode('parent'); $('#m-store').onclick=()=>setMode('store');
+
+/* ================= والدین ================= */
+const kids={
+ ali:{n:'علی',full:'علی رضایی',cls:'هفتم الف',rank:4,
+  abs:[['۲ آبان ۱۴۰۵','بدون اطلاع','پیامک غیبت برای شما ارسال شد'],['۲۱ مهر ۱۴۰۵','با اطلاع','بیماری، با تأیید والدین']],
+  gr:[['ریاضی',18,15.2],['علوم',17.5,16.1],['فارسی',16,15.8],['انگلیسی',19,17.4],['مطالعات اجتماعی',17,16.3]],
+  hw:[['حل تمرین‌های فصل ۳ ریاضی','ارسال شد'],['انشا درباره طبیعت','ارسال شد'],['گزارش آزمایش جرم و حجم','دیر شد'],['تمرین هندسه، صفحه ۴۲','ارسال نشده']],
+  prog:[['آزمون ۱',15.2],['آزمون ۲',16.1],['آزمون ۳',16.9],['آزمون ۴',17.5]],
+  note:'علی در ریاضی پیشرفت خوبی داشته است. اگر مطالعه روزانه‌اش را حفظ کند و تکالیف را به‌موقع بفرستد، نتیجه بهتر هم می‌شود.'},
+ mar:{n:'مریم',full:'مریم رضایی',cls:'نهم ب',rank:2,
+  abs:[['۱۵ مهر ۱۴۰۵','با اطلاع','مسابقه ورزشی مدرسه']],
+  gr:[['ریاضی',19,16.4],['علوم',18.5,16.9],['فارسی',18,16.2],['انگلیسی',20,18.1],['مطالعات اجتماعی',17.5,16.8]],
+  hw:[['مرور فصل ۴ علوم','ارسال شد'],['خلاصه‌نویسی درس ۵','ارسال شد'],['تمرین معادله‌ها','ارسال شد']],
+  prog:[['آزمون ۱',17.4],['آزمون ۲',17.9],['آزمون ۳',18.2],['آزمون ۴',18.6]],
+  note:'مریم یکی از دانش‌آموزان فعال کلاس است. پیشنهاد می‌کنیم برای آزمون‌های المپیاد هم ثبت‌نام کند.'}
+};
+let kid='ali';
+function renderParent(){
+  const k=kids[kid];
+  $('#kids').innerHTML=Object.entries(kids).map(([id,o])=>`<button class="chip !bg-white/15 !border-white/30 !text-white ${id===kid?'!bg-white !text-royal':''}" data-k="${id}">${o.n}، ${o.cls}</button>`).join('');
+  $$('#kids .chip').forEach(b=>b.onclick=()=>{kid=b.dataset.k;renderParent();});
+  const avg=k.gr.reduce((s,g)=>s+g[1],0)/k.gr.length, openHw=k.hw.filter(h=>h[1]!=='ارسال شد').length, absN=k.abs.length;
+  $('#kpis').innerHTML=[['user-x',absN,'غیبت این ترم','bg-[#FDECEC] text-late'],['notebook-pen',openHw,'تکلیف باز','bg-sun/30 text-[#7A5600]'],['award',dec(avg.toFixed(1)).replace(/^/,''),'میانگین کل','bg-[#E6F7EE] text-ok'],['trophy',faNum(k.rank),'رتبه در پایه','bg-[#E8F0FF] text-royal']]
+    .map(c=>`<div class="card p-4 rise"><div class="w-10 h-10 rounded-xl ${c[3]} flex items-center justify-center"><i data-lucide="${c[0]}" class="w-5 h-5"></i></div><p class="text-[26px] font-extrabold leading-tight mt-2">${typeof c[1]==='number'?faNum(c[1]):c[1]}</p><p class="text-sm muted">${c[2]}</p></div>`).join('');
+  $('#abs-list').innerHTML=k.abs.map(a=>`<div class="flex items-center gap-3 rounded-2xl bg-mist p-3"><div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${a[1]==='بدون اطلاع'?'bg-[#FDECEC] text-late':'bg-sun/30 text-[#7A5600]'}"><i data-lucide="${a[1]==='بدون اطلاع'?'user-x':'file-check'}" class="w-5 h-5"></i></div><div class="flex-1"><p class="font-bold">${a[0]}</p><p class="text-sm muted">${a[2]}</p></div><span class="tag ${a[1]==='بدون اطلاع'?'bg-[#FDECEC] text-late':'bg-sun/30 text-[#7A5600]'}">${a[1]}</span></div>`).join('');
+  $('#card-rows').innerHTML=k.gr.map(g=>`<div><div class="flex justify-between"><span class="font-bold">${g[0]}</span><span class="font-extrabold">${dec(g[1])} <span class="text-xs muted font-normal">میانگین کلاس ${dec(g[2])}</span></span></div><div class="bar mt-1.5 relative"><span style="width:${g[1]/20*100}%"></span></div></div>`).join('');
+  $('#card-avg').textContent=dec(avg.toFixed(2)); $('#card-rank').innerHTML=`${faNum(k.rank)} <span class="text-sm muted font-semibold">از ۳۸</span>`;
+  const done=k.hw.filter(h=>h[1]==='ارسال شد').length, p=Math.round(done/k.hw.length*100);
+  $('#hw-ring').style.background=`conic-gradient(#12A150 ${p}%,#E3ECFF 0)`; $('#hw-pct').textContent=faNum(p)+'٪'; $('#hw-sum').textContent=`${faNum(done)} از ${faNum(k.hw.length)} تکلیف ارسال شده`;
+  const st={'ارسال شد':'bg-[#E6F7EE] text-ok','دیر شد':'bg-[#FDECEC] text-late','ارسال نشده':'bg-sun/30 text-[#7A5600]'};
+  $('#hw-list').innerHTML=k.hw.map(h=>`<div class="flex items-center gap-3 rounded-2xl bg-mist p-3"><p class="flex-1 font-semibold">${h[0]}</p><span class="tag ${st[h[1]]}">${h[1]}</span></div>`).join('');
+  $('#prog-chart').innerHTML=k.prog.map((p,i)=>`<div class="flex-1 flex flex-col items-center justify-end h-full"><p class="text-sm font-extrabold ${i===k.prog.length-1?'text-royal':''}">${dec(p[1])}</p><div class="w-full max-w-[56px] rounded-t-2xl mt-1" style="height:${(p[1]-12)/8*100}%;background:${i===k.prog.length-1?'linear-gradient(180deg,#1E90FF,#0A4BD6)':'#C9D9FA'}"></div><p class="text-xs muted mt-1.5">${p[0]}</p></div>`).join('');
+  $('#prog-note').textContent=k.note;
+  icons();
+}
+$('#dl-card').onclick=()=>toast('کارنامه برای دانلود آماده شد');
+$$('nav a.chip').forEach(a=>a.onclick=e=>{ e.preventDefault(); document.querySelector(a.getAttribute('href')).scrollIntoView({behavior:'smooth'}); });
+renderParent();
+
+/* ================= فروشگاه ================= */
+const P=[
+ {id:1,k:'course',t:'دوره ریاضی هفتم، فصل‌به‌فصل',p:2800000,i:'sigma',g:'linear-gradient(135deg,#1E90FF,#0A4BD6)',d:'آموزش کامل ریاضی هفتم با حل تمرین در کلاس و رفع اشکال هفتگی.',inc:['۲۴ جلسه آموزشی','تمرین و آزمون هر فصل','رفع اشکال با معلم','جزوه فصل‌ها']},
+ {id:2,k:'course',t:'دوره علوم تجربی هشتم',p:2600000,i:'flask-conical',g:'linear-gradient(135deg,#12A150,#0B6B3A)',d:'علوم هشتم همراه با آزمایش‌های ساده و نمونه سؤال‌های آزمون.',inc:['۲۰ جلسه آموزشی','ویدئوی آزمایش‌ها','آزمون پایان فصل','پشتیبانی پیام‌رسان کانون']},
+ {id:3,k:'course',t:'دوره آمادگی آزمون‌های تیزهوشان',p:3900000,i:'brain',g:'linear-gradient(135deg,#FFB020,#F08A00)',d:'تقویت استدلال، هوش و ریاضی برای آزمون‌های ورودی مدارس خاص.',inc:['۳۰ جلسه آموزشی','۱۰ آزمون شبیه‌سازی','کارنامه و رتبه‌بندی','مسیر مطالعه شخصی']},
+ {id:4,k:'booklet',t:'جزوه ریاضی هفتم',p:120000,i:'file-text',g:'linear-gradient(135deg,#0A4BD6,#0B1F4D)',d:'خلاصه درس‌نامه‌ها و تمرین‌های منتخب ریاضی هفتم.',inc:['PDF قابل چاپ','۱۲۰ صفحه','پاسخ تشریحی']},
+ {id:5,k:'booklet',t:'جزوه علوم هشتم',p:135000,i:'book-open',g:'linear-gradient(135deg,#1E90FF,#0838A3)',d:'جزوه مفهومی علوم هشتم با نمودار و جدول‌های مرور.',inc:['PDF قابل چاپ','۱۰۰ صفحه','نمونه سؤال هر فصل']},
+ {id:6,k:'booklet',t:'بسته نمونه سؤال فارسی',p:90000,i:'languages',g:'linear-gradient(135deg,#E5484D,#A82025)',d:'مجموعه سؤال‌های املا، دستور و درک مطلب با پاسخ‌نامه.',inc:['PDF قابل چاپ','۸۰ سؤال','پاسخ‌نامه']}
+];
+let cart={}, view='home', filter='all', discount=0, codeUsed='';
+const cartCount=()=>Object.values(cart).reduce((s,q)=>s+q,0);
+const kindName=k=>k==='course'?'دوره':'جزوه';
+function pCard(p){ return `<button data-open="${p.id}" class="pcard card overflow-hidden text-start w-full"><div class="cover h-40" style="background:${p.g}"><i data-lucide="${p.i}" class="w-14 h-14"></i></div><div class="p-5"><span class="tag ${p.k==='course'?'bg-[#E3ECFF] text-royal':'bg-sun/30 text-[#7A5600]'}">${kindName(p.k)}</span><p class="font-extrabold text-[18px] mt-2 leading-snug">${p.t}</p><div class="flex items-center justify-between mt-4"><p class="font-extrabold text-royal">${money(p.p)} <span class="text-sm muted font-semibold">تومان</span></p><span class="w-10 h-10 rounded-xl bg-[#E8F0FF] text-royal flex items-center justify-center"><i data-lucide="arrow-left" class="w-5 h-5"></i></span></div></div></button>`; }
+
+function render(){
+  const m=$('#store-main'); let h='';
+  if(view==='home'){
+    h=`<section class="rise brand-bg relative overflow-hidden rounded-[32px] text-white p-8 sm:p-14"><div class="dots absolute inset-0 opacity-50"></div>
+      <div class="relative grid lg:grid-cols-2 gap-8 items-center"><div><h1 class="text-[34px] sm:text-[48px] font-extrabold leading-[1.35]">هر روز، یک پله بالاتر.</h1><p class="mt-3 text-white/85 text-[18px] max-w-md">دوره‌ها و جزوه‌های رسمی کانون را از همین‌جا بگیر و درس‌هایت را قدم‌به‌قدم جلو ببر.</p>
+      <div class="flex gap-3 mt-7 flex-wrap"><button data-v="catalog" data-f="course" class="btn btn-sun" style="min-height:54px"><i data-lucide="play-circle" class="w-5 h-5"></i> مشاهده دوره‌ها</button><button data-v="catalog" data-f="booklet" class="btn !bg-white/15 text-white border border-white/30" style="min-height:54px"><i data-lucide="file-text" class="w-5 h-5"></i> جزوه‌ها</button></div></div>
+      <svg class="hidden lg:block w-full max-w-sm justify-self-end" viewBox="0 0 420 250" fill="none" aria-hidden="true"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity=".15"/></linearGradient></defs><rect x="350" y="170" width="52" height="70" rx="14" fill="url(#g1)" opacity=".5"/><rect x="282" y="140" width="52" height="100" rx="14" fill="url(#g1)" opacity=".6"/><rect x="214" y="104" width="52" height="136" rx="14" fill="url(#g1)" opacity=".72"/><rect x="146" y="64" width="52" height="176" rx="14" fill="url(#g1)" opacity=".85"/><rect x="78" y="22" width="52" height="218" rx="14" fill="url(#g1)"/><path d="M104 -2l7 15 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z" transform="translate(0 4)" fill="#FFC531"/></svg></div></section>
+      <section class="mt-12"><div class="flex items-end justify-between mb-5"><h2 class="text-[26px] font-extrabold">دوره‌های پرطرفدار</h2><button data-v="catalog" data-f="all" class="text-royal font-bold">همه محصولات</button></div><div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">${P.slice(0,3).map(pCard).join('')}</div></section>
+      <section class="mt-12 grid sm:grid-cols-3 gap-4">${[['video','آموزش ویدئویی','هر جلسه را هر وقت خواستی ببین.'],['file-check-2','جزوه رسمی کانون','جزوه‌ها را خود معلم‌ها نوشته‌اند.'],['headset','پشتیبانی','سؤالت را از معلم بپرس.']].map(b=>`<div class="rounded-[24px] bg-mist p-6"><div class="w-12 h-12 rounded-2xl bg-white text-royal flex items-center justify-center shadow"><i data-lucide="${b[0]}" class="w-6 h-6"></i></div><p class="font-extrabold text-[18px] mt-3">${b[1]}</p><p class="muted">${b[2]}</p></div>`).join('')}</section>`;
+  }
+  if(view==='catalog'){
+    const l=P.filter(p=>filter==='all'||p.k===filter);
+    h=`<div class="rise"><h2 class="text-[28px] font-extrabold">${filter==='course'?'دوره‌ها':filter==='booklet'?'جزوه‌ها':'همه محصولات'}</h2>
+    <div class="flex gap-2 mt-4">${[['all','همه'],['course','دوره‌ها'],['booklet','جزوه‌ها']].map(f=>`<button class="chip ${filter===f[0]?'on':''}" data-f2="${f[0]}">${f[1]}</button>`).join('')}</div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">${l.map(pCard).join('')}</div></div>`;
+  }
+  if(view==='product'){
+    const p=P.find(x=>x.id===curP);
+    h=`<div class="rise"><button data-v="catalog" data-f="all" class="flex items-center gap-1.5 text-royal font-bold mb-4"><i data-lucide="arrow-right" class="w-5 h-5"></i> بازگشت به محصولات</button>
+    <div class="grid lg:grid-cols-2 gap-8"><div class="cover rounded-[28px] h-72 lg:h-[420px]" style="background:${p.g}"><i data-lucide="${p.i}" class="w-28 h-28"></i></div>
+    <div><span class="tag ${p.k==='course'?'bg-[#E3ECFF] text-royal':'bg-sun/30 text-[#7A5600]'}">${kindName(p.k)}</span><h1 class="text-[30px] font-extrabold leading-snug mt-2">${p.t}</h1><p class="muted text-[17px] mt-2">${p.d}</p>
+    <div class="mt-5 rounded-[22px] bg-mist p-5"><p class="font-extrabold mb-2">در این ${kindName(p.k)} چه می‌گیری؟</p><ul class="space-y-2">${p.inc.map(i=>`<li class="flex items-center gap-2"><i data-lucide="circle-check" class="w-5 h-5 text-ok"></i> ${i}</li>`).join('')}</ul></div>
+    <p class="text-[30px] font-extrabold text-royal mt-6">${money(p.p)} <span class="text-base muted font-semibold">تومان</span></p>
+    <div class="flex gap-3 mt-4"><button data-add="${p.id}" class="btn btn-royal flex-1" style="min-height:56px"><i data-lucide="shopping-cart" class="w-5 h-5"></i> افزودن به سبد</button><button data-buy="${p.id}" class="btn btn-sun" style="min-height:56px">خرید فوری</button></div></div></div></div>`;
+  }
+  if(view==='cart'){
+    const items=Object.keys(cart).map(id=>({p:P.find(x=>x.id==id),q:cart[id]}));
+    const sum=items.reduce((s,x)=>s+x.p.p*x.q,0), off=Math.round(sum*discount), pay=sum-off;
+    h=items.length?`<div class="rise"><h2 class="text-[28px] font-extrabold">سبد خرید</h2><div class="grid lg:grid-cols-5 gap-6 mt-5"><div class="lg:col-span-3 space-y-3">${items.map(x=>`<div class="card p-4 flex items-center gap-4"><div class="cover w-20 h-20 rounded-2xl shrink-0" style="background:${x.p.g}"><i data-lucide="${x.p.i}" class="w-8 h-8"></i></div><div class="flex-1 min-w-0"><p class="font-extrabold leading-snug">${x.p.t}</p><p class="text-royal font-bold">${money(x.p.p)} تومان</p></div><div class="flex items-center gap-1 bg-mist rounded-2xl p-1"><button data-q="${x.p.id}:1" class="w-9 h-9 rounded-xl bg-white font-extrabold" aria-label="بیشتر">+</button><span class="w-7 text-center font-extrabold">${faNum(x.q)}</span><button data-q="${x.p.id}:-1" class="w-9 h-9 rounded-xl bg-white font-extrabold" aria-label="کمتر">−</button></div><button data-rm="${x.p.id}" class="w-10 h-10 rounded-xl bg-[#FDECEC] text-late flex items-center justify-center" aria-label="حذف"><i data-lucide="trash-2" class="w-5 h-5"></i></button></div>`).join('')}</div>
+    <div class="lg:col-span-2"><div class="card p-5 space-y-4 lg:sticky lg:top-24"><div><label class="font-bold text-sm" for="code">کد تخفیف</label><div class="flex gap-2 mt-1.5"><input id="code" class="input" placeholder="مثلاً رشد۲۰" value="${codeUsed}"><button id="apply" class="btn btn-soft">اعمال</button></div>${discount?`<p class="text-sm text-ok font-bold mt-1.5">کد تخفیف ${faNum(Math.round(discount*100))} درصدی اعمال شد.</p>`:''}</div>
+    <div class="space-y-2 pt-2 border-t border-line"><div class="flex justify-between"><span class="muted">جمع سبد</span><span class="font-bold">${money(sum)} تومان</span></div><div class="flex justify-between"><span class="muted">تخفیف</span><span class="font-bold ${off?'text-ok':''}">${off?'−':''}${money(off)} تومان</span></div><div class="flex justify-between text-[19px] pt-2 border-t border-line"><span class="font-extrabold">مبلغ قابل پرداخت</span><span class="font-extrabold text-royal">${money(pay)} تومان</span></div></div>
+    <button id="pay" class="btn btn-sun w-full" style="min-height:58px"><i data-lucide="credit-card" class="w-5 h-5"></i> پرداخت</button></div></div></div></div>`
+    :`<div class="card p-10 text-center max-w-md mx-auto rise"><div class="w-20 h-20 mx-auto rounded-[26px] bg-mist text-royal flex items-center justify-center"><i data-lucide="shopping-cart" class="w-10 h-10"></i></div><p class="text-[22px] font-extrabold mt-4">سبد خرید خالی است</p><p class="muted">دوره یا جزوه‌ای انتخاب کن و به سبد اضافه کن.</p><button data-v="catalog" data-f="all" class="btn btn-royal mt-5">دیدن محصولات</button></div>`;
+  }
+  m.innerHTML=h;
+  const c=cartCount(); $('#cart-badge').textContent=faNum(c); $('#cart-badge').classList.toggle('is-hidden',!c);
+  $$('.nav-link').forEach(b=>{ const on=(view==='home'&&b.dataset.v==='home')||(view==='catalog'&&b.dataset.f===filter&&b.dataset.v==='catalog'); on?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current'); });
+  bind(); icons();
+}
+let curP=null;
+function nav(v,f){ view=v; if(f) filter=f; render(); scrollTo(0,0); }
+function bind(){
+  $$('[data-v]').forEach(b=>b.onclick=()=>nav(b.dataset.v,b.dataset.f));
+  $$('[data-open]').forEach(b=>b.onclick=()=>{curP=+b.dataset.open;nav('product');});
+  $$('[data-f2]').forEach(b=>b.onclick=()=>{filter=b.dataset.f2;render();});
+  $$('[data-add]').forEach(b=>b.onclick=()=>{ cart[b.dataset.add]=(cart[b.dataset.add]||0)+1; render(); toast('به سبد خرید اضافه شد'); });
+  $$('[data-buy]').forEach(b=>b.onclick=()=>{ cart[b.dataset.buy]=(cart[b.dataset.buy]||0)+1; nav('cart'); });
+  $$('[data-q]').forEach(b=>b.onclick=()=>{ const [id,d]=b.dataset.q.split(':'); cart[id]=Math.max(1,cart[id]+ +d); render(); });
+  $$('[data-rm]').forEach(b=>b.onclick=()=>{ delete cart[b.dataset.rm]; render(); });
+  const ap=$('#apply'); if(ap) ap.onclick=()=>{ const v=enNum($('#code').value.trim()).replace(/\s/g,'');
+    if(v==='رشد20'){ discount=.2; codeUsed=$('#code').value; render(); } else { discount=0; codeUsed=''; render(); toast('کد تخفیف معتبر نیست'); } };
+  const py=$('#pay'); if(py) py.onclick=()=>{ $('#modal-pay').classList.remove('is-hidden'); };
+}
+$('#pay-close').onclick=()=>{ $('#modal-pay').classList.add('is-hidden'); cart={}; discount=0; codeUsed=''; nav('home'); };
+setMode('parent'); render();
+</script>
+</body>
+</html>

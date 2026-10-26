@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A4BD6">
+<title>پلتفرم رشد | پنل دانش‌آموز</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Vazirmatn', 'sans-serif'] },
+  colors: { royal: '#0A4BD6', ink: '#0B1F4D', sky: '#1E90FF', sun: '#FFC531', mist: '#F5F8FF', line: '#DCE6FA', ok: '#12A150', late: '#E5484D' }
+} } }
+</script>
+<style>
+  :root { --royal:#0A4BD6; --ink:#0B1F4D; --sky:#1E90FF; --sun:#FFC531; --mist:#F5F8FF; --line:#DCE6FA; --ok:#12A150; --late:#E5484D; }
+  html { -webkit-tap-highlight-color: transparent; }
+  body { font-family:'Vazirmatn',sans-serif; font-size:16px; line-height:1.8; background:var(--mist); color:var(--ink); }
+  .is-hidden { display:none !important; }
+  :focus-visible { outline:3px solid var(--sky); outline-offset:2px; border-radius:12px; }
+  .muted { color:#5A6E99; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:24px; box-shadow:0 14px 36px -24px rgba(10,75,214,.55); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; min-height:48px; padding:0 1.25rem; border-radius:16px; font-weight:800; transition:transform .12s, box-shadow .2s; }
+  .btn:active { transform:scale(.97); }
+  .btn-royal { background:linear-gradient(180deg,#1457E6,#0A4BD6); color:#fff; box-shadow:0 8px 20px -6px rgba(10,75,214,.55), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn-sun { background:linear-gradient(180deg,#FFD25A,#FFC531); color:var(--ink); box-shadow:0 10px 24px -8px rgba(255,197,49,.8), inset 0 1px 0 rgba(255,255,255,.5); }
+  .btn-soft { background:#E8F0FF; color:var(--royal); }
+  .btn-sm { min-height:40px; padding:0 1rem; border-radius:12px; font-size:14px; }
+  .btn[disabled] { opacity:.45; pointer-events:none; box-shadow:none; }
+  .input { width:100%; min-height:52px; padding:0 16px; border-radius:16px; border:1.5px solid var(--line); background:#fff; transition:border-color .2s, box-shadow .2s; }
+  .input:focus { outline:none; border-color:var(--royal); box-shadow:0 0 0 4px rgba(10,75,214,.12); }
+  .brand-bg { background:radial-gradient(900px 500px at 100% 0%, rgba(30,144,255,.55), transparent 60%), radial-gradient(600px 400px at 0% 100%, rgba(255,197,49,.18), transparent 60%), linear-gradient(160deg,#0A4BD6 0%, #0838A3 60%, #0B1F4D 100%); }
+  .dots { background-image:radial-gradient(rgba(255,255,255,.14) 1.3px, transparent 1.3px); background-size:22px 22px; }
+  .dock { box-shadow:0 -8px 30px -12px rgba(11,31,77,.25); }
+  .dock-item { position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 0 8px; font-size:12px; font-weight:600; color:#7D90B8; }
+  .dock-item i, .dock-item svg { width:24px; height:24px; }
+  .dock-item[aria-current="page"] { color:var(--royal); }
+  .dock-item[aria-current="page"]::before { content:""; position:absolute; top:0; width:30px; height:4px; border-radius:0 0 6px 6px; background:var(--sun); }
+  .seg-ctl { display:flex; background:#E3ECFF; border-radius:16px; padding:4px; gap:4px; }
+  .seg-ctl button { flex:1; min-height:42px; border-radius:12px; font-weight:700; color:#5A6E99; font-size:14px; }
+  .seg-ctl button[aria-pressed="true"] { background:#fff; color:var(--royal); box-shadow:0 4px 12px -4px rgba(10,75,214,.35); }
+  .tag { display:inline-flex; align-items:center; gap:.3rem; border-radius:99px; padding:2px 12px; font-size:13px; font-weight:700; }
+  .bar { height:10px; border-radius:99px; background:#E3ECFF; overflow:hidden; }
+  .bar > span { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#1E90FF,#0A4BD6); transition:width .5s; }
+  .opt { width:100%; min-height:64px; display:flex; align-items:center; gap:14px; text-align:start; padding:0 16px; border-radius:20px; border:2px solid var(--line); background:#fff; font-weight:600; font-size:18px; transition:all .15s; }
+  .opt .lt { width:38px; height:38px; border-radius:12px; background:var(--mist); display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--royal); }
+  .opt[aria-pressed="true"] { border-color:var(--royal); background:#EEF4FF; }
+  .opt[aria-pressed="true"] .lt { background:var(--royal); color:#fff; }
+  .step-dot { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid var(--line); background:#fff; color:#9DB0D6; }
+  .step-dot.done { background:var(--ok); border-color:var(--ok); color:#fff; }
+  .step-dot.cur { border-color:var(--royal); color:var(--royal); box-shadow:0 0 0 5px rgba(10,75,214,.12); }
+  .step-line { flex:1; height:3px; border-radius:3px; background:var(--line); margin-top:18px; }
+  .step-line.done { background:var(--ok); }
+  .day { min-width:52px; padding:8px 0; border-radius:16px; text-align:center; font-weight:700; background:#fff; border:1px solid var(--line); }
+  .day[aria-pressed="true"] { background:var(--royal); color:#fff; border-color:var(--royal); }
+  @keyframes rise { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:none } }
+  .rise { animation:rise .35s cubic-bezier(.2,.8,.2,1) both; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+
+<header class="brand-bg relative text-white">
+  <div class="dots absolute inset-0 opacity-50"></div>
+  <div class="relative max-w-3xl mx-auto px-4 pt-4 pb-24 flex items-center gap-3">
+    <div class="w-12 h-12 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center shrink-0"><i data-lucide="graduation-cap" class="w-6 h-6 text-sun"></i></div>
+    <div class="flex-1 min-w-0 leading-tight"><p class="font-extrabold truncate">کانون نخبه‌پروری شهید کاظم آشتیانی</p><p class="text-white/70 text-sm">پلتفرم رشد</p></div>
+    <button class="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center relative" aria-label="اعلان‌ها"><i data-lucide="bell" class="w-5 h-5"></i><span class="absolute top-2.5 right-3 w-2.5 h-2.5 rounded-full bg-sun"></span></button>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 -mt-[88px] relative pb-28">
+
+<!-- ================= خانه ================= -->
+<section id="t-home" class="tab space-y-4">
+  <div class="text-white px-1 min-h-[64px]">
+    <p class="text-white/80 text-sm">دوشنبه ۴ آبان ۱۴۰۵</p>
+    <h2 class="text-[26px] font-extrabold leading-snug">سلام علی، آماده‌ای؟</h2>
+  </div>
+
+  <div class="card p-5 flex items-center gap-4 rise">
+    <div id="ring-level" class="w-[92px] h-[92px] rounded-full shrink-0 flex items-center justify-center">
+      <div class="w-[74px] h-[74px] rounded-full bg-white flex flex-col items-center justify-center leading-tight"><span id="home-total" class="text-[20px] font-extrabold"></span><span class="text-[11px] muted">امتیاز</span></div>
+    </div>
+    <div class="flex-1 min-w-0"><p class="font-extrabold text-[18px]">سطح ۵، کاوشگر</p><p id="home-next" class="text-sm muted"></p></div>
+    <div class="text-center rounded-2xl px-4 py-3 bg-sun/25"><i data-lucide="trophy" class="w-6 h-6 mx-auto text-[#B07A00]"></i><p class="font-extrabold">رتبه ۴</p><p class="text-xs muted">از ۳۸ نفر</p></div>
+  </div>
+
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-3"><h3 class="font-extrabold text-[18px]">تکلیف‌های نزدیک به مهلت</h3><button class="text-royal font-bold text-sm" data-go="hw">همه</button></div>
+    <div id="home-hw" class="space-y-3"></div>
+  </div>
+
+  <div class="card p-5 flex items-center gap-4">
+    <div class="w-14 h-14 rounded-2xl bg-[#E8F0FF] text-royal flex items-center justify-center shrink-0"><i data-lucide="calendar-clock" class="w-7 h-7"></i></div>
+    <div class="flex-1"><p class="text-sm muted">کلاس امروز</p><p class="font-extrabold text-[18px]">ریاضی، آقای کریمی</p><p class="text-sm muted">۱۶:۰۰ تا ۱۷:۳۰، کلاس ۳</p></div>
+    <span class="tag bg-[#E6F7EE] text-ok">امروز</span>
+  </div>
+
+  <div class="card p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-extrabold text-[18px] flex items-center gap-2"><i data-lucide="crown" class="w-5 h-5 text-[#B07A00]"></i> برترین‌های مطالعه</h3>
+      <div class="seg-ctl !p-1 w-40" data-seg="lead"><button data-v="today" aria-pressed="true" class="!min-h-[34px]">امروز</button><button data-v="week" aria-pressed="false" class="!min-h-[34px]">هفته</button></div>
+    </div>
+    <div data-panel="lead:today" id="podium-today"></div>
+    <div data-panel="lead:week" id="podium-week" class="is-hidden"></div>
+  </div>
+
+  <div class="rounded-[26px] p-5 text-white relative overflow-hidden" style="background:linear-gradient(135deg,#0A4BD6,#0B1F4D)">
+    <div class="dots absolute inset-0 opacity-40"></div>
+    <div class="relative flex items-center gap-2 mb-3"><i data-lucide="sparkles" class="w-5 h-5 text-sun"></i><h3 class="font-extrabold text-[18px]">مسیر یادگیری پیشنهادی هوش مصنوعی</h3></div>
+    <div class="relative space-y-2.5">
+      <div class="flex items-center gap-3 bg-white/12 rounded-2xl p-3"><i data-lucide="book-open" class="w-5 h-5 text-sun shrink-0"></i><div class="flex-1"><p class="font-semibold">مرور فصل ۳ ریاضی</p><p class="text-xs text-white/70">۲۰ دقیقه</p></div><span class="tag bg-white/20 text-white">تأیید معلم</span></div>
+      <div class="flex items-center gap-3 bg-white/12 rounded-2xl p-3"><i data-lucide="target" class="w-5 h-5 text-sun shrink-0"></i><div class="flex-1"><p class="font-semibold">۱۰ تست کسرها</p><p class="text-xs text-white/70">۱۵ دقیقه</p></div><span class="tag bg-white/20 text-white">تأیید معلم</span></div>
+      <div class="flex items-center gap-3 bg-white/12 rounded-2xl p-3"><i data-lucide="flask-conical" class="w-5 h-5 text-sun shrink-0"></i><div class="flex-1"><p class="font-semibold">خواندن درس ۵ علوم</p><p class="text-xs text-white/70">۳۰ دقیقه</p></div><span class="tag bg-sun text-ink">در انتظار معلم</span></div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <button class="soon card p-5 text-start" style="background:linear-gradient(135deg,#FFF3CC,#FFE08A)">
+      <div class="flex gap-1.5 mb-3"><span class="w-9 h-9 rounded-xl bg-white/70 flex items-center justify-center"><i data-lucide="sigma" class="w-5 h-5"></i></span><span class="w-9 h-9 rounded-xl bg-white/70 flex items-center justify-center"><i data-lucide="languages" class="w-5 h-5"></i></span><span class="w-9 h-9 rounded-xl bg-white/70 flex items-center justify-center"><i data-lucide="atom" class="w-5 h-5"></i></span></div>
+      <p class="font-extrabold flex items-center gap-1.5"><i data-lucide="gamepad-2" class="w-5 h-5"></i> بازی درسی</p><p class="text-sm text-[#6B5200]">ریاضی، فارسی، علوم</p>
+    </button>
+    <button class="soon card p-5 text-start" style="background:linear-gradient(135deg,#E3F0FF,#BFDCFF)">
+      <div class="w-9 h-9 rounded-xl bg-white/70 flex items-center justify-center mb-3"><i data-lucide="book-heart" class="w-5 h-5 text-royal"></i></div>
+      <p class="font-extrabold flex items-center gap-1.5"><i data-lucide="wand-sparkles" class="w-5 h-5 text-royal"></i> داستان تعاملی</p><p class="text-sm text-[#2B4F8C]">بخوان و انتخاب کن</p>
+    </button>
+  </div>
+</section>
+
+<!-- ================= تکالیف ================= -->
+<section id="t-hw" class="tab is-hidden space-y-4">
+  <div class="text-white px-1 min-h-[64px]"><h2 class="text-[26px] font-extrabold">تکالیف</h2><p class="text-white/80 text-sm">مهلت‌ها را از دست نده</p></div>
+  <div id="hw-list" class="space-y-3"></div>
+</section>
+
+<!-- ================= آزمون ================= -->
+<section id="t-exam" class="tab is-hidden space-y-4">
+  <div class="text-white px-1 min-h-[64px]"><h2 class="text-[26px] font-extrabold">آزمون</h2><p class="text-white/80 text-sm">آزمون بده و رتبه‌ات را ببین</p></div>
+  <div class="seg-ctl" data-seg="ex"><button data-v="list" aria-pressed="true">آزمون‌های آنلاین</button><button data-v="res" aria-pressed="false">نتایج</button></div>
+
+  <div data-panel="ex:list" class="space-y-3">
+    <div class="card p-5">
+      <div class="flex items-start gap-4"><div class="w-14 h-14 rounded-2xl text-white flex items-center justify-center shrink-0" style="background:linear-gradient(135deg,#1E90FF,#0A4BD6)"><i data-lucide="sigma" class="w-7 h-7"></i></div>
+        <div class="flex-1"><p class="font-extrabold text-[18px]">آزمون ریاضی فصل ۳</p><p class="text-sm muted">۵ سؤال تستی، ۱۰ دقیقه</p><p class="text-sm muted flex items-center gap-1.5 mt-1"><i data-lucide="calendar" class="w-4 h-4"></i> تا ۸ آبان ۱۴۰۵، ساعت ۲۳:۰۰</p></div></div>
+      <button id="btn-start-exam" class="btn btn-royal w-full mt-4"><i data-lucide="play" class="w-5 h-5"></i> شروع آزمون</button>
+    </div>
+    <div class="card p-5 opacity-70">
+      <div class="flex items-start gap-4"><div class="w-14 h-14 rounded-2xl bg-[#E8F0FF] text-royal flex items-center justify-center shrink-0"><i data-lucide="languages" class="w-7 h-7"></i></div>
+        <div class="flex-1"><p class="font-extrabold text-[18px]">آزمون فارسی، نگارش</p><p class="text-sm muted">از ۱۰ آبان فعال می‌شود</p></div><span class="tag bg-[#E3ECFF] text-royal">به‌زودی</span></div>
+    </div>
+  </div>
+  <div data-panel="ex:res" id="res-list" class="is-hidden space-y-3"></div>
+</section>
+
+<!-- ================= مطالعه ================= -->
+<section id="t-study" class="tab is-hidden space-y-4">
+  <div class="text-white px-1 min-h-[64px]"><h2 class="text-[26px] font-extrabold">مطالعه</h2><p class="text-white/80 text-sm">۲۵ دقیقه تمرکز، ۵ دقیقه استراحت</p></div>
+  <div class="card p-6 text-center">
+    <div class="seg-ctl w-60 mx-auto mb-4" id="mode-ctl"><button data-m="focus" aria-pressed="true">تمرکز</button><button data-m="break" aria-pressed="false">استراحت</button></div>
+    <div class="relative w-[260px] h-[260px] mx-auto">
+      <svg viewBox="0 0 260 260" class="w-full h-full -rotate-90">
+        <circle cx="130" cy="130" r="110" fill="none" stroke="#E3ECFF" stroke-width="16"/>
+        <circle id="p-ring" cx="130" cy="130" r="110" fill="none" stroke="url(#pg)" stroke-width="16" stroke-linecap="round" stroke-dasharray="691.15" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear"/>
+        <defs><linearGradient id="pg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1E90FF"/><stop offset="1" stop-color="#0A4BD6"/></linearGradient></defs>
+      </svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center"><p id="p-time" class="text-[52px] font-extrabold leading-none tracking-wide"></p><p id="p-label" class="muted mt-2 font-semibold">زمان تمرکز</p></div>
+    </div>
+    <div class="flex gap-3 justify-center mt-6">
+      <button id="p-toggle" class="btn btn-royal min-w-[160px]"><i data-lucide="play" class="w-5 h-5"></i> شروع</button>
+      <button id="p-reset" class="btn btn-soft" aria-label="از اول"><i data-lucide="rotate-ccw" class="w-5 h-5"></i></button>
+    </div>
+    <button id="p-quick" class="text-sm muted underline mt-4">حالت نمونه: ۱۰ ثانیه‌ای</button>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <div class="card p-5"><i data-lucide="flame" class="w-6 h-6 text-[#E8590C]"></i><p id="s-pomos" class="text-[28px] font-extrabold leading-tight mt-1"></p><p class="text-sm muted">پومودوروی امروز</p></div>
+    <div class="card p-5"><i data-lucide="clock-3" class="w-6 h-6 text-royal"></i><p id="s-time" class="text-[20px] font-extrabold leading-tight mt-2"></p><p class="text-sm muted">مطالعه امروز</p></div>
+  </div>
+  <div class="card p-5">
+    <div class="flex items-center gap-2 mb-2"><i data-lucide="alarm-clock" class="w-5 h-5 text-[#B07A00]"></i><p class="font-extrabold">حداقل مطالعه روزانه: ۲ ساعت</p></div>
+    <div class="bar"><span id="s-bar" style="width:0"></span></div>
+    <p id="s-remind" class="text-sm muted mt-2"></p>
+  </div>
+</section>
+
+<!-- ================= من ================= -->
+<section id="t-me" class="tab is-hidden space-y-4">
+  <div class="text-white px-1 min-h-[64px] flex items-center gap-3">
+    <div class="w-14 h-14 rounded-2xl bg-sun text-ink flex items-center justify-center font-extrabold text-xl">ع.ر</div>
+    <div><h2 class="text-[22px] font-extrabold leading-tight">علی رضایی</h2><p class="text-white/80 text-sm">پایه هفتم، کلاس الف</p></div>
+  </div>
+  <div class="seg-ctl" data-seg="me"><button data-v="pts" aria-pressed="true">امتیاز</button><button data-v="cal" aria-pressed="false">تقویم</button><button data-v="res" aria-pressed="false">منابع</button><button data-v="pay" aria-pressed="false">پرداخت</button></div>
+
+  <div data-panel="me:pts" class="space-y-3">
+    <div class="card overflow-hidden">
+      <div class="px-5 py-3 bg-[#E6F7EE] text-ok font-extrabold flex items-center gap-2"><i data-lucide="trending-up" class="w-5 h-5"></i> امتیازهای مثبت</div>
+      <div id="plus-rows" class="divide-y divide-line"></div>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="px-5 py-3 bg-[#FDECEC] text-late font-extrabold flex items-center gap-2"><i data-lucide="trending-down" class="w-5 h-5"></i> امتیازهای منفی</div>
+      <div id="minus-rows" class="divide-y divide-line"></div>
+    </div>
+    <div class="card p-5 flex items-center justify-between"><span class="font-extrabold">جمع امتیاز</span><span id="pts-total" class="text-[26px] font-extrabold text-royal"></span></div>
+  </div>
+
+  <div data-panel="me:cal" class="is-hidden space-y-3">
+    <div id="week" class="flex gap-2 overflow-x-auto pb-1"></div>
+    <div id="day-classes" class="space-y-3"></div>
+  </div>
+
+  <div data-panel="me:res" class="is-hidden space-y-3">
+    <h3 class="font-extrabold flex items-center gap-2"><i data-lucide="video" class="w-5 h-5 text-royal"></i> ویدئوها</h3>
+    <div id="videos" class="space-y-3"></div>
+    <h3 class="font-extrabold flex items-center gap-2 pt-2"><i data-lucide="file-text" class="w-5 h-5 text-royal"></i> جزوه‌ها</h3>
+    <div id="booklets" class="space-y-3"></div>
+  </div>
+
+  <div data-panel="me:pay" class="is-hidden space-y-3">
+    <div class="card p-5">
+      <div class="flex items-start justify-between gap-3"><div><p class="muted text-sm">حق عضویت این دوره</p><p class="text-[30px] font-extrabold leading-tight">۱٬۵۰۰٬۰۰۰ <span class="text-base muted font-semibold">تومان</span></p></div><span id="pay-chip" class="tag"></span></div>
+      <p class="muted flex items-center gap-2 mt-2"><i data-lucide="calendar-clock" class="w-5 h-5"></i> مهلت: ۱۰ آبان ۱۴۰۵، ساعت ۲۳:۵۹</p>
+      <div id="pay-steps" class="flex items-start mt-5"></div>
+    </div>
+    <div id="pay-box" class="card p-5">
+      <p class="font-extrabold">پرداخت کارت‌به‌کارت</p>
+      <div class="mt-3 rounded-[22px] p-5 text-white relative overflow-hidden" style="background:linear-gradient(135deg,#0A4BD6,#0B1F4D)"><div class="dots absolute inset-0 opacity-40"></div>
+        <div class="relative flex items-center justify-between"><i data-lucide="landmark" class="w-6 h-6 text-sun"></i><span class="text-sm text-white/75">کانون نخبه‌پروری</span></div>
+        <p class="relative text-[22px] font-extrabold tracking-[.12em] mt-5" dir="ltr">۶۰۳۷ ۹۹۷۰ ۰۰۰۰ ۰۰۰۰</p></div>
+      <button class="btn btn-royal w-full mt-4" id="btn-receipt"><i data-lucide="upload" class="w-5 h-5"></i> بارگذاری رسید</button>
+    </div>
+  </div>
+</section>
+</main>
+
+<nav class="dock fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="منوی اصلی">
+  <div class="max-w-3xl mx-auto grid grid-cols-5">
+    <button data-go="home" class="dock-item" aria-current="page"><i data-lucide="house"></i>خانه</button>
+    <button data-go="hw" class="dock-item"><i data-lucide="notebook-pen"></i>تکالیف</button>
+    <button data-go="exam" class="dock-item"><i data-lucide="clipboard-check"></i>آزمون</button>
+    <button data-go="study" class="dock-item"><i data-lucide="timer"></i>مطالعه</button>
+    <button data-go="me" class="dock-item"><i data-lucide="circle-user-round"></i>من</button>
+  </div>
+</nav>
+
+<!-- آزمون تمام‌صفحه -->
+<div id="exam" class="is-hidden fixed inset-0 z-50 bg-mist overflow-y-auto">
+  <div id="ex-run" class="max-w-xl mx-auto min-h-full flex flex-col px-5 py-5">
+    <div class="flex items-center justify-between">
+      <button id="ex-close" class="w-11 h-11 rounded-2xl bg-white border border-line flex items-center justify-center" aria-label="خروج"><i data-lucide="x" class="w-5 h-5"></i></button>
+      <p class="font-extrabold">آزمون ریاضی فصل ۳</p>
+      <span class="tag bg-ink text-white !py-1.5"><i data-lucide="timer" class="w-4 h-4"></i><span id="ex-time"></span></span>
+    </div>
+    <div class="bar mt-4"><span id="ex-bar" style="width:0"></span></div>
+    <p id="ex-count" class="muted text-sm mt-2"></p>
+    <h2 id="ex-q" class="text-[24px] font-extrabold leading-[1.7] mt-4"></h2>
+    <div id="ex-opts" class="space-y-3 mt-6 flex-1"></div>
+    <div class="flex gap-3 mt-6">
+      <button id="ex-prev" class="btn btn-soft"><i data-lucide="arrow-right" class="w-5 h-5"></i> قبلی</button>
+      <button id="ex-next" class="btn btn-royal flex-1">بعدی <i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+    </div>
+  </div>
+  <div id="ex-result" class="is-hidden max-w-xl mx-auto min-h-full flex flex-col items-center justify-center px-5 py-10 text-center">
+    <div id="ex-ring" class="w-40 h-40 rounded-full flex items-center justify-center"><div class="w-32 h-32 rounded-full bg-white flex flex-col items-center justify-center"><span id="ex-pct" class="text-[36px] font-extrabold"></span></div></div>
+    <h2 id="ex-msg" class="text-[26px] font-extrabold mt-5"></h2>
+    <p id="ex-detail" class="muted mt-1"></p>
+    <button id="ex-done" class="btn btn-sun w-full mt-8" style="min-height:58px"><i data-lucide="check" class="w-5 h-5"></i> دیدن نتیجه‌ها</button>
+  </div>
+</div>
+
+<!-- ارسال تکلیف -->
+<div id="sheet-hw" class="is-hidden fixed inset-0 z-[60] bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
+  <div class="w-full sm:max-w-md bg-white rounded-t-[28px] sm:rounded-[28px] p-6 pb-8 rise">
+    <div class="flex items-center justify-between"><h3 class="text-[22px] font-extrabold">ارسال تکلیف</h3><button class="close-sheet w-10 h-10 rounded-xl bg-mist flex items-center justify-center" aria-label="بستن"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <p id="sheet-hw-title" class="muted mt-1"></p>
+    <label class="mt-4 block rounded-[22px] border-2 border-dashed border-sky/60 bg-mist p-5 text-center cursor-pointer">
+      <i data-lucide="paperclip" class="w-7 h-7 mx-auto text-royal"></i><p class="font-bold mt-2">عکس یا فایل تکلیف را انتخاب کن</p><p id="hw-file-name" class="text-sm muted">هنوز فایلی انتخاب نشده</p>
+      <input id="hw-file" type="file" class="sr-only">
+    </label>
+    <textarea class="input !py-3 mt-3" rows="2" placeholder="توضیح برای معلم (اختیاری)"></textarea>
+    <button id="hw-send" class="btn btn-royal w-full mt-4"><i data-lucide="send" class="w-5 h-5"></i> ارسال</button>
+  </div>
+</div>
+
+<!-- ارسال رسید -->
+<div id="sheet-receipt" class="is-hidden fixed inset-0 z-[60] bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center">
+  <div class="w-full sm:max-w-md bg-white rounded-t-[28px] sm:rounded-[28px] p-6 pb-8 rise">
+    <div class="flex items-center justify-between"><h3 class="text-[22px] font-extrabold">بارگذاری رسید</h3><button class="close-sheet w-10 h-10 rounded-xl bg-mist flex items-center justify-center" aria-label="بستن"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+    <label class="mt-4 block rounded-[22px] border-2 border-dashed border-sky/60 bg-mist p-5 text-center cursor-pointer">
+      <i data-lucide="image-up" class="w-8 h-8 mx-auto text-royal"></i><p class="font-bold mt-2">عکس رسید را انتخاب کن</p><p id="rc-file-name" class="text-sm muted">هنوز فایلی انتخاب نشده</p>
+      <input id="rc-file" type="file" accept="image/*" class="sr-only">
+    </label>
+    <button id="rc-send" class="btn btn-royal w-full mt-4" disabled><i data-lucide="send" class="w-5 h-5"></i> ارسال رسید</button>
+  </div>
+</div>
+
+<div id="toast" class="is-hidden fixed top-5 left-1/2 -translate-x-1/2 z-[80] bg-ink text-white rounded-2xl px-5 py-3 shadow-2xl font-semibold flex items-center gap-2"><i data-lucide="circle-check" class="w-5 h-5 text-sun"></i><span id="toast-text"></span></div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
+const icons=()=>lucide.createIcons();
+const faNum=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+const mmss=s=>faNum(String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'));
+const fmtMin=m=>{const h=Math.floor(m/60),r=m%60;return (h?faNum(h)+' ساعت':'')+(h&&r?' و ':'')+((r||!h)?faNum(r)+' دقیقه':'');};
+function toast(m){ $('#toast-text').textContent=m; $('#toast').classList.remove('is-hidden'); clearTimeout(window._t); window._t=setTimeout(()=>$('#toast').classList.add('is-hidden'),2200); }
+
+/* ناوبری و تب‌ها */
+function go(t){ $$('.tab').forEach(x=>x.classList.add('is-hidden')); $('#t-'+t).classList.remove('is-hidden'); $$('.dock-item').forEach(b=>b.dataset.go===t?b.setAttribute('aria-current','page'):b.removeAttribute('aria-current')); scrollTo(0,0); }
+$$('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+function pickSeg(name,v){ const g=document.querySelector(`[data-seg="${name}"]`); g.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.v===v))); $$(`[data-panel^="${name}:"]`).forEach(p=>p.classList.toggle('is-hidden',p.dataset.panel!==`${name}:${v}`)); }
+$$('[data-seg]').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=()=>pickSeg(g.dataset.seg,b.dataset.v)));
+$$('.soon').forEach(b=>b.onclick=()=>toast('این بخش بعداً ساخته می‌شود'));
+
+/* امتیازها */
+const plus=[['ساعت مطالعه','timer',740,'۴۶ ساعت'],['آزمون‌ها','clipboard-check',380,'۵ آزمون'],['فعالیت و مشارکت','sparkles',160,'۸ بار']];
+const minus=[['غیبت بدون اطلاع','user-x',-20,'۱ بار'],['تکلیف دیرشده','alarm-clock',-15,'۱ بار'],['اجرانکردن برنامه مطالعه','calendar-x',-10,'۱ بار'],['مطالعه کمتر از حداقل','trending-down',-15,'۳ روز'],['حق عضویت پرداخت‌نشده','wallet',0,'ندارد']];
+const total=[...plus,...minus].reduce((s,r)=>s+r[2],0);
+const row=(r,cls)=>`<div class="flex items-center gap-3 px-5 py-3 ${r[2]===0?'opacity-50':''}"><i data-lucide="${r[1]}" class="w-5 h-5 muted"></i><div class="flex-1"><p class="font-semibold">${r[0]}</p><p class="text-xs muted">${r[3]}</p></div><span class="font-extrabold ${cls}" dir="ltr">${r[2]>0?'+':r[2]<0?'−':''}${faNum(Math.abs(r[2]))}</span></div>`;
+$('#plus-rows').innerHTML=plus.map(r=>row(r,'text-ok')).join('');
+$('#minus-rows').innerHTML=minus.map(r=>row(r,'text-late')).join('');
+$('#pts-total').textContent=faNum(total);
+$('#home-total').textContent=faNum(total);
+const pct=Math.round((total-1000)/500*100);
+$('#ring-level').style.background=`conic-gradient(#0A4BD6 ${pct}%, #E3ECFF 0)`;
+$('#home-next').textContent=`${faNum(1500-total)} امتیاز تا سطح ۶`;
+
+/* تکالیف */
+const now=Date.now(), H=3600000;
+const hw=[
+ {id:1,sub:'ریاضی',icon:'sigma',title:'حل تمرین‌های فصل ۳',due:'۵ آبان ۱۴۰۵، ساعت ۲۰:۰۰',end:now+29*H+14*60000,state:'open'},
+ {id:2,sub:'فارسی',icon:'languages',title:'نوشتن انشا درباره طبیعت',due:'۴ آبان ۱۴۰۵، ساعت ۱۸:۳۰',end:now+4*H+38*60000,state:'open'},
+ {id:3,sub:'علوم',icon:'atom',title:'گزارش آزمایش جرم و حجم',due:'۳ آبان ۱۴۰۵، ساعت ۱۶:۰۰',end:now-22*H,state:'open'},
+ {id:4,sub:'ریاضی',icon:'sigma',title:'تمرین هندسه، صفحه ۴۲',due:'۲ آبان ۱۴۰۵، ساعت ۱۴:۰۰',end:now-46*H,state:'done'}
+];
+const isLate=h=>h.end<now;
+function cd(h){ let s=Math.max(0,Math.floor((h.end-Date.now())/1000)); const d=Math.floor(s/86400); s%=86400; const hh=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60; return (d?faNum(d)+' روز و ':'')+faNum([hh,m,ss].map(x=>String(x).padStart(2,'0')).join(':')); }
+function renderHw(){
+  $('#hw-list').innerHTML=hw.map(h=>{
+    const late=isLate(h)&&h.state==='open';
+    const stat=h.state==='done'?'<span class="tag bg-[#E6F7EE] text-ok"><i data-lucide="check" class="w-4 h-4"></i> ارسال شد</span>':late?'<span class="tag bg-[#FDECEC] text-late"><i data-lucide="circle-alert" class="w-4 h-4"></i> دیر شد، امتیاز منفی</span>':`<span class="tag bg-[#E3ECFF] text-royal"><i data-lucide="hourglass" class="w-4 h-4"></i><span class="cd" data-id="${h.id}">${cd(h)}</span></span>`;
+    return `<div class="card p-5 ${late?'!border-[#F6C9CB]':''}">
+      <div class="flex items-start gap-4"><div class="w-12 h-12 rounded-2xl ${late?'bg-[#FDECEC] text-late':'bg-[#E8F0FF] text-royal'} flex items-center justify-center shrink-0"><i data-lucide="${h.icon}" class="w-6 h-6"></i></div>
+      <div class="flex-1 min-w-0"><p class="text-sm muted">${h.sub}</p><p class="font-extrabold text-[17px]">${h.title}</p><p class="text-sm muted flex items-center gap-1.5 mt-1"><i data-lucide="calendar-clock" class="w-4 h-4"></i> مهلت: ${h.due}</p></div></div>
+      <div class="flex items-center justify-between gap-3 mt-4 flex-wrap">${stat}${h.state==='open'?`<button class="btn btn-sm ${late?'btn-soft':'btn-royal'}" onclick="openHw(${h.id})"><i data-lucide="send" class="w-4 h-4"></i> ${late?'ارسال دیرهنگام':'ارسال'}</button>`:''}</div></div>`;
+  }).join('');
+  const near=hw.filter(h=>h.state==='open'&&!isLate(h)).sort((a,b)=>a.end-b.end).slice(0,2);
+  $('#home-hw').innerHTML=near.map(h=>`<div class="flex items-center gap-3 bg-mist rounded-2xl p-3"><i data-lucide="${h.icon}" class="w-5 h-5 text-royal"></i><div class="flex-1 min-w-0"><p class="font-bold truncate">${h.title}</p><p class="text-xs muted">${h.due}</p></div><span class="tag bg-white text-royal cd" data-id="${h.id}">${cd(h)}</span></div>`).join('')||'<p class="muted">تکلیف باز نداری. آفرین!</p>';
+  icons();
+}
+setInterval(()=>$$('.cd').forEach(el=>{const h=hw.find(x=>x.id==el.dataset.id); if(h) el.textContent=cd(h);}),1000);
+let curHw=null;
+function openHw(id){ curHw=id; $('#sheet-hw-title').textContent=hw.find(h=>h.id===id).title; $('#sheet-hw').classList.remove('is-hidden'); }
+$('#hw-file').onchange=e=>{ $('#hw-file-name').textContent=e.target.files[0]?.name||'هنوز فایلی انتخاب نشده'; };
+$('#hw-send').onclick=()=>{ const h=hw.find(x=>x.id===curHw); const late=isLate(h); h.state='done'; $('#sheet-hw').classList.add('is-hidden'); renderHw(); toast(late?'ارسال شد؛ امتیاز دیرکرد کم می‌شود':'تکلیف ارسال شد'); };
+$$('.close-sheet').forEach(b=>b.onclick=()=>b.closest('.fixed').classList.add('is-hidden'));
+renderHw();
+
+/* برترین‌های مطالعه */
+function podium(list){
+  const order=[1,0,2], hgt=[96,128,80], col=['#C0CCE6','#FFC531','#E7A977'];
+  return `<div class="flex items-end justify-center gap-3" dir="ltr">${order.map(i=>{const p=list[i];return `<div class="flex-1 max-w-[120px] text-center" dir="rtl"><div class="w-12 h-12 mx-auto rounded-full flex items-center justify-center font-extrabold ${i===0?'ring-4 ring-sun/50':''}" style="background:${col[i]}">${p[0].split(' ').map(w=>w[0]).join('.')}</div><p class="font-bold text-sm mt-1 truncate">${p[0]}</p><p class="text-xs muted">${p[1]}</p><div class="mt-2 rounded-t-2xl flex items-start justify-center pt-2 text-[22px] font-extrabold" style="height:${hgt[i]}px;background:linear-gradient(180deg,${col[i]},${col[i]}55)">${faNum(i+1)}</div></div>`;}).join('')}</div>`;
+}
+$('#podium-today').innerHTML=podium([['سارا محمدی','۴ ساعت و ۱۰ دقیقه'],['امیرحسین کریمی','۳ ساعت و ۵۰ دقیقه'],['نیلوفر احمدی','۳ ساعت و ۲۰ دقیقه']]);
+$('#podium-week').innerHTML=podium([['امیرحسین کریمی','۲۴ ساعت'],['سارا محمدی','۲۲ ساعت و ۳۰ دقیقه'],['مهدی صادقی','۲۰ ساعت']]);
+
+/* آزمون */
+const Q=[
+ {q:'حاصل ‎۳/۴ + ۱/۴‎ کدام است؟',o:['۱','۱/۲','۴/۸','۳/۸'],a:0},
+ {q:'کدام عدد اول است؟',o:['۹','۱۵','۱۷','۲۱'],a:2},
+ {q:'مساحت مستطیلی به طول ۶ و عرض ۴ چقدر است؟',o:['۱۰','۲۰','۲۴','۳۰'],a:2},
+ {q:'۲۵ درصد از ۸۰ برابر است با:',o:['۱۰','۲۰','۲۵','۴۰'],a:1},
+ {q:'کدام کسر از همه بزرگ‌تر است؟',o:['۱/۳','۱/۲','۱/۴','۱/۵'],a:1}
+];
+const letters=['الف','ب','ج','د'];
+let qi=0, ans=[], left=600, etimer;
+const results=[
+ {t:'ریاضی فصل ۲',type:'آنلاین',p:85,rank:3},{t:'علوم ماهانه',type:'حضوری',p:72,rank:9},{t:'فارسی، دستور',type:'آنلاین',p:91,rank:2}
+];
+function renderQ(){
+  $('#ex-count').textContent=`سؤال ${faNum(qi+1)} از ${faNum(Q.length)}`;
+  $('#ex-bar').style.width=((qi+1)/Q.length*100)+'%';
+  $('#ex-q').textContent=Q[qi].q;
+  $('#ex-opts').innerHTML=Q[qi].o.map((t,i)=>`<button class="opt" aria-pressed="${ans[qi]===i}" data-i="${i}"><span class="lt">${letters[i]}</span>${t}</button>`).join('');
+  $$('#ex-opts .opt').forEach(b=>b.onclick=()=>{ans[qi]=+b.dataset.i; renderQ();});
+  $('#ex-prev').disabled=qi===0;
+  $('#ex-next').innerHTML=qi===Q.length-1?'پایان آزمون <i data-lucide="flag" class="w-5 h-5"></i>':'بعدی <i data-lucide="arrow-left" class="w-5 h-5"></i>';
+  icons();
+}
+function startExam(){ qi=0; ans=Array(Q.length).fill(null); left=600; $('#ex-run').classList.remove('is-hidden'); $('#ex-result').classList.add('is-hidden'); $('#exam').classList.remove('is-hidden'); $('#ex-time').textContent=mmss(left); renderQ(); clearInterval(etimer); etimer=setInterval(()=>{left--; $('#ex-time').textContent=mmss(Math.max(left,0)); if(left<=0) finishExam();},1000); }
+function finishExam(){
+  clearInterval(etimer);
+  const ok=ans.filter((a,i)=>a===Q[i].a).length, p=Math.round(ok/Q.length*100);
+  $('#ex-ring').style.background=`conic-gradient(${p>=60?'#12A150':'#E5484D'} ${p}%, #E3ECFF 0)`;
+  $('#ex-pct').textContent=faNum(p)+'٪';
+  $('#ex-msg').textContent=p>=80?'عالی بود!':p>=60?'خوب بود، ادامه بده':'بیشتر تمرین کن';
+  $('#ex-detail').textContent=`${faNum(ok)} پاسخ درست از ${faNum(Q.length)} سؤال`;
+  $('#ex-run').classList.add('is-hidden'); $('#ex-result').classList.remove('is-hidden');
+  results.unshift({t:'ریاضی فصل ۳',type:'آنلاین',p,rank:p>=80?2:p>=60?6:14}); renderResults();
+}
+function renderResults(){
+  $('#res-list').innerHTML=results.map(r=>`<div class="card p-4 flex items-center gap-4"><div class="w-16 h-16 rounded-full shrink-0 flex items-center justify-center" style="background:conic-gradient(${r.p>=60?'#12A150':'#E5484D'} ${r.p}%, #E3ECFF 0)"><div class="w-[50px] h-[50px] rounded-full bg-white flex items-center justify-center font-extrabold text-sm">${faNum(r.p)}٪</div></div><div class="flex-1 min-w-0"><p class="font-extrabold">${r.t}</p><span class="tag ${r.type==='آنلاین'?'bg-[#E3ECFF] text-royal':'bg-sun/30 text-[#7A5600]'} !text-xs">${r.type}</span></div><div class="text-center"><p class="text-xs muted">رتبه</p><p class="font-extrabold text-[18px]">${faNum(r.rank)} <span class="text-xs muted font-semibold">از ۳۸</span></p></div></div>`).join('');
+}
+$('#btn-start-exam').onclick=startExam;
+$('#ex-next').onclick=()=>{ qi<Q.length-1?(qi++,renderQ()):finishExam(); };
+$('#ex-prev').onclick=()=>{ if(qi>0){qi--;renderQ();} };
+$('#ex-close').onclick=()=>{ if(confirm('از آزمون خارج می‌شوی؟ پاسخ‌هایت ذخیره نمی‌شود.')){clearInterval(etimer);$('#exam').classList.add('is-hidden');} };
+$('#ex-done').onclick=()=>{ $('#exam').classList.add('is-hidden'); go('exam'); pickSeg('ex','res'); };
+renderResults();
+
+/* پومودورو */
+const C=691.15; let pm='focus', quick=false, plen=1500, pleft=1500, prun=false, pt, pomos=3, studyMin=75;
+const lenOf=()=>quick?10:(pm==='focus'?1500:300);
+function drawP(){ $('#p-time').textContent=mmss(pleft); $('#p-ring').style.strokeDashoffset=C*(1-pleft/plen); $('#p-label').textContent=pm==='focus'?'زمان تمرکز':'زمان استراحت'; $$('#mode-ctl button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.m===pm))); }
+function stats(){ $('#s-pomos').textContent=faNum(pomos); $('#s-time').textContent=fmtMin(studyMin); $('#s-bar').style.width=Math.min(100,studyMin/120*100)+'%'; const r=Math.max(0,120-studyMin); $('#s-remind').textContent=r?`${fmtMin(r)} تا حداقل مطالعه امروز مانده. تا آخر شب وقت داری.`:'حداقل مطالعه امروز را کامل کردی. آفرین!'; }
+function setMode(m){ clearInterval(pt); prun=false; pm=m; plen=pleft=lenOf(); $('#p-toggle').innerHTML='<i data-lucide="play" class="w-5 h-5"></i> شروع'; drawP(); icons(); }
+function tickP(){ pleft--; if(pleft<=0){ clearInterval(pt); prun=false; pleft=0; drawP(); if(pm==='focus'){ pomos++; studyMin+=25; stats(); toast('یک پومودورو کامل شد؛ ۲۵ دقیقه به مطالعه‌ات اضافه شد'); setMode('break'); } else { toast('استراحت تمام شد'); setMode('focus'); } return; } drawP(); }
+$('#p-toggle').onclick=()=>{ if(prun){ clearInterval(pt); prun=false; $('#p-toggle').innerHTML='<i data-lucide="play" class="w-5 h-5"></i> ادامه'; } else { prun=true; pt=setInterval(tickP,1000); $('#p-toggle').innerHTML='<i data-lucide="pause" class="w-5 h-5"></i> توقف'; } icons(); };
+$('#p-reset').onclick=()=>setMode(pm);
+$$('#mode-ctl button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+$('#p-quick').onclick=()=>{ quick=!quick; $('#p-quick').textContent=quick?'حالت نمونه روشن است؛ برای خاموش کردن بزن':'حالت نمونه: ۱۰ ثانیه‌ای'; setMode(pm); };
+setMode('focus'); stats();
+
+/* تقویم */
+const days=['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
+const sched=[
+ [['ریاضی','۱۶:۰۰ تا ۱۷:۳۰','کلاس ۳','آقای کریمی']],[['فارسی','۱۶:۰۰ تا ۱۷:۰۰','کلاس ۲','خانم رحیمی']],
+ [['ریاضی','۱۶:۰۰ تا ۱۷:۳۰','کلاس ۳','آقای کریمی'],['علوم','۱۷:۴۵ تا ۱۸:۴۵','آزمایشگاه','خانم احمدی']],
+ [['علوم','۱۶:۰۰ تا ۱۷:۰۰','آزمایشگاه','خانم احمدی']],[['فارسی','۱۶:۰۰ تا ۱۷:۰۰','کلاس ۲','خانم رحیمی'],['ریاضی','۱۷:۱۵ تا ۱۸:۱۵','کلاس ۳','آقای کریمی']],
+ [['آزمون جامع','۱۰:۰۰ تا ۱۲:۰۰','سالن آزمون','']],[]
+];
+let selDay=2;
+function renderCal(){
+  $('#week').innerHTML=days.map((d,i)=>`<button class="day" aria-pressed="${i===selDay}" data-i="${i}"><span class="block text-xs ${i===selDay?'text-white/80':'muted'}">${d}</span><span class="text-[18px]">${faNum(i+2)}</span></button>`).join('');
+  $$('#week .day').forEach(b=>b.onclick=()=>{selDay=+b.dataset.i;renderCal();});
+  $('#day-classes').innerHTML=sched[selDay].map(c=>`<div class="card p-4 flex items-center gap-4"><div class="w-1.5 self-stretch rounded-full bg-royal"></div><div class="flex-1"><p class="font-extrabold">${c[0]}</p><p class="text-sm muted">${c[3]?c[3]+'، ':''}${c[2]}</p></div><span class="tag bg-[#E3ECFF] text-royal">${c[1]}</span></div>`).join('')||'<div class="card p-6 text-center muted">این روز کلاسی نداری. استراحت کن!</div>';
+}
+renderCal();
+
+/* منابع */
+$('#videos').innerHTML=[['آموزش کسرها، جلسه ۱','۱۴:۲۰'],['حل تمرین هندسه','۰۹:۴۵'],['مرور علوم فصل ۳','۱۸:۱۰']].map(v=>`<button class="soon card p-3 w-full flex items-center gap-4 text-start"><div class="w-20 h-14 rounded-xl text-white flex items-center justify-center shrink-0" style="background:linear-gradient(135deg,#1E90FF,#0A4BD6)"><i data-lucide="play" class="w-6 h-6"></i></div><div class="flex-1"><p class="font-bold">${v[0]}</p><p class="text-xs muted">${v[1]} دقیقه</p></div></button>`).join('');
+$('#booklets').innerHTML=[['جزوه ریاضی فصل ۳','۲٫۴ مگابایت'],['جزوه علوم فصل ۳','۱٫۸ مگابایت'],['نمونه سؤال فارسی','۱٫۱ مگابایت']].map(b=>`<div class="card p-4 flex items-center gap-4"><div class="w-12 h-12 rounded-2xl bg-[#FDECEC] text-late flex items-center justify-center shrink-0"><i data-lucide="file-text" class="w-6 h-6"></i></div><div class="flex-1"><p class="font-bold">${b[0]}</p><p class="text-xs muted">PDF، ${b[1]}</p></div><button class="soon btn btn-soft btn-sm" aria-label="دانلود"><i data-lucide="download" class="w-4 h-4"></i></button></div>`).join('');
+$$('.soon').forEach(b=>b.onclick=()=>toast('این بخش بعداً ساخته می‌شود'));
+
+/* پرداخت */
+let pay='unpaid';
+function renderPay(){
+  const m={unpaid:['bg-[#FDECEC] text-late','پرداخت نشده'],pending:['bg-sun/30 text-[#7A5600]','در انتظار تأیید']}[pay];
+  $('#pay-chip').className='tag '+m[0]; $('#pay-chip').textContent=m[1];
+  const st=pay==='unpaid'?['cur','todo','todo']:['done','done','cur'], defs=[['wallet','پرداخت'],['upload','بارگذاری رسید'],['shield-check','تأیید مدیر']];
+  $('#pay-steps').innerHTML=defs.map((d,i)=>`<div class="flex flex-col items-center text-center w-20"><div class="step-dot ${st[i]}"><i data-lucide="${st[i]==='done'?'check':d[0]}" class="w-5 h-5"></i></div><p class="text-xs font-semibold mt-2">${d[1]}</p></div>${i<2?`<div class="step-line ${st[i]==='done'&&st[i+1]!=='todo'?'done':''}"></div>`:''}`).join('');
+  $('#btn-receipt').disabled=pay!=='unpaid'; $('#btn-receipt').innerHTML=pay==='unpaid'?'<i data-lucide="upload" class="w-5 h-5"></i> بارگذاری رسید':'<i data-lucide="hourglass" class="w-5 h-5"></i> رسید ارسال شد';
+  icons();
+}
+$('#btn-receipt').onclick=()=>$('#sheet-receipt').classList.remove('is-hidden');
+$('#rc-file').onchange=e=>{ $('#rc-file-name').textContent=e.target.files[0]?.name||'هنوز فایلی انتخاب نشده'; $('#rc-send').disabled=!e.target.files[0]; };
+$('#rc-send').onclick=()=>{ pay='pending'; $('#sheet-receipt').classList.add('is-hidden'); renderPay(); toast('رسید ارسال شد؛ منتظر تأیید مدیر باش'); };
+renderPay(); icons();
+</script>
+</body>
+</html>
