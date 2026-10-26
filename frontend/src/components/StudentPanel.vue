@@ -89,6 +89,7 @@
 
         <!-- Level & Score Card (Interactive Gamification Hub) -->
         <div 
+          id="level-hub-card"
           @click="handleOpenLevels"
           class="card p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rise cursor-pointer hover:shadow-xl hover:border-royal/50 transition-all group relative overflow-hidden"
           title="کلیک برای مشاهده نقشه راه کامل سطوح و جوایز"
