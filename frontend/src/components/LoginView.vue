@@ -93,6 +93,22 @@
           </button>
         </div>
 
+        <!-- Quick Sample Account Selector (1-Click Demo Fill) -->
+        <div class="mt-3 p-2.5 rounded-2xl bg-white border border-line flex items-center justify-between text-xs shadow-sm">
+          <div class="flex items-center gap-1.5 text-[#5A6E99]">
+            <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+            <span class="font-bold">داده‌های نمونه {{ roleTitles[selectedRole] }}:</span>
+          </div>
+          <button 
+            type="button" 
+            @click="fillSampleAccount"
+            class="px-3 py-1 rounded-xl bg-royal/10 hover:bg-royal/20 text-royal font-extrabold transition-all cursor-pointer flex items-center gap-1"
+          >
+            <span>ورود سریع آزمایشی</span>
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
         <!-- Login Form with Field Icons -->
         <form @submit.prevent="handleLogin" class="mt-6 space-y-3 sm:space-y-4" autocomplete="off">
           <div>
@@ -177,6 +193,23 @@ const password = ref('');
 const showPass = ref(false);
 const loading = ref(false);
 const errorMsg = ref('');
+
+const roleTitles = {
+  student: 'دانش‌آموز (علی رضایی)',
+  parent: 'اولیا (مهدی رضایی)',
+  teacher: 'معلم (فاطمه احمدی)',
+  admin: 'مدیریت (محمد کریمی)'
+};
+
+function fillSampleAccount() {
+  playTap();
+  if (selectedRole.value === 'student') identifier.value = '0012345678';
+  else if (selectedRole.value === 'parent') identifier.value = '09121112233';
+  else if (selectedRole.value === 'teacher') identifier.value = '0022334455';
+  else if (selectedRole.value === 'admin') identifier.value = '0011223344';
+  password.value = '123456';
+  handleLogin();
+}
 
 onMounted(() => {
   refreshIcons();
