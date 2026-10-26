@@ -1,5 +1,11 @@
 <template>
   <div class="space-y-4">
+    <!-- Tab Title on Blue Wave -->
+    <div class="text-white px-1">
+      <h2 class="text-2xl sm:text-[26px] font-black">گفتگو با مشاور تحصیلی</h2>
+      <p class="text-white/80 text-xs sm:text-sm">پاسخگویی به سوالات، بررسی روند درسی و برنامه‌ریزی تخصصی کانون</p>
+    </div>
+
     <!-- Header: Counselor Profile (Identical to Naghsh Yar Chat header) -->
     <div class="card p-4 sm:p-5 flex items-center justify-between gap-3 rise border border-line shadow-sm">
       <div class="flex items-center gap-3.5">

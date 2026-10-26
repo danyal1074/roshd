@@ -4,25 +4,25 @@
     <!-- PHASE 1: EXAMS LIST & SELF-ASSESSMENT BUILDER -->
     <div v-if="phase === 'list'" class="space-y-5">
       <!-- Page Head (Identical to Naghsh Yar PageHead) -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-1">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
         <div>
-          <h2 class="text-2xl font-black text-ink flex items-center gap-2">
+          <h2 class="text-2xl sm:text-[26px] font-black text-white flex items-center gap-2">
             <span>آزمون‌ها</span>
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-black bg-[#2b3fd6]/10 text-[#2b3fd6]">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-black bg-white/20 text-white backdrop-blur">
               سامانه آزمون هوشمند
             </span>
           </h2>
-          <p class="text-xs sm:text-sm text-[#5A6E99] mt-1">
+          <p class="text-xs sm:text-sm text-white/80 mt-1">
             آزمون‌های برنامه‌ریزی‌شده و آزمون‌های خودسنجی با محاسبه نمره منفی و تحلیل پاسخ‌ها.
           </p>
         </div>
 
         <button 
           @click="selfOpen = true"
-          class="btn bg-[#2b3fd6] hover:bg-[#1f2fa8] text-white shadow-md font-bold text-xs sm:text-sm flex items-center gap-2 self-start sm:self-auto"
+          class="btn btn-sun text-ink font-black shadow-lg text-xs sm:text-sm flex items-center gap-2 self-start sm:self-auto !min-h-[42px] hover:scale-105 active:scale-95 transition-all"
         >
-          <i data-lucide="plus-circle" class="w-4 h-4 text-sun"></i>
-          <span>ساخت آزمون خودسنجی</span>
+          <i data-lucide="plus-circle" class="w-4 h-4 text-ink"></i>
+          <span>+ ساخت آزمون خودسنجی</span>
         </button>
       </div>
 
