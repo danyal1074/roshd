@@ -266,6 +266,13 @@ async function handleLogin() {
       throw new Error(data.error || 'خطا در ورود به سامانه');
     }
 
+    if (data.token) {
+      localStorage.setItem('roshd_token', data.token);
+    }
+    if (data.user) {
+      localStorage.setItem('roshd_user', JSON.stringify(data.user));
+    }
+
     playSuccess();
     emit('login-success', data.user);
   } catch (err) {

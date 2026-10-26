@@ -226,6 +226,18 @@ function initDb() {
       category TEXT DEFAULT 'general', -- avatar, receipt, homework, lecture, store
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- Performance Indexes for 400+ Concurrent Students
+    CREATE INDEX IF NOT EXISTS idx_users_role_grade ON users (role, grade);
+    CREATE INDEX IF NOT EXISTS idx_users_phone ON users (phone);
+    CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance (student_id, date_fa);
+    CREATE INDEX IF NOT EXISTS idx_homework_submissions_student ON homework_submissions (student_id);
+    CREATE INDEX IF NOT EXISTS idx_homeworks_grade_class ON homeworks (grade, class_name);
+    CREATE INDEX IF NOT EXISTS idx_exams_grade_class ON exams (grade, class_name);
+    CREATE INDEX IF NOT EXISTS idx_exam_results_student ON exam_results (student_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_participants ON messages (sender_id, receiver_id);
+    CREATE INDEX IF NOT EXISTS idx_fee_receipts_student ON fee_receipts (student_id);
+    CREATE INDEX IF NOT EXISTS idx_media_files_uploader ON media_files (uploader_id);
   `);
 }
 

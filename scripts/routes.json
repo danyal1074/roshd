@@ -1,0 +1,222 @@
+[
+  {
+    "line": 51,
+    "method": "GET",
+    "path": "/api/videos/stream/:filename"
+  },
+  {
+    "line": 89,
+    "method": "POST",
+    "path": "/api/auth/login"
+  },
+  {
+    "line": 150,
+    "method": "GET",
+    "path": "/api/notices"
+  },
+  {
+    "line": 166,
+    "method": "POST",
+    "path": "/api/notices"
+  },
+  {
+    "line": 177,
+    "method": "POST",
+    "path": "/api/notices/seen"
+  },
+  {
+    "line": 189,
+    "method": "GET",
+    "path": "/api/notices/report"
+  },
+  {
+    "line": 208,
+    "method": "GET",
+    "path": "/api/students"
+  },
+  {
+    "line": 253,
+    "method": "POST",
+    "path": "/api/students"
+  },
+  {
+    "line": 277,
+    "method": "DELETE",
+    "path": "/api/students/:id"
+  },
+  {
+    "line": 283,
+    "method": "GET",
+    "path": "/api/attendance"
+  },
+  {
+    "line": 309,
+    "method": "POST",
+    "path": "/api/attendance"
+  },
+  {
+    "line": 336,
+    "method": "GET",
+    "path": "/api/homeworks"
+  },
+  {
+    "line": 355,
+    "method": "POST",
+    "path": "/api/homeworks"
+  },
+  {
+    "line": 368,
+    "method": "POST",
+    "path": "/api/homeworks/:id/submit"
+  },
+  {
+    "line": 399,
+    "method": "GET",
+    "path": "/api/homeworks/report"
+  },
+  {
+    "line": 414,
+    "method": "GET",
+    "path": "/api/exams"
+  },
+  {
+    "line": 425,
+    "method": "GET",
+    "path": "/api/exams/:id"
+  },
+  {
+    "line": 432,
+    "method": "POST",
+    "path": "/api/exams"
+  },
+  {
+    "line": 446,
+    "method": "POST",
+    "path": "/api/exams/:id/submit"
+  },
+  {
+    "line": 506,
+    "method": "GET",
+    "path": "/api/exams/comprehensive/rankings"
+  },
+  {
+    "line": 526,
+    "method": "GET",
+    "path": "/api/study/stats/:student_id"
+  },
+  {
+    "line": 543,
+    "method": "POST",
+    "path": "/api/study/pomodoro"
+  },
+  {
+    "line": 563,
+    "method": "GET",
+    "path": "/api/study/leaderboard"
+  },
+  {
+    "line": 582,
+    "method": "GET",
+    "path": "/api/points/:student_id"
+  },
+  {
+    "line": 599,
+    "method": "GET",
+    "path": "/api/fees/defs"
+  },
+  {
+    "line": 604,
+    "method": "PUT",
+    "path": "/api/fees/defs"
+  },
+  {
+    "line": 618,
+    "method": "GET",
+    "path": "/api/fees/receipts"
+  },
+  {
+    "line": 631,
+    "method": "POST",
+    "path": "/api/fees/receipts"
+  },
+  {
+    "line": 647,
+    "method": "POST",
+    "path": "/api/fees/pay-online"
+  },
+  {
+    "line": 687,
+    "method": "PUT",
+    "path": "/api/fees/receipts/:id"
+  },
+  {
+    "line": 714,
+    "method": "GET",
+    "path": "/api/fees/report"
+  },
+  {
+    "line": 738,
+    "method": "GET",
+    "path": "/api/accounting/summary"
+  },
+  {
+    "line": 761,
+    "method": "GET",
+    "path": "/api/accounting/ledger"
+  },
+  {
+    "line": 766,
+    "method": "POST",
+    "path": "/api/accounting/expense"
+  },
+  {
+    "line": 777,
+    "method": "GET",
+    "path": "/api/messages"
+  },
+  {
+    "line": 788,
+    "method": "POST",
+    "path": "/api/messages"
+  },
+  {
+    "line": 796,
+    "method": "GET",
+    "path": "/api/store/products"
+  },
+  {
+    "line": 801,
+    "method": "POST",
+    "path": "/api/store/checkout"
+  },
+  {
+    "line": 863,
+    "method": "GET",
+    "path": "/api/stats/dashboard"
+  },
+  {
+    "line": 887,
+    "method": "GET",
+    "path": "/api/parent/overview"
+  },
+  {
+    "line": 911,
+    "method": "POST",
+    "path": "/api/upload"
+  },
+  {
+    "line": 969,
+    "method": "GET",
+    "path": "/api/media"
+  },
+  {
+    "line": 993,
+    "method": "GET",
+    "path": "/api/store/orders"
+  },
+  {
+    "line": 1004,
+    "method": "POST",
+    "path": "/api/user/profile"
+  }
+]

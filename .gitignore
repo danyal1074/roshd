@@ -27,6 +27,7 @@ Thumbs.db
 # SQLite WAL and temp files (keep primary rosh.db)
 *.db-shm
 *.db-wal
+backend/backups/
 
 # Large audio & video files
 *.mp4

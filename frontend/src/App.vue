@@ -264,15 +264,32 @@ function setDeviceMode(mode) {
   deviceMode.value = mode;
 }
 
-// Auto-detect screen size: on desktop default to mobile or responsive, on mobile device stay responsive
-onMounted(() => {
+// Auto-detect screen size and initialize session
+onMounted(async () => {
   if (window.innerWidth >= 1024) {
     deviceMode.value = 'responsive';
   } else {
     deviceMode.value = 'responsive';
   }
+  await initAuth();
   refreshIcons();
 });
+
+async function initAuth() {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.user) {
+        currentUser.value = data.user;
+        currentView.value = data.user.role;
+        checkUnseenNotices(data.user.id, data.user.grade);
+      }
+    }
+  } catch (e) {
+    // Ignore, guest stays on currentView
+  }
+}
 
 watch([currentView, deviceMode], () => {
   nextTick(() => refreshIcons());
@@ -298,7 +315,12 @@ function handleLoginSuccess(user) {
   nextTick(() => refreshIcons());
 }
 
-function logout() {
+async function logout() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+  } catch (e) {}
+  localStorage.removeItem('roshd_token');
+  localStorage.removeItem('roshd_user');
   currentUser.value = null;
   currentView.value = 'login';
   nextTick(() => refreshIcons());
@@ -318,7 +340,7 @@ async function switchView(view) {
     return;
   }
 
-  // Set mock user for presentation if not logged in
+  // Set demo user with password if switching to role panel
   if (!currentUser.value || currentUser.value.role !== view) {
     let mockNatId = '0012345678';
     if (view === 'teacher') mockNatId = '0022334455';
@@ -329,10 +351,14 @@ async function switchView(view) {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: mockNatId, role: view })
+        body: JSON.stringify({ identifier: mockNatId, password: '123456', role: view })
       });
       const data = await res.json();
-      currentUser.value = data.user;
+      if (res.ok && data.user) {
+        if (data.token) localStorage.setItem('roshd_token', data.token);
+        if (data.user) localStorage.setItem('roshd_user', JSON.stringify(data.user));
+        currentUser.value = data.user;
+      }
     } catch (e) {
       console.error(e);
     }

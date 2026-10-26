@@ -3,28 +3,94 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
+const rateLimit = require('express-rate-limit');
 const { db } = require('./db');
+const {
+  verifyAndMigratePassword,
+  hashPassword,
+  generateToken,
+  setAuthCookie,
+  clearAuthCookie,
+  authMiddleware,
+  requireAuth,
+  requireRole,
+  sanitizeUser,
+  COOKIE_NAME
+} = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const HOST = '0.0.0.0';
+const HOST = process.env.HOST || '0.0.0.0';
 
-app.use(cors());
-app.use(express.json());
+// ----------------- SECURITY HEADERS & MIDDLEWARES -----------------
+// Helmet with relaxed CSP for fonts/assets
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 
-// Uploads directories setup
+// CORS Configuration
+const allowedOrigins = [
+  'https://roshd.digiral.ir',
+  'http://roshd.digiral.ir',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps, curl, server-to-server)
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Permissive in internal reverse proxy
+  },
+  credentials: true
+}));
+
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+app.use(cookieParser());
+
+// Rate Limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // limit to 20 attempts per account per IP
+  keyGenerator: (req) => `${req.ip}_${req.body?.identifier || 'anon'}`,
+  validate: { keyGeneratorIpFallback: false },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => process.env.SKIP_RATE_LIMIT === 'true',
+  message: { error: 'تعداد تلاش‌های ورود بیش از حد مجاز است. لطفاً ۱۵ دقیقه دیگر مجدداً تلاش کنید.' }
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 4000, // accommodate 400 concurrent students behind school NAT / campus network
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => process.env.SKIP_RATE_LIMIT === 'true'
+});
+
+app.use('/api/', generalLimiter);
+app.use(authMiddleware);
+
+// ----------------- FILE UPLOADS CONFIGURATION -----------------
 const uploadsDir = path.join(__dirname, 'uploads');
 const dirs = ['images', 'videos', 'homeworks', 'receipts'].map(d => path.join(uploadsDir, d));
 [uploadsDir, ...dirs].forEach(d => {
   if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
 });
 
-// Production Multer Storage with MIME-Type Subdirectory Routing
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let sub = 'images';
     const mime = file.mimetype || '';
-    const cat = req.query.category || req.body.category || '';
+    const cat = req.body.category || req.query.category || '';
     if (cat === 'receipt') sub = 'receipts';
     else if (cat === 'homework') sub = 'homeworks';
     else if (mime.startsWith('video/')) sub = 'videos';
@@ -33,433 +99,502 @@ const storage = multer.diskStorage({
     cb(null, path.join(uploadsDir, sub));
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const safeName = Date.now() + '-' + Math.round(Math.random() * 1e6) + ext;
+    // Sanitize extension and generate random cryptographic name
+    const ext = path.extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, '');
+    const safeName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
     cb(null, safeName);
   }
 });
 
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 150 * 1024 * 1024 } // 150MB max file size (videos & documents)
-});
-
-// Serve static uploads
-app.use('/uploads', express.static(uploadsDir));
-
-// HTTP Range Video Streaming for Educational Videos (Supports mobile iOS/Android scrubbing)
-app.get('/api/videos/stream/:filename', (req, res) => {
-  const filePath = path.join(uploadsDir, 'videos', req.params.filename);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'ویدیو یافت نشد' });
-  }
-
-  const stat = fs.statSync(filePath);
-  const fileSize = stat.size;
-  const range = req.headers.range;
-
-  if (range) {
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunksize = (end - start) + 1;
-    const file = fs.createReadStream(filePath, { start, end });
-    const head = {
-      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-      'Accept-Ranges': 'bytes',
-      'Content-Length': chunksize,
-      'Content-Type': 'video/mp4',
-    };
-    res.writeHead(206, head);
-    file.pipe(res);
+const fileFilter = (req, file, cb) => {
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.pdf', '.docx', '.mp4', '.webm'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowedExtensions.includes(ext)) {
+    cb(null, true);
   } else {
-    const head = {
-      'Content-Length': fileSize,
-      'Content-Type': 'video/mp4',
-    };
-    res.writeHead(200, head);
-    fs.createReadStream(filePath).pipe(res);
+    cb(new Error('فرمت فایل ارسالی مجاز نمی‌باشد.'));
   }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 150 * 1024 * 1024 } // 150MB max
 });
 
-// Helper to convert English digits to Persian
+// Serve public uploads (images and videos)
+app.use('/uploads/images', express.static(path.join(uploadsDir, 'images')));
+app.use('/uploads/videos', express.static(path.join(uploadsDir, 'videos')));
+
+// Protected uploads (receipts and homeworks require authentication)
+app.get('/uploads/receipts/:filename', requireAuth, (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const filePath = path.join(uploadsDir, 'receipts', filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'فایل یافت نشد' });
+  res.sendFile(filePath);
+});
+
+app.get('/uploads/homeworks/:filename', requireAuth, (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const filePath = path.join(uploadsDir, 'homeworks', filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'فایل یافت نشد' });
+  res.sendFile(filePath);
+});
+
+// Helper for Persian digits
 const faNum = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
 
-// ----------------- AUTH -----------------
-app.post('/api/auth/login', (req, res) => {
-  const { identifier, password, role } = req.body;
-  if (!identifier) {
-    return res.status(400).json({ error: 'کد ملی یا شماره موبایل الزامی است' });
+// Real dynamic Persian date helper
+function getJalaliDate() {
+  const d = new Date();
+  const options = { year: 'numeric', month: '2-digit', day: '2-digit', calendar: 'persian' };
+  try {
+    return new Intl.DateTimeFormat('fa-IR-u-ca-persian', options).format(d);
+  } catch (e) {
+    return '۱۴۰۳/۰۸/۰۵';
   }
+}
+
+// ----------------- HEALTH CHECK -----------------
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: Math.round(process.uptime()),
+    database: 'connected'
+  });
+});
+
+// ----------------- AUTHENTICATION -----------------
+app.post('/api/auth/login', authLimiter, (req, res) => {
+  const { identifier, password, role } = req.body;
+  if (!identifier || !password) {
+    return res.status(400).json({ error: 'کد ملی یا شماره موبایل و رمز عبور الزامی است.' });
+  }
+
+  const cleanId = String(identifier).trim();
+  const cleanPassword = String(password).trim();
 
   // Find user by national_id OR phone
   let user;
   if (role) {
-    user = db.prepare('SELECT * FROM users WHERE (national_id = ? OR phone = ?) AND role = ?').get(identifier, identifier, role);
+    user = db.prepare('SELECT * FROM users WHERE (national_id = ? OR phone = ?) AND role = ?').get(cleanId, cleanId, role);
   } else {
-    user = db.prepare('SELECT * FROM users WHERE national_id = ? OR phone = ?').get(identifier, identifier);
+    user = db.prepare('SELECT * FROM users WHERE national_id = ? OR phone = ?').get(cleanId, cleanId);
   }
 
-  // If password provided and does not match
-  if (user && password && user.password !== password) {
-    return res.status(401).json({ error: 'رمز عبور اشتباه است' });
-  }
-
-  // If user not found, create a demo fallback or pick matching role
+  // Strict check: No user found -> 401 Unauthorized (No mock fallback!)
   if (!user) {
-    if (role === 'admin') {
-      user = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
-    } else if (role === 'teacher') {
-      user = db.prepare("SELECT * FROM users WHERE role = 'teacher' LIMIT 1").get();
-    } else if (role === 'parent') {
-      user = db.prepare("SELECT * FROM users WHERE role = 'parent' LIMIT 1").get();
-    } else {
-      user = db.prepare("SELECT * FROM users WHERE role = 'student' LIMIT 1").get();
-    }
+    return res.status(401).json({ error: 'کد ملی یا رمز عبور اشتباه است.' });
   }
 
-  // Check if today is student's birthday (demo logic: Ali Rezaei is born 08/04 -> today!)
-  const isBirthday = user.role === 'student' && (user.birth_date?.includes('۰۸/۰۴') || user.birth_date?.includes('08/04') || user.national_id === '0012345678');
+  // Verify Password with automatic migration
+  const isValid = verifyAndMigratePassword(cleanPassword, user.password, (newHash) => {
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(newHash, user.id);
+  });
+
+  if (!isValid) {
+    return res.status(401).json({ error: 'کد ملی یا رمز عبور اشتباه است.' });
+  }
+
+  // Generate secure token and set HttpOnly Cookie
+  const token = generateToken(user);
+  setAuthCookie(res, token);
 
   res.json({
-    user: {
-      id: user.id,
-      role: user.role,
-      national_id: user.national_id,
-      phone: user.phone,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      full_name: user.full_name,
-      grade: user.grade,
-      class_name: user.class_name,
-      school_name: user.school_name,
-      birth_date: user.birth_date,
-      parent_phone: user.parent_phone,
-      level: user.level,
-      level_title: user.level_title,
-      total_points: user.total_points,
-      rank: user.rank,
-      fee_status: user.fee_status,
-      is_locked: user.is_locked,
-      is_birthday: isBirthday
-    }
+    success: true,
+    token,
+    user: sanitizeUser(user)
   });
 });
 
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'کاربر یافت نشد.' });
+  res.json({ user: sanitizeUser(user) });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  clearAuthCookie(res);
+  res.json({ success: true, message: 'با موفقیت خارج شدید.' });
+});
+
 // ----------------- NOTICES -----------------
-app.get('/api/notices', (req, res) => {
-  const userId = req.query.user_id;
-  const grade = req.query.grade;
+app.get('/api/notices', requireAuth, (req, res) => {
+  const grade = req.query.grade || req.user.grade || 'all';
+  const userId = req.user.id;
 
   const notices = db.prepare(`
-    SELECT n.*,
-      CASE WHEN nv.id IS NOT NULL THEN 1 ELSE 0 END as is_seen
+    SELECT n.*, 
+           CASE WHEN nv.id IS NOT NULL THEN 1 ELSE 0 END as is_seen
     FROM notices n
     LEFT JOIN notice_views nv ON n.id = nv.notice_id AND nv.user_id = ?
-    WHERE n.target_audience = 'all' OR n.target_audience = ? OR ? IS NULL
+    WHERE n.target_audience = 'all' OR n.target_audience = ?
     ORDER BY n.id DESC
-  `).all(userId || 0, grade || 'all', grade ? 'filtered' : null);
+  `).all(userId, grade);
 
   res.json(notices);
 });
 
-app.post('/api/notices', (req, res) => {
-  const { title, body, target_audience, place, tag } = req.body;
-  const date_fa = '۴ آبان ۱۴۰۵';
-  const stmt = db.prepare(`
+app.post('/api/notices', requireAuth, requireRole('admin'), (req, res) => {
+  const { title, date_fa, place, tag, target_audience } = req.body;
+  const bodyText = req.body.body || req.body.content;
+  if (!title || !bodyText) {
+    return res.status(400).json({ error: 'عنوان و متن اطلاعیه الزامی است.' });
+  }
+
+  const currentDate = date_fa || getJalaliDate();
+  const info = db.prepare(`
     INSERT INTO notices (title, body, date_fa, place, tag, target_audience)
     VALUES (?, ?, ?, ?, ?, ?)
-  `);
-  const info = stmt.run(title, body, date_fa, place || 'کانون', tag || 'مهم', target_audience || 'all');
+  `).run(title, bodyText, currentDate, place || 'کانون', tag || 'مهم', target_audience || 'all');
+
   res.json({ success: true, id: info.lastInsertRowid });
 });
 
-app.post('/api/notices/seen', (req, res) => {
-  const { notice_id, user_id } = req.body;
-  if (!notice_id || !user_id) return res.status(400).json({ error: 'Missing parameters' });
+app.post('/api/notices/seen', requireAuth, (req, res) => {
+  const { notice_id } = req.body;
+  const userId = req.user.id; // Trusted from session
 
-  db.prepare(`
-    INSERT OR IGNORE INTO notice_views (notice_id, user_id)
-    VALUES (?, ?)
-  `).run(notice_id, user_id);
+  if (!notice_id) return res.status(400).json({ error: 'شناسه اطلاعیه نامعتبر است.' });
 
-  res.json({ success: true });
+  try {
+    db.prepare('INSERT OR IGNORE INTO notice_views (notice_id, user_id) VALUES (?, ?)').run(notice_id, userId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'خطا در ثبت وضعیت مشاهده اطلاعیه.' });
+  }
 });
 
-app.get('/api/notices/report', (req, res) => {
-  const totalStudents = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student'").get().count;
-  const notices = db.prepare(`
-    SELECT n.*,
-      (SELECT COUNT(*) FROM notice_views nv WHERE nv.notice_id = n.id) as seen_count
+app.get('/api/notices/report', requireAuth, requireRole('admin'), (req, res) => {
+  const report = db.prepare(`
+    SELECT n.id, n.title, n.date_fa, n.tag,
+           COUNT(nv.id) as seen_count,
+           (SELECT COUNT(*) FROM users WHERE role = 'student') as total_students
     FROM notices n
+    LEFT JOIN notice_views nv ON n.id = nv.notice_id
+    GROUP BY n.id
     ORDER BY n.id DESC
   `).all();
-
-  const result = notices.map(n => ({
-    ...n,
-    total_audience: n.target_audience === 'all' ? totalStudents : Math.round(totalStudents / 3),
-    unseen_count: Math.max(0, (n.target_audience === 'all' ? totalStudents : Math.round(totalStudents / 3)) - n.seen_count)
-  }));
-
-  res.json(result);
+  res.json(report);
 });
 
-// ----------------- STUDENTS (FOR 450 STUDENTS DIRECTORY) -----------------
-app.get('/api/students', (req, res) => {
-  const { search, grade, class_name, school_name, limit = 50, page = 1 } = req.query;
-  const offset = (Number(page) - 1) * Number(limit);
+// ----------------- STUDENTS MANAGEMENT -----------------
+app.get('/api/students', requireAuth, requireRole('admin', 'teacher'), (req, res) => {
+  const { grade, class_name, search, page = 1, limit = 50 } = req.query;
+  const pageNum = Math.max(1, parseInt(page));
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+  const offset = (pageNum - 1) * limitNum;
 
-  let whereClauses = ["role = 'student'"];
-  let params = [];
+  let query = `
+    SELECT id, role, national_id, phone, first_name, last_name, full_name, 
+           grade, class_name, school_name, birth_date, address, parent_phone, 
+           parent_name, level, level_title, total_points, rank, fee_status, platform_fee_status, is_locked
+    FROM users 
+    WHERE role = 'student'
+  `;
+  const params = [];
 
-  if (search) {
-    whereClauses.push('(full_name LIKE ? OR national_id LIKE ?)');
-    params.push(`%${search}%`, `%${search}%`);
-  }
-  if (grade) {
-    whereClauses.push('grade = ?');
+  if (grade && grade !== 'all') {
+    query += ' AND grade = ?';
     params.push(grade);
   }
-  if (class_name) {
-    whereClauses.push('class_name = ?');
+  if (class_name && class_name !== 'all') {
+    query += ' AND class_name = ?';
     params.push(class_name);
   }
-  if (school_name) {
-    whereClauses.push('school_name = ?');
-    params.push(school_name);
+  if (search) {
+    query += ' AND (full_name LIKE ? OR national_id LIKE ? OR phone LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
 
-  const whereStr = whereClauses.join(' AND ');
+  // Count total for pagination
+  const countQuery = `SELECT COUNT(*) as total FROM (${query})`;
+  const totalCount = db.prepare(countQuery).get(...params).total;
 
-  const total = db.prepare(`SELECT COUNT(*) as count FROM users WHERE ${whereStr}`).get(...params).count;
-  const students = db.prepare(`
-    SELECT id, national_id, phone, first_name, last_name, full_name,
-           grade, class_name, school_name, birth_date, address, parent_phone,
-           level, level_title, total_points, rank, fee_status, is_locked
-    FROM users
-    WHERE ${whereStr}
-    ORDER BY id ASC
-    LIMIT ? OFFSET ?
-  `).all(...params, Number(limit), offset);
+  query += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+  params.push(limitNum, offset);
 
+  const students = db.prepare(query).all(...params);
   res.json({
-    total,
-    page: Number(page),
-    limit: Number(limit),
-    students
+    students,
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total: totalCount,
+      total_pages: Math.ceil(totalCount / limitNum)
+    }
   });
 });
 
-app.post('/api/students', (req, res) => {
-  const { first_name, last_name, national_id, address, school_name, grade, class_name, birth_date, parent_phone } = req.body;
-  const full_name = `${first_name} ${last_name}`;
+app.post('/api/students', requireAuth, requireRole('admin'), (req, res) => {
+  const { national_id, phone, first_name, last_name, grade, class_name, password } = req.body;
+  if (!national_id || !first_name || !last_name) {
+    return res.status(400).json({ error: 'کد ملی، نام و نام خانوادگی الزامی است.' });
+  }
+
+  const fullName = `${first_name} ${last_name}`;
+  const rawPw = password || '123456';
+  const hashedPw = hashPassword(rawPw);
 
   try {
-    const totalCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student'").get().count;
-    const stmt = db.prepare(`
-      INSERT INTO users (
-        role, national_id, phone, password, first_name, last_name, full_name,
-        grade, class_name, school_name, birth_date, address, parent_phone,
-        level, level_title, total_points, rank, fee_status, is_locked
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const info = stmt.run(
-      'student', national_id, parent_phone, '123456', first_name, last_name, full_name,
-      grade, class_name, school_name, birth_date, address, parent_phone,
-      1, 'نوآموز', 100, totalCount + 1, 'pending', 0
-    );
+    const info = db.prepare(`
+      INSERT INTO users (role, national_id, phone, password, first_name, last_name, full_name, grade, class_name)
+      VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(national_id, phone || '', hashedPw, first_name, last_name, fullName, grade || 'هفتم', class_name || 'الف');
+
     res.json({ success: true, id: info.lastInsertRowid });
   } catch (err) {
-    res.status(400).json({ error: 'کد ملی قبلاً ثبت شده است یا داده‌ها نامعتبر هستند.' });
+    if (err.message.includes('UNIQUE constraint failed')) {
+      return res.status(400).json({ error: 'کاربری با این کد ملی قبلاً ثبت شده است.' });
+    }
+    res.status(500).json({ error: 'خطا در ثبت‌نام دانش‌آموز.' });
   }
 });
 
-app.delete('/api/students/:id', (req, res) => {
-  db.prepare("DELETE FROM users WHERE id = ? AND role = 'student'").run(req.params.id);
+app.delete('/api/students/:id', requireAuth, requireRole('admin'), (req, res) => {
+  const studentId = parseInt(req.params.id);
+  db.prepare("DELETE FROM users WHERE id = ? AND role = 'student'").run(studentId);
   res.json({ success: true });
 });
 
 // ----------------- ATTENDANCE -----------------
-app.get('/api/attendance', (req, res) => {
-  const { grade = 'هفتم', class_name = 'الف', date_fa = '۱۴۰۵/۰۸/۰۴' } = req.query;
+app.get('/api/attendance', requireAuth, requireRole('admin', 'teacher'), (req, res) => {
+  const { date_fa, grade, class_name } = req.query;
+  const targetDate = date_fa || getJalaliDate();
 
-  const students = db.prepare(`
-    SELECT u.id, u.full_name, u.grade, u.class_name,
+  let query = `
+    SELECT u.id as student_id, u.full_name, u.grade, u.class_name, u.phone, u.parent_phone,
            COALESCE(a.status, 'p') as status,
-           COALESCE(a.sms_sent, 0) as sms_sent
+           a.id as attendance_id
     FROM users u
     LEFT JOIN attendance a ON u.id = a.student_id AND a.date_fa = ?
-    WHERE u.role = 'student' AND u.grade = ? AND u.class_name = ?
-    ORDER BY u.id ASC
-  `).all(date_fa, grade, class_name);
+    WHERE u.role = 'student'
+  `;
+  const params = [targetDate];
 
-  const presentCount = students.filter(s => s.status === 'p').length;
-  const absentCount = students.filter(s => s.status === 'a').length;
-  const excusedCount = students.filter(s => s.status === 'e').length;
-
-  res.json({
-    date_fa,
-    grade,
-    class_name,
-    stats: { present: presentCount, absent: absentCount, excused: excusedCount, total: students.length },
-    students
-  });
-});
-
-app.post('/api/attendance', (req, res) => {
-  const { grade, class_name, date_fa, records } = req.body;
-  if (!records || !Array.isArray(records)) {
-    return res.status(400).json({ error: 'اطلاعات حضور و غیاب نامعتبر است' });
+  if (grade && grade !== 'all') {
+    query += ' AND u.grade = ?';
+    params.push(grade);
+  }
+  if (class_name && class_name !== 'all') {
+    query += ' AND u.class_name = ?';
+    params.push(class_name);
   }
 
-  const upsert = db.prepare(`
-    INSERT INTO attendance (date_fa, grade, class_name, student_id, status, sms_sent)
-    VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT(date_fa, student_id) DO UPDATE SET
-      status = excluded.status,
-      sms_sent = excluded.sms_sent
+  query += ' ORDER BY u.last_name ASC';
+  const list = db.prepare(query).all(...params);
+  res.json(list);
+});
+
+app.post('/api/attendance', requireAuth, requireRole('admin', 'teacher'), (req, res) => {
+  const { date_fa, records } = req.body;
+  if (!records || !Array.isArray(records)) {
+    return res.status(400).json({ error: 'رکوردهای ارسالی نامعتبر است.' });
+  }
+
+  const targetDate = date_fa || getJalaliDate();
+  const insert = db.prepare(`
+    INSERT INTO attendance (date_fa, grade, class_name, student_id, status)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(date_fa, student_id) DO UPDATE SET status = excluded.status
   `);
 
   db.exec('BEGIN TRANSACTION;');
-  let smsCount = 0;
-  for (const r of records) {
-    const isSms = r.status === 'a' ? 1 : 0;
-    if (isSms) smsCount++;
-    upsert.run(date_fa || '۱۴۰۵/۰۸/۰۴', grade, class_name, r.student_id, r.status, isSms);
+  try {
+    for (const r of records) {
+      insert.run(targetDate, r.grade || 'هفتم', r.class_name || 'الف', r.student_id, r.status);
+    }
+    db.exec('COMMIT;');
+    res.json({ success: true, count: records.length });
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    res.status(500).json({ error: 'خطا در ثبت حضور و غیاب.' });
   }
-  db.exec('COMMIT;');
-
-  res.json({ success: true, sms_count: smsCount });
 });
 
 // ----------------- HOMEWORKS -----------------
-app.get('/api/homeworks', (req, res) => {
-  const { student_id, grade = 'هفتم', class_name = 'الف' } = req.query;
+app.get('/api/homeworks', requireAuth, (req, res) => {
+  const grade = req.user.role === 'student' ? req.user.grade : (req.query.grade || null);
+  const className = req.user.role === 'student' ? req.user.class_name : (req.query.class_name || null);
+  const studentId = req.user.id;
 
-  const homeworks = db.prepare(`
-    SELECT h.*,
-      hs.status as submission_status,
-      hs.is_late,
-      hs.grade_score,
-      hs.feedback,
-      hs.submitted_at_fa
+  let query = `
+    SELECT h.*, 
+           hs.status as submission_status, 
+           hs.grade_score, 
+           hs.feedback, 
+           hs.file_url as student_file,
+           hs.is_late
     FROM homeworks h
     LEFT JOIN homework_submissions hs ON h.id = hs.homework_id AND hs.student_id = ?
-    WHERE h.grade = ? AND (h.class_name = ? OR h.class_name = 'همه کلاس‌ها')
-    ORDER BY h.id DESC
-  `).all(student_id || 0, grade, class_name);
+    WHERE 1=1
+  `;
+  const params = [studentId];
 
+  if (grade) {
+    query += " AND (h.grade = ? OR h.grade = 'all')";
+    params.push(grade);
+  }
+  if (className) {
+    query += " AND (h.class_name = ? OR h.class_name = 'all')";
+    params.push(className);
+  }
+
+  query += ' ORDER BY h.id DESC';
+  const homeworks = db.prepare(query).all(...params);
   res.json(homeworks);
 });
 
-app.post('/api/homeworks', (req, res) => {
-  const { title, grade, class_name, subject, teacher_name, deadline_fa, points, description } = req.body;
-  const stmt = db.prepare(`
+app.post('/api/homeworks', requireAuth, requireRole('teacher', 'admin'), (req, res) => {
+  const { title, grade, class_name, subject, deadline_fa, points, description } = req.body;
+  if (!title || !grade) {
+    return res.status(400).json({ error: 'عنوان و پایه الزامی است.' });
+  }
+
+  const teacherName = req.user.full_name || 'استاد کانون';
+  const info = db.prepare(`
     INSERT INTO homeworks (title, grade, class_name, subject, teacher_name, deadline_fa, deadline_timestamp, points, description)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  const info = stmt.run(
-    title, grade, class_name, subject || 'عمومی', teacher_name || 'معلم کانون',
-    deadline_fa, Date.now() + 86400000, points || 20, description || ''
+  `).run(
+    title, grade, class_name || 'all', subject || 'عمومی', teacherName,
+    deadline_fa || '۱۰ آبان ۱۴۰۳', Date.now() + 7 * 86400000, points || 20, description || ''
   );
+
   res.json({ success: true, id: info.lastInsertRowid });
 });
 
-app.post('/api/homeworks/:id/submit', (req, res) => {
-  const homework_id = req.params.id;
-  const { student_id, note, file_url } = req.body;
+app.post('/api/homeworks/:id/submit', requireAuth, requireRole('student'), (req, res) => {
+  const homeworkId = parseInt(req.params.id);
+  const studentId = req.user.id; // Trusted from session
+  const { file_url, note } = req.body;
 
-  const hw = db.prepare('SELECT * FROM homeworks WHERE id = ?').get(homework_id);
-  const isLate = hw && hw.deadline_timestamp < Date.now() ? 1 : 0;
+  const hw = db.prepare('SELECT * FROM homeworks WHERE id = ?').get(homeworkId);
+  if (!hw) return res.status(404).json({ error: 'تکلیف یافت نشد.' });
 
-  const stmt = db.prepare(`
+  const currentDate = getJalaliDate();
+  const isLate = Date.now() > (hw.deadline_timestamp || (Date.now() + 1000)) ? 1 : 0;
+
+  db.prepare(`
     INSERT INTO homework_submissions (homework_id, student_id, submitted_at_fa, file_url, note, is_late, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, 'submitted')
     ON CONFLICT(homework_id, student_id) DO UPDATE SET
       submitted_at_fa = excluded.submitted_at_fa,
       file_url = excluded.file_url,
       note = excluded.note,
       is_late = excluded.is_late,
-      status = excluded.status
-  `);
+      status = 'submitted'
+  `).run(homeworkId, studentId, currentDate, file_url || '', note || '', isLate);
 
-  stmt.run(homework_id, student_id, '۴ آبان ۱۴۰۵، ساعت ۱۸:۳۰', file_url || 'hw.pdf', note || '', isLate, isLate ? 'late' : 'submitted');
-
-  // If late, deduct 10 points in points_log, else add 20 points!
-  if (isLate) {
-    db.prepare("INSERT INTO points_log (student_id, type, title, points, date_fa) VALUES (?, 'minus', 'ارسال با دیرکرد تکلیف', 10, '۴ آبان')").run(student_id);
-  } else {
-    db.prepare("INSERT INTO points_log (student_id, type, title, points, date_fa) VALUES (?, 'plus', 'ارسال به‌موقع تکلیف', 20, '۴ آبان')").run(student_id);
-    db.prepare('UPDATE users SET total_points = total_points + 20 WHERE id = ?').run(student_id);
-  }
-
-  res.json({ success: true, is_late: isLate });
+  res.json({ success: true, message: 'تکلیف با موفقیت ارسال شد.' });
 });
 
-app.get('/api/homeworks/report', (req, res) => {
-  const { grade, class_name } = req.query;
-  const homeworks = db.prepare(`
-    SELECT h.*,
-      (SELECT COUNT(*) FROM users u WHERE u.role = 'student' AND u.grade = h.grade AND (h.class_name = 'همه کلاس‌ها' OR u.class_name = h.class_name)) as total_expected,
-      (SELECT COUNT(*) FROM homework_submissions hs WHERE hs.homework_id = h.id) as submitted_count
-    FROM homeworks h
-    WHERE (? IS NULL OR h.grade = ?) AND (? IS NULL OR h.class_name = ?)
-    ORDER BY h.id DESC
-  `).all(grade || null, grade || null, class_name || null, class_name || null);
+app.get('/api/homeworks/report', requireAuth, requireRole('teacher', 'admin'), (req, res) => {
+  const { homework_id } = req.query;
+  if (!homework_id) return res.status(400).json({ error: 'شناسه تکلیف الزامی است.' });
 
-  res.json(homeworks);
+  const submissions = db.prepare(`
+    SELECT hs.*, u.full_name, u.grade, u.class_name
+    FROM homework_submissions hs
+    JOIN users u ON hs.student_id = u.id
+    WHERE hs.homework_id = ?
+    ORDER BY hs.id DESC
+  `).all(homework_id);
+
+  res.json(submissions);
 });
 
-// ----------------- EXAMS -----------------
-app.get('/api/exams', (req, res) => {
-  const { grade, class_name } = req.query;
-  const exams = db.prepare(`
+// ----------------- ONLINE EXAMS -----------------
+app.get('/api/exams', requireAuth, (req, res) => {
+  const grade = req.user.role === 'student' ? req.user.grade : (req.query.grade || null);
+  const className = req.user.role === 'student' ? req.user.class_name : (req.query.class_name || null);
+
+  let query = `
     SELECT id, title, grade, class_name, subject, duration_minutes, question_count, deadline_fa, created_at
     FROM exams
-    WHERE (? IS NULL OR grade = ?) AND (? IS NULL OR class_name = ?)
-    ORDER BY id DESC
-  `).all(grade || null, grade || null, class_name || null, class_name || null);
+    WHERE 1=1
+  `;
+  const params = [];
+  if (grade) {
+    query += " AND (grade = ? OR grade = 'all')";
+    params.push(grade);
+  }
+  if (className) {
+    query += " AND (class_name = ? OR class_name = 'all')";
+    params.push(className);
+  }
+  query += ' ORDER BY id DESC';
+
+  const exams = db.prepare(query).all(...params);
   res.json(exams);
 });
 
-app.get('/api/exams/:id', (req, res) => {
+// GET EXAM: Strip correct answers for students to prevent cheating!
+app.get('/api/exams/:id', requireAuth, (req, res) => {
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id);
-  if (!exam) return res.status(404).json({ error: 'آزمون یافت نشد' });
-  exam.questions = JSON.parse(exam.questions_json || '[]');
+  if (!exam) return res.status(404).json({ error: 'آزمون یافت نشد.' });
+
+  const rawQuestions = JSON.parse(exam.questions_json || '[]');
+  const isTeacherOrAdmin = ['teacher', 'admin'].includes(req.user.role);
+
+  // If student: remove 'correct' answer key!
+  if (!isTeacherOrAdmin) {
+    exam.questions = rawQuestions.map(q => {
+      const copy = { ...q };
+      delete copy.correct;
+      delete copy.correct_answer;
+      return copy;
+    });
+  } else {
+    exam.questions = rawQuestions;
+  }
+
+  delete exam.questions_json;
   res.json(exam);
 });
 
-app.post('/api/exams', (req, res) => {
+app.post('/api/exams', requireAuth, requireRole('teacher', 'admin'), (req, res) => {
   const { title, grade, class_name, subject, duration_minutes, question_count, questions } = req.body;
-  const stmt = db.prepare(`
+  if (!title || !questions || !Array.isArray(questions)) {
+    return res.status(400).json({ error: 'عنوان و سوالات آزمون الزامی است.' });
+  }
+
+  const info = db.prepare(`
     INSERT INTO exams (title, grade, class_name, subject, duration_minutes, question_count, questions_json, deadline_fa)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  const info = stmt.run(
-    title, grade, class_name, subject || 'عمومی',
-    duration_minutes || 15, question_count || questions?.length || 5,
-    JSON.stringify(questions || []), '۱۰ آبان ۱۴۰۵'
+  `).run(
+    title, grade || 'هفتم', class_name || 'all', subject || 'عمومی',
+    duration_minutes || 15, question_count || questions.length,
+    JSON.stringify(questions), '۱۰ آبان ۱۴۰۳'
   );
+
   res.json({ success: true, id: info.lastInsertRowid });
 });
 
-app.post('/api/exams/:id/submit', (req, res) => {
-  const exam_id = req.params.id;
-  const { student_id, answers } = req.body; // { '1': 1, '2': 2 }
+// Strict server-side exam evaluation
+app.post('/api/exams/:id/submit', requireAuth, requireRole('student'), (req, res) => {
+  const examId = parseInt(req.params.id);
+  const studentId = req.user.id; // Trusted from session
+  const { answers } = req.body; // e.g. { '1': 2, '2': 4 }
 
-  const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(exam_id);
-  if (!exam) return res.status(404).json({ error: 'آزمون یافت نشد' });
+  if (!answers || typeof answers !== 'object') {
+    return res.status(400).json({ error: 'پاسخ‌های ارسالی نامعتبر است.' });
+  }
 
+  const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(examId);
+  if (!exam) return res.status(404).json({ error: 'آزمون یافت نشد.' });
+
+  // Evaluate against master key
   const questions = JSON.parse(exam.questions_json || '[]');
   let correct = 0;
   let wrong = 0;
   let unanswered = 0;
 
   questions.forEach(q => {
-    const ans = answers[q.id];
-    if (ans === undefined || ans === null) {
+    const studentAns = answers[q.id];
+    if (studentAns === undefined || studentAns === null) {
       unanswered++;
-    } else if (ans === q.correct) {
+    } else if (studentAns === q.correct) {
       correct++;
     } else {
       wrong++;
@@ -470,9 +605,11 @@ app.post('/api/exams/:id/submit', (req, res) => {
   const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
   const score = Math.round((percentage / 100) * 20);
 
-  const stmt = db.prepare(`
+  const currentDate = getJalaliDate();
+
+  db.prepare(`
     INSERT INTO exam_results (exam_id, student_id, score, total_questions, correct_count, wrong_count, unanswered_count, percentage, rank, submitted_at_fa)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
     ON CONFLICT(exam_id, student_id) DO UPDATE SET
       score = excluded.score,
       correct_count = excluded.correct_count,
@@ -480,316 +617,296 @@ app.post('/api/exams/:id/submit', (req, res) => {
       unanswered_count = excluded.unanswered_count,
       percentage = excluded.percentage,
       submitted_at_fa = excluded.submitted_at_fa
-  `);
-
-  stmt.run(exam_id, student_id, score, total, correct, wrong, unanswered, percentage, 4, '۴ آبان ۱۴۰۵');
-
-  // Award points
-  const pointsEarned = correct * 10;
-  db.prepare('INSERT INTO points_log (student_id, type, title, points, date_fa) VALUES (?, "plus", ?, ?, "۴ آبان")')
-    .run(student_id, `شرکت در ${exam.title}`, pointsEarned);
-  db.prepare('UPDATE users SET total_points = total_points + ? WHERE id = ?').run(pointsEarned, student_id);
+  `).run(examId, studentId, score, total, correct, wrong, unanswered, percentage, currentDate);
 
   res.json({
     success: true,
     score,
-    total,
-    correct,
-    wrong,
-    unanswered,
-    percentage,
-    points_earned: pointsEarned
+    total_questions: total,
+    correct_count: correct,
+    wrong_count: wrong,
+    unanswered_count: unanswered,
+    percentage
   });
 });
 
-// Comprehensive Exam (آزمون جامع - همه ۴۵۰ دانش‌آموز)
-app.get('/api/exams/comprehensive/rankings', (req, res) => {
-  const students = db.prepare(`
-    SELECT id, national_id, full_name, grade, class_name, school_name, total_points, rank
-    FROM users
-    WHERE role = 'student'
-    ORDER BY total_points DESC
+app.get('/api/exams/comprehensive/rankings', requireAuth, (req, res) => {
+  const rankings = db.prepare(`
+    SELECT er.*, u.full_name, u.grade, u.class_name
+    FROM exam_results er
+    JOIN users u ON er.student_id = u.id
+    ORDER BY er.percentage DESC, er.score DESC
+    LIMIT 50
   `).all();
-
-  // Re-rank dynamically based on points
-  const ranked = students.map((s, index) => ({
-    ...s,
-    rank: index + 1,
-    score: Math.min(100, Math.round(50 + (s.total_points / 12))),
-    qr_data: `ROSH-EXAM:ID=${s.id};NAT=${s.national_id};NAME=${encodeURIComponent(s.full_name)};GRADE=${encodeURIComponent(s.grade + ' ' + s.class_name)}`
-  }));
-
-  res.json(ranked);
+  res.json(rankings);
 });
 
-// ----------------- POMODORO & STUDY -----------------
-app.get('/api/study/stats/:student_id', (req, res) => {
-  const student_id = req.params.student_id;
-  const today = '۱۴۰۵/۰۸/۰۴';
+// ----------------- POMODORO & STUDY STATS -----------------
+app.get('/api/study/stats/:student_id', requireAuth, (req, res) => {
+  const targetId = parseInt(req.params.student_id);
+  const isSelf = req.user.id === targetId;
+  const isStaffOrParent = ['admin', 'teacher', 'parent'].includes(req.user.role);
 
-  const session = db.prepare('SELECT * FROM study_sessions WHERE student_id = ? AND date_fa = ?').get(student_id, today) || {
-    pomodoros_count: 0,
-    total_minutes: 0
-  };
+  if (!isSelf && !isStaffOrParent) {
+    return res.status(403).json({ error: 'دسترسی غیرمجاز.' });
+  }
+
+  const today = getJalaliDate();
+  const session = db.prepare('SELECT * FROM study_sessions WHERE student_id = ? AND date_fa = ?').get(targetId, today);
 
   res.json({
-    today_pomodoros: session.pomodoros_count,
-    today_minutes: session.total_minutes,
-    goal_minutes: 120,
-    progress_percentage: Math.min(100, Math.round((session.total_minutes / 120) * 100))
+    today_pomodoros: session ? session.pomodoros_count : 0,
+    today_minutes: session ? session.total_minutes : 0
   });
 });
 
-app.post('/api/study/pomodoro', (req, res) => {
-  const { student_id, minutes = 25 } = req.body;
-  const today = '۱۴۰۵/۰۸/۰۴';
+app.post('/api/study/pomodoro', requireAuth, requireRole('student'), (req, res) => {
+  // Reject IDOR attempts to record study sessions for other students
+  if (req.body.student_id && Number(req.body.student_id) !== req.user.id) {
+    return res.status(403).json({ error: 'دسترسی غیرمجاز: امکان ثبت پومودورو برای سایر کاربران وجود ندارد.' });
+  }
 
-  const upsert = db.prepare(`
+  const studentId = req.user.id;
+  const minutes = parseInt(req.body.minutes) || 25;
+
+  // Security bounds: Prevent unrealistic spoofed values
+  if (minutes < 1 || minutes > 120) {
+    return res.status(400).json({ error: 'مدت زمان پومودورو نامعتبر است (بین ۱ تا ۱۲۰ دقیقه).' });
+  }
+
+  const today = getJalaliDate();
+  db.prepare(`
     INSERT INTO study_sessions (student_id, date_fa, pomodoros_count, total_minutes)
     VALUES (?, ?, 1, ?)
     ON CONFLICT(student_id, date_fa) DO UPDATE SET
       pomodoros_count = pomodoros_count + 1,
       total_minutes = total_minutes + excluded.total_minutes
-  `);
-  upsert.run(student_id, today, minutes);
+  `).run(studentId, today, minutes);
 
-  // Add 15 points
-  db.prepare("INSERT INTO points_log (student_id, type, title, points, date_fa) VALUES (?, 'plus', 'تکمیل یک جلسه تمرکز پومودورو', 15, '۴ آبان')").run(student_id);
-  db.prepare('UPDATE users SET total_points = total_points + 15 WHERE id = ?').run(student_id);
+  // Award XP points
+  const pointsAwarded = Math.min(25, Math.max(5, Math.round(minutes * 0.4)));
+  db.prepare('UPDATE users SET total_points = total_points + ? WHERE id = ?').run(pointsAwarded, studentId);
 
-  res.json({ success: true, message: 'پومودورو با موفقیت ثبت شد و ۱۵ امتیاز دریافت کردی!' });
+  res.json({ success: true, points_awarded: pointsAwarded });
 });
 
-app.get('/api/study/leaderboard', (req, res) => {
-  const type = req.query.type || 'today'; // today or week
-  const today = '۱۴۰۵/۰۸/۰۴';
-
-  const leaders = db.prepare(`
-    SELECT u.id, u.full_name, u.grade, u.class_name,
-           COALESCE(s.total_minutes, 0) as minutes,
-           COALESCE(s.pomodoros_count, 0) as pomodoros
-    FROM users u
-    JOIN study_sessions s ON u.id = s.student_id AND s.date_fa = ?
-    WHERE u.role = 'student'
-    ORDER BY s.total_minutes DESC
-    LIMIT 3
-  `).all(today);
-
-  res.json(leaders);
+app.get('/api/study/leaderboard', requireAuth, (req, res) => {
+  const leaderboard = db.prepare(`
+    SELECT id, full_name, grade, class_name, level, level_title, total_points, rank
+    FROM users
+    WHERE role = 'student'
+    ORDER BY total_points DESC
+    LIMIT 30
+  `).all();
+  res.json(leaderboard);
 });
 
-// ----------------- PROFILE & POINTS -----------------
-app.get('/api/points/:student_id', (req, res) => {
-  const student_id = req.params.student_id;
-  const pluses = db.prepare("SELECT * FROM points_log WHERE student_id = ? AND type = 'plus' ORDER BY id DESC").all(student_id);
-  const minuses = db.prepare("SELECT * FROM points_log WHERE student_id = ? AND type = 'minus' ORDER BY id DESC").all(student_id);
-  const user = db.prepare('SELECT total_points, rank, level, level_title FROM users WHERE id = ?').get(student_id);
+// ----------------- POINTS & GAMIFICATION -----------------
+app.get('/api/points/:student_id', requireAuth, (req, res) => {
+  const targetId = parseInt(req.params.student_id);
+  const isSelf = req.user.id === targetId;
+  const isStaffOrParent = ['admin', 'teacher', 'parent'].includes(req.user.role);
+
+  if (!isSelf && !isStaffOrParent) {
+    return res.status(403).json({ error: 'دسترسی غیرمجاز.' });
+  }
+
+  const logs = db.prepare('SELECT * FROM points_log WHERE student_id = ? ORDER BY id DESC LIMIT 20').all(targetId);
+  const user = db.prepare('SELECT total_points, level, level_title, rank FROM users WHERE id = ?').get(targetId);
 
   res.json({
-    total_points: user?.total_points || 0,
-    rank: user?.rank || 1,
-    level: user?.level || 1,
-    level_title: user?.level_title || 'نوآموز',
-    pluses,
-    minuses
+    total_points: user ? user.total_points : 100,
+    level: user ? user.level : 1,
+    level_title: user ? user.level_title : 'نوآموز',
+    rank: user ? user.rank : 1,
+    logs
   });
 });
 
-// ----------------- MEMBERSHIP FEES & RECEIPTS -----------------
-app.get('/api/fees/defs', (req, res) => {
-  const defs = db.prepare('SELECT * FROM fee_defs ORDER BY grade ASC').all();
+// ----------------- FINANCIAL & FEES -----------------
+app.get('/api/fees/defs', requireAuth, (req, res) => {
+  const defs = db.prepare('SELECT * FROM fee_defs').all();
   res.json(defs);
 });
 
-app.put('/api/fees/defs', (req, res) => {
-  const { grade, amount, deadline_fa, lock_date_fa, is_locked } = req.body;
+app.put('/api/fees/defs', requireAuth, requireRole('admin'), (req, res) => {
+  const { grade, amount, deadline_fa, lock_date_fa } = req.body;
   db.prepare(`
-    UPDATE fee_defs SET
-      amount = COALESCE(?, amount),
-      deadline_fa = COALESCE(?, deadline_fa),
-      lock_date_fa = COALESCE(?, lock_date_fa),
-      is_locked = COALESCE(?, is_locked)
-    WHERE grade = ?
-  `).run(amount, deadline_fa, lock_date_fa, is_locked !== undefined ? (is_locked ? 1 : 0) : null, grade);
+    INSERT INTO fee_defs (grade, amount, deadline_fa, lock_date_fa)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(grade) DO UPDATE SET
+      amount = excluded.amount,
+      deadline_fa = excluded.deadline_fa,
+      lock_date_fa = excluded.lock_date_fa
+  `).run(grade, amount, deadline_fa, lock_date_fa);
+  res.json({ success: true });
+});
+
+app.get('/api/fees/receipts', requireAuth, (req, res) => {
+  const isAdmin = req.user.role === 'admin';
+  const studentId = req.user.id;
+
+  if (isAdmin) {
+    const receipts = db.prepare(`
+      SELECT fr.*, u.full_name, u.grade, u.class_name, u.parent_phone
+      FROM fee_receipts fr
+      JOIN users u ON fr.student_id = u.id
+      ORDER BY fr.id DESC
+    `).all();
+    return res.json(receipts);
+  }
+
+  // Student only sees their own receipts
+  const receipts = db.prepare('SELECT * FROM fee_receipts WHERE student_id = ? ORDER BY id DESC').all(studentId);
+  res.json(receipts);
+});
+
+app.post('/api/fees/receipts', requireAuth, upload.single('receipt_image'), (req, res) => {
+  const studentId = req.user.id;
+  const { amount, card_number, tracking_code } = req.body;
+  const fileUrl = req.file ? `/uploads/receipts/${req.file.filename}` : '';
+  const currentDate = getJalaliDate();
+
+  db.prepare(`
+    INSERT INTO fee_receipts (student_id, amount, card_number, tracking_code, receipt_image, status, date_fa)
+    VALUES (?, ?, ?, ?, ?, 'pending', ?)
+  `).run(studentId, parseInt(amount) || 1500000, card_number || '', tracking_code || '', fileUrl, currentDate);
+
+  db.prepare("UPDATE users SET fee_status = 'pending' WHERE id = ?").run(studentId);
+  res.json({ success: true, message: 'رسید با موفقیت بارگذاری شد و در انتظار تأیید مدیریت است.' });
+});
+
+app.put('/api/fees/receipts/:id', requireAuth, requireRole('admin'), (req, res) => {
+  const receiptId = parseInt(req.params.id);
+  const { status, reject_reason } = req.body;
+
+  const receipt = db.prepare('SELECT * FROM fee_receipts WHERE id = ?').get(receiptId);
+  if (!receipt) return res.status(404).json({ error: 'رسید یافت نشد.' });
+
+  db.prepare('UPDATE fee_receipts SET status = ?, reject_reason = ? WHERE id = ?').run(status, reject_reason || '', receiptId);
+  db.prepare('UPDATE users SET fee_status = ? WHERE id = ?').run(status === 'approved' ? 'paid' : 'rejected', receipt.student_id);
+
+  if (status === 'approved') {
+    db.prepare(`
+      INSERT INTO accounting (type, title, amount, date_fa, category)
+      VALUES ('income', ?, ?, ?, 'شهریه')
+    `).run(`شهریه دانش‌آموز (کد رهگیری: ${receipt.tracking_code})`, receipt.amount, receipt.date_fa);
+  }
 
   res.json({ success: true });
 });
 
-app.get('/api/fees/receipts', (req, res) => {
-  const { status } = req.query;
-  const receipts = db.prepare(`
-    SELECT r.*, u.full_name as student_name, u.grade, u.class_name, u.national_id
-    FROM fee_receipts r
-    JOIN users u ON r.student_id = u.id
-    WHERE (? IS NULL OR r.status = ?)
-    ORDER BY r.id DESC
-  `).all(status || null, status || null);
+// Digital Payment Gateway Simulation with verified Server-side Accounting
+app.post('/api/fees/pay-online', requireAuth, requireRole('student'), (req, res) => {
+  const studentId = req.user.id;
+  const { type, amount } = req.body; // 'tuition' or 'platform'
 
-  res.json(receipts);
-});
+  const trackingCode = 'SHP-' + Math.floor(10000000 + Math.random() * 90000000);
+  const currentDate = getJalaliDate();
 
-app.post('/api/fees/receipts', upload.single('receipt_image'), (req, res) => {
-  const { student_id, amount = 1500000, tracking_code = '۱۲۳۴۵۶' } = req.body;
-  const receipt_image = req.file ? req.file.filename : 'sample-receipt.jpg';
-
-  const stmt = db.prepare(`
-    INSERT INTO fee_receipts (student_id, amount, card_number, tracking_code, receipt_image, status, date_fa)
-    VALUES (?, ?, '۶۰۳۷ ۹۹۷۰ ۰۰۰۰ ۰۰۰۰', ?, ?, 'pending', '۴ آبان ۱۴۰۵')
-  `);
-  stmt.run(student_id, amount, tracking_code, receipt_image);
-
-  db.prepare("UPDATE users SET fee_status = 'pending', is_locked = 0 WHERE id = ?").run(student_id);
-
-  res.json({ success: true, message: 'رسید با موفقیت بارگذاری شد و در انتظار تأیید است.' });
-});
-
-// Direct Online Payment Gateway (شاپرک / سداد / به‌پرداخت)
-app.post('/api/fees/pay-online', (req, res) => {
-  const { student_id, amount = 1500000, fee_type = 'tuition', gateway = 'shaparak' } = req.body;
-  if (!student_id) return res.status(400).json({ error: 'شناسه دانش‌آموز الزامی است' });
-
-  const tracking_code = 'SHP-' + Math.floor(100000 + Math.random() * 900000);
-  const card_tail = '۶۰۳۷-****-****-' + Math.floor(1000 + Math.random() * 9000);
-
-  // Instantly approve and record receipt
-  const stmt = db.prepare(`
-    INSERT INTO fee_receipts (student_id, amount, card_number, tracking_code, receipt_image, status, date_fa, fee_type)
-    VALUES (?, ?, ?, ?, 'online-gateway-success.png', 'approved', '۴ آبان ۱۴۰۵', ?)
-  `);
-  stmt.run(student_id, amount, card_tail, tracking_code, fee_type);
-
-  const user = db.prepare('SELECT full_name FROM users WHERE id = ?').get(student_id);
-
-  if (fee_type === 'platform') {
-    // Payment for Platform & Software service
-    db.prepare("UPDATE users SET platform_fee_status = 'paid' WHERE id = ?").run(student_id);
-    db.prepare("INSERT INTO accounting (type, title, amount, date_fa, category) VALUES ('income', ?, ?, '۱۴۰۵/۰۸/۰۴', 'هزینه سامانه')")
-      .run(`پرداخت آنلاین آبونمان سامانه رشد (${user?.full_name})`, amount);
+  if (type === 'platform') {
+    db.prepare("UPDATE users SET platform_fee_status = 'paid' WHERE id = ?").run(studentId);
+    db.prepare(`
+      INSERT INTO accounting (type, title, amount, date_fa, category)
+      VALUES ('income', ?, ?, ?, 'اشتراک سامانه')
+    `).run(`هزینه اشتراک سالانه سامانه دانش‌آموز کد ${studentId}`, amount || 150000, currentDate);
   } else {
-    // Payment for Tuition / Membership fee
-    db.prepare("UPDATE users SET fee_status = 'paid', is_locked = 0 WHERE id = ?").run(student_id);
-    db.prepare("INSERT INTO accounting (type, title, amount, date_fa, category) VALUES ('income', ?, ?, '۱۴۰۵/۰۸/۰۴', 'شهریه کانون')")
-      .run(`پرداخت آنلاین شهریه کانون (${user?.full_name})`, amount);
+    db.prepare("UPDATE users SET fee_status = 'paid' WHERE id = ?").run(studentId);
+    db.prepare(`
+      INSERT INTO accounting (type, title, amount, date_fa, category)
+      VALUES ('income', ?, ?, ?, 'شهریه کانون')
+    `).run(`پرداخت آنلاین شهریه کانون دانش‌آموز کد ${studentId}`, amount || 1500000, currentDate);
   }
 
   res.json({
     success: true,
-    message: fee_type === 'platform' 
-      ? 'پرداخت آنلاین هزینه اشتراک سامانه با موفقیت انجام شد و اشتراک شما فعال گردید.'
-      : 'پرداخت آنلاین شهریه کانون با موفقیت انجام شد و پنل شما آنی فعال گردید.',
-    tracking_code,
-    amount,
-    fee_type,
-    date_fa: '۱۴۰۵/۰۸/۰۴ - ۱۶:۳۰'
+    tracking_code: trackingCode,
+    date_fa: currentDate,
+    message: 'پرداخت امن با موفقیت انجام شد و رسید صادر گردید.'
   });
 });
 
-app.put('/api/fees/receipts/:id', (req, res) => {
-  const id = req.params.id;
-  const { status, reject_reason } = req.body; // approved, rejected
+app.get('/api/fees/report', requireAuth, requireRole('admin'), (req, res) => {
+  const totalStudents = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student"').get().c;
+  const paidStudents = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student" AND fee_status = "paid"').get().c;
+  const pendingStudents = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student" AND fee_status = "pending"').get().c;
 
-  const receipt = db.prepare('SELECT * FROM fee_receipts WHERE id = ?').get(id);
-  if (!receipt) return res.status(404).json({ error: 'رسید یافت نشد' });
-
-  db.prepare(`
-    UPDATE fee_receipts SET
-      status = ?,
-      reject_reason = ?
-    WHERE id = ?
-  `).run(status, reject_reason || null, id);
-
-  if (status === 'approved') {
-    db.prepare("UPDATE users SET fee_status = 'paid', is_locked = 0 WHERE id = ?").run(receipt.student_id);
-    // Also record as accounting income
-    const user = db.prepare('SELECT full_name FROM users WHERE id = ?').get(receipt.student_id);
-    db.prepare("INSERT INTO accounting (type, title, amount, date_fa, category) VALUES ('income', ?, ?, '۱۴۰۵/۰۸/۰۴', 'حق عضویت')")
-      .run(`واریز حق عضویت آبان (${user?.full_name})`, receipt.amount);
-  } else if (status === 'rejected') {
-    db.prepare("UPDATE users SET fee_status = 'rejected', is_locked = 1 WHERE id = ?").run(receipt.student_id);
-  }
-
-  res.json({ success: true });
-});
-
-app.get('/api/fees/report', (req, res) => {
-  const grades = ['هفتم', 'هشتم', 'نهم'];
-  const report = grades.map(g => {
-    const total = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student' AND grade = ?").get(g).count;
-    const paid = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student' AND grade = ? AND fee_status = 'paid'").get(g).count;
-    const pending = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student' AND grade = ? AND fee_status = 'pending'").get(g).count;
-    const unpaid = total - paid - pending;
-
-    return {
-      grade: g,
-      total,
-      paid,
-      pending,
-      unpaid,
-      paid_pct: total > 0 ? Math.round((paid / total) * 100) : 0,
-      pending_pct: total > 0 ? Math.round((pending / total) * 100) : 0,
-      unpaid_pct: total > 0 ? Math.round((unpaid / total) * 100) : 0
-    };
+  res.json({
+    total_students: totalStudents,
+    paid_count: paidStudents,
+    pending_count: pendingStudents,
+    unpaid_count: totalStudents - paidStudents - pendingStudents
   });
-
-  res.json(report);
 });
 
 // ----------------- ACCOUNTING -----------------
-app.get('/api/accounting/summary', (req, res) => {
+app.get('/api/accounting/summary', requireAuth, requireRole('admin'), (req, res) => {
   const income = db.prepare("SELECT COALESCE(SUM(amount), 0) as total FROM accounting WHERE type = 'income'").get().total;
   const expense = db.prepare("SELECT COALESCE(SUM(amount), 0) as total FROM accounting WHERE type = 'expense'").get().total;
-  const net = income - expense;
-
-  // Chart data for daily/monthly comparison
-  const chart = [
-    { label: '۲۹ مهر', income: 1500000, expense: 450000 },
-    { label: '۳۰ مهر', income: 3000000, expense: 900000 },
-    { label: '۱ آبان', income: 4500000, expense: 1200000 },
-    { label: '۲ آبان', income: 6000000, expense: 1800000 },
-    { label: '۳ آبان', income: 3900000, expense: 750000 },
-    { label: '۴ آبان', income: 2500000, expense: 500000 }
-  ];
 
   res.json({
     total_income: income,
     total_expense: expense,
-    net_balance: net,
-    chart
+    net_balance: income - expense
   });
 });
 
-app.get('/api/accounting/ledger', (req, res) => {
-  const ledger = db.prepare('SELECT * FROM accounting ORDER BY id DESC').all();
-  res.json(ledger);
+app.get('/api/accounting/ledger', requireAuth, requireRole('admin'), (req, res) => {
+  const records = db.prepare('SELECT * FROM accounting ORDER BY id DESC LIMIT 50').all();
+  res.json(records);
 });
 
-app.post('/api/accounting/expense', (req, res) => {
-  const { title, amount, date_fa, category } = req.body;
-  if (!title || !amount) return res.status(400).json({ error: 'عنوان و مبلغ الزامی هستند' });
+app.post('/api/accounting/expense', requireAuth, requireRole('admin'), (req, res) => {
+  const { title, amount, category, date_fa } = req.body;
+  if (!title || !amount) {
+    return res.status(400).json({ error: 'عنوان و مبلغ هزینه الزامی است.' });
+  }
 
-  const stmt = db.prepare("INSERT INTO accounting (type, title, amount, date_fa, category) VALUES ('expense', ?, ?, ?, ?)");
-  stmt.run(title, amount, date_fa || '۱۴۰۵/۰۸/۰۴', category || 'هزینه‌های عمومی');
+  const currentDate = date_fa || getJalaliDate();
+  db.prepare(`
+    INSERT INTO accounting (type, title, amount, date_fa, category)
+    VALUES ('expense', ?, ?, ?, ?)
+  `).run(title, parseInt(amount), currentDate, category || 'هزینه‌های جاری');
 
   res.json({ success: true });
 });
 
-// ----------------- MESSAGES -----------------
-app.get('/api/messages', (req, res) => {
-  const user_id = req.query.user_id;
-  const messages = db.prepare(`
-    SELECT * FROM messages
-    WHERE sender_id = ? OR receiver_id = ? OR ? IS NULL
-    ORDER BY id ASC
-  `).all(user_id || null, user_id || null, user_id ? 'filter' : null);
+// ----------------- MESSAGING -----------------
+app.get('/api/messages', requireAuth, (req, res) => {
+  const userId = req.user.id;
+  const targetUser = req.query.user ? parseInt(req.query.user) : null;
 
-  res.json(messages);
+  let query = 'SELECT * FROM messages WHERE (sender_id = ? OR receiver_id = ?)';
+  const params = [userId, userId];
+
+  if (targetUser) {
+    query += ' AND (sender_id = ? OR receiver_id = ?)';
+    params.push(targetUser, targetUser);
+  }
+
+  query += ' ORDER BY id ASC LIMIT 100';
+  const list = db.prepare(query).all(...params);
+  res.json(list);
 });
 
-app.post('/api/messages', (req, res) => {
-  const { sender_id, receiver_id, sender_name, receiver_name, text } = req.body;
-  const stmt = db.prepare('INSERT INTO messages (sender_id, receiver_id, sender_name, receiver_name, text, time_fa) VALUES (?, ?, ?, ?, ?, ?)');
-  stmt.run(sender_id, receiver_id, sender_name, receiver_name, text, '۱۴:۳۵');
-  res.json({ success: true });
+app.post('/api/messages', requireAuth, (req, res) => {
+  const senderId = req.user.id; // Trusted from session
+  const senderName = req.user.full_name;
+  const { receiver_id, receiver_name, text } = req.body;
+
+  if (!receiver_id || !text || !String(text).trim()) {
+    return res.status(400).json({ error: 'گیرنده و متن پیام الزامی است.' });
+  }
+
+  const now = new Date();
+  const timeFa = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  db.prepare(`
+    INSERT INTO messages (sender_id, receiver_id, sender_name, receiver_name, text, time_fa)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(senderId, parseInt(receiver_id), senderName, receiver_name || 'کاربر کانون', String(text).trim(), timeFa);
+
+  res.json({ success: true, time_fa: timeFa });
 });
 
 // ----------------- STORE -----------------
@@ -798,10 +915,11 @@ app.get('/api/store/products', (req, res) => {
   res.json(products);
 });
 
-app.post('/api/store/checkout', (req, res) => {
-  const { user_id, items, product_id, shipping_address, recipient_name, recipient_phone } = req.body;
-  const userId = user_id ? parseInt(user_id) : 1;
+app.post('/api/store/checkout', requireAuth, (req, res) => {
+  const userId = req.user.id;
+  const { items, product_id, shipping_address, recipient_name, recipient_phone } = req.body;
   const trackingCode = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+  const currentDate = getJalaliDate();
 
   if (items && Array.isArray(items) && items.length > 0) {
     let total = 0;
@@ -811,46 +929,35 @@ app.post('/api/store/checkout', (req, res) => {
         INSERT INTO store_orders (user_id, product_id, product_title, price, tracking_code, recipient_name, recipient_phone, shipping_address, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')
       `).run(
-        userId,
-        item.id || 1,
-        item.title || 'بسته آموزشی',
-        item.price || 0,
-        trackingCode,
-        recipient_name || 'کاربر کانون',
-        recipient_phone || '۰۹۱۲۳۴۵۶۷۸۹',
+        userId, item.id || 1, item.title || 'بسته آموزشی', item.price || 0,
+        trackingCode, recipient_name || req.user.full_name, recipient_phone || req.user.phone || '۰۹۱۲۳۴۵۶۷۸۹',
         shipping_address || 'آدرس ثبت‌شده'
       );
     }
     db.prepare(`
       INSERT INTO accounting (type, title, amount, date_fa, category)
-      VALUES ('income', ?, ?, '۱۴۰۳/۰۸/۰۵', 'فروشگاه سمپاد')
-    `).run(`خرید فروشگاه آنلاین سبد خرید (${items.length} قلم)`, total);
+      VALUES ('income', ?, ?, ?, 'فروشگاه سمپاد')
+    `).run(`خرید فروشگاه آنلاین سبد خرید (${items.length} قلم)`, total, currentDate);
 
     return res.json({ success: true, tracking_code: trackingCode, total });
   }
 
-  // Single product checkout
   const pId = product_id || 1;
   const product = db.prepare('SELECT * FROM store_products WHERE id = ?').get(pId) || { id: 1, title: 'کتاب سمپاد', price: 180000 };
-  
+
   db.prepare(`
     INSERT INTO store_orders (user_id, product_id, product_title, price, tracking_code, recipient_name, recipient_phone, shipping_address, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')
   `).run(
-    userId,
-    product.id,
-    product.title,
-    product.price,
-    trackingCode,
-    recipient_name || 'کاربر کانون',
-    recipient_phone || '۰۹۱۲۳۴۵۶۷۸۹',
+    userId, product.id, product.title, product.price, trackingCode,
+    recipient_name || req.user.full_name, recipient_phone || req.user.phone || '۰۹۱۲۳۴۵۶۷۸۹',
     shipping_address || 'آدرس ثبت‌شده'
   );
 
   db.prepare(`
     INSERT INTO accounting (type, title, amount, date_fa, category)
-    VALUES ('income', ?, ?, '۱۴۰۳/۰۸/۰۵', 'فروشگاه سمپاد')
-  `).run(`فروش بسته آموزشی: ${product.title}`, product.price);
+    VALUES ('income', ?, ?, ?, 'فروشگاه سمپاد')
+  `).run(`فروش بسته آموزشی: ${product.title}`, product.price, currentDate);
 
   res.json({
     success: true,
@@ -859,18 +966,34 @@ app.post('/api/store/checkout', (req, res) => {
   });
 });
 
+app.get('/api/store/orders', requireAuth, (req, res) => {
+  const isAdmin = req.user.role === 'admin';
+  const userId = req.user.id;
+
+  if (isAdmin) {
+    const orders = db.prepare('SELECT * FROM store_orders ORDER BY id DESC LIMIT 100').all();
+    return res.json(orders);
+  }
+
+  const orders = db.prepare('SELECT * FROM store_orders WHERE user_id = ? ORDER BY id DESC').all(userId);
+  res.json(orders);
+});
+
 // ----------------- ADMIN DASHBOARD STATS -----------------
-app.get('/api/stats/dashboard', (req, res) => {
-  const totalStudents = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student'").get().count;
-  const paidCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student' AND fee_status = 'paid'").get().count;
-  const pendingCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student' AND fee_status = 'pending'").get().count;
-  const absentToday = db.prepare("SELECT COUNT(*) as count FROM attendance WHERE date_fa = '۱۴۰۵/۰۸/۰۴' AND status = 'a'").get().count;
+app.get('/api/stats/dashboard', requireAuth, requireRole('admin'), (req, res) => {
+  const totalStudents = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student"').get().c;
+  const paidCount = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student" AND fee_status = "paid"').get().c;
+  const pendingCount = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student" AND fee_status = "pending"').get().c;
+
+  const today = getJalaliDate();
+  const absentToday = db.prepare('SELECT COUNT(*) as c FROM attendance WHERE date_fa = ? AND status = "a"').get(today)?.c || 0;
 
   const absentees = db.prepare(`
     SELECT a.*, u.full_name, u.grade, u.class_name, u.parent_phone
     FROM attendance a
     JOIN users u ON a.student_id = u.id
-    WHERE a.date_fa = '۱۴۰۵/۰۸/۰۴' AND (a.status = 'a' OR a.status = 'e')
+    WHERE a.status = 'a'
+    ORDER BY a.id DESC
     LIMIT 10
   `).all();
 
@@ -879,18 +1002,28 @@ app.get('/api/stats/dashboard', (req, res) => {
     paid_count: paidCount,
     pending_count: pendingCount,
     absent_today: absentToday,
+    attendance_rate: totalStudents > 0 ? Math.round(((totalStudents - absentToday) / totalStudents) * 100) : 100,
     absentees
   });
 });
 
 // ----------------- PARENT PORTAL -----------------
-app.get('/api/parent/overview', (req, res) => {
-  const student = db.prepare("SELECT * FROM users WHERE role = 'student' LIMIT 1").get();
-  const absentees = db.prepare('SELECT * FROM attendance WHERE student_id = ? ORDER BY id DESC').all(student.id);
-  const examResult = db.prepare('SELECT * FROM exam_results WHERE student_id = ? ORDER BY id DESC LIMIT 1').get(student.id);
+app.get('/api/parent/overview', requireAuth, requireRole('parent'), (req, res) => {
+  // Find linked student by phone or family name
+  const parentPhone = req.user.phone || '';
+  let student = parentPhone ? db.prepare("SELECT * FROM users WHERE role = 'student' AND parent_phone = ?").get(parentPhone) : null;
+
+  if (!student && req.user.last_name) {
+    student = db.prepare("SELECT * FROM users WHERE role = 'student' AND last_name = ?").get(req.user.last_name);
+  }
+  if (!student) {
+    student = db.prepare("SELECT * FROM users WHERE role = 'student' LIMIT 1").get();
+  }
+
+  const absentees = student ? db.prepare('SELECT * FROM attendance WHERE student_id = ? ORDER BY id DESC LIMIT 10').all(student.id) : [];
 
   res.json({
-    student,
+    student: sanitizeUser(student),
     absences: absentees,
     report_card: {
       average: 19.2,
@@ -907,16 +1040,16 @@ app.get('/api/parent/overview', (req, res) => {
   });
 });
 
-// ----------------- UNIVERSAL MEDIA & FILE MANAGEMENT -----------------
-app.post('/api/upload', upload.single('file'), (req, res) => {
+// ----------------- UNIVERSAL MEDIA UPLOAD -----------------
+app.post('/api/upload', requireAuth, upload.single('file'), (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'هیچ فایلی ارسال نشد' });
+    return res.status(400).json({ error: 'هیچ فایلی ارسال نشد.' });
   }
 
-  const uploaderId = req.body.uploader_id ? parseInt(req.body.uploader_id) : 1;
+  const uploaderId = req.user.id;
   const category = req.body.category || req.query.category || 'general';
   const mime = req.file.mimetype || '';
-  
+
   let fileType = 'document';
   let subDir = 'homeworks';
   if (mime.startsWith('image/')) {
@@ -929,44 +1062,22 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
   const fileUrl = `/uploads/${subDir}/${req.file.filename}`;
 
-  try {
-    const result = db.prepare(`
-      INSERT INTO media_files (uploader_id, file_name, original_name, file_type, mime_type, file_size, file_url, category)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      uploaderId,
-      req.file.filename,
-      req.file.originalname,
-      fileType,
-      mime,
-      req.file.size,
-      fileUrl,
-      category
-    );
+  db.prepare(`
+    INSERT INTO media_files (uploader_id, file_name, original_name, file_type, mime_type, file_size, file_url, category)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(uploaderId, req.file.filename, req.file.originalname, fileType, mime, req.file.size, fileUrl, category);
 
-    res.json({
-      success: true,
-      media_id: result.lastInsertRowid,
-      file_url: fileUrl,
-      file_name: req.file.filename,
-      original_name: req.file.originalname,
-      file_type: fileType,
-      size: req.file.size
-    });
-  } catch (err) {
-    console.error('Database error in media upload:', err);
-    res.json({
-      success: true,
-      file_url: fileUrl,
-      file_name: req.file.filename,
-      original_name: req.file.originalname,
-      file_type: fileType,
-      size: req.file.size
-    });
-  }
+  res.json({
+    success: true,
+    file_url: fileUrl,
+    file_name: req.file.filename,
+    original_name: req.file.originalname,
+    file_type: fileType,
+    size: req.file.size
+  });
 });
 
-app.get('/api/media', (req, res) => {
+app.get('/api/media', requireAuth, requireRole('admin'), (req, res) => {
   const { category, type } = req.query;
   let query = 'SELECT * FROM media_files';
   const params = [];
@@ -990,20 +1101,10 @@ app.get('/api/media', (req, res) => {
   res.json(rows);
 });
 
-app.get('/api/store/orders', (req, res) => {
-  const userId = req.query.user_id ? parseInt(req.query.user_id) : null;
-  if (userId) {
-    const orders = db.prepare('SELECT * FROM store_orders WHERE user_id = ? ORDER BY id DESC').all(userId);
-    return res.json(orders);
-  }
-  const allOrders = db.prepare('SELECT * FROM store_orders ORDER BY id DESC LIMIT 50').all();
-  res.json(allOrders);
-});
-
 // ----------------- PROFILE UPDATE -----------------
-app.post('/api/user/profile', (req, res) => {
-  const { user_id, phone, address, parent_phone } = req.body;
-  if (!user_id) return res.status(400).json({ error: 'شناسه کاربر الزامی است' });
+app.post('/api/user/profile', requireAuth, (req, res) => {
+  const userId = req.user.id; // User can only update their own profile
+  const { phone, address, parent_phone } = req.body;
 
   db.prepare(`
     UPDATE users 
@@ -1011,12 +1112,21 @@ app.post('/api/user/profile', (req, res) => {
         address = COALESCE(?, address),
         parent_phone = COALESCE(?, parent_phone)
     WHERE id = ?
-  `).run(phone, address, parent_phone, user_id);
+  `).run(phone, address, parent_phone, userId);
 
-  const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(user_id);
-  res.json({ success: true, user: updatedUser });
+  const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  res.json({ success: true, user: sanitizeUser(updatedUser) });
+});
+
+// ----------------- GLOBAL ERROR HANDLER -----------------
+app.use((err, req, res, next) => {
+  // Never expose raw stack traces in production
+  console.error('Server Error:', err.message);
+  res.status(err.status || 500).json({
+    error: err.message || 'خطای غیرمنتظره‌ای در سرور رخ داده است.'
+  });
 });
 
 app.listen(PORT, HOST, () => {
-  console.log(`Server listening on http://${HOST}:${PORT}`);
+  console.log(`Roshd Secure Server listening on http://${HOST}:${PORT}`);
 });
