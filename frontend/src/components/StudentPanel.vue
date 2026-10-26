@@ -87,22 +87,58 @@
           <h2 class="text-[26px] font-extrabold leading-snug">سلام {{ user.first_name }}، آماده‌ای؟</h2>
         </div>
 
-        <!-- Level & Score Card -->
-        <div class="card p-5 flex items-center gap-4 rise">
-          <div class="w-[92px] h-[92px] rounded-full shrink-0 flex items-center justify-center p-1.5" style="background:conic-gradient(#1E90FF 75%,#E3ECFF 0)">
-            <div class="w-full h-full rounded-full bg-white flex flex-col items-center justify-center leading-tight shadow-inner">
-              <span class="text-[20px] font-extrabold text-royal">{{ faNum(user.total_points) }}</span>
-              <span class="text-[11px] text-[#5A6E99]">امتیاز</span>
+        <!-- Level & Score Card (Interactive Gamification Hub) -->
+        <div 
+          @click="handleOpenLevels"
+          class="card p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rise cursor-pointer hover:shadow-xl hover:border-royal/50 transition-all group relative overflow-hidden"
+          title="کلیک برای مشاهده نقشه راه کامل سطوح و جوایز"
+        >
+          <!-- Subtle background decorative glow -->
+          <div class="absolute -left-12 -top-12 w-36 h-36 rounded-full bg-royal/5 group-hover:bg-royal/10 transition-all pointer-events-none"></div>
+
+          <div class="flex items-center gap-3.5 sm:gap-4 w-full sm:w-auto">
+            <!-- Animated Radial XP Ring -->
+            <div 
+              class="w-[84px] h-[84px] sm:w-[94px] sm:h-[94px] rounded-full shrink-0 flex items-center justify-center p-1.5 shadow-sm group-hover:scale-105 transition-transform" 
+              :style="{ background: `conic-gradient(#1E90FF ${levelProgressPercent}%, #E3ECFF 0)` }"
+            >
+              <div class="w-full h-full rounded-full bg-white flex flex-col items-center justify-center leading-tight shadow-inner">
+                <span class="text-[19px] sm:text-[22px] font-black text-royal">{{ faNum(user.total_points) }}</span>
+                <span class="text-[10px] sm:text-[11px] text-[#5A6E99] font-bold">امتیاز</span>
+              </div>
+            </div>
+
+            <!-- Title, Level, and Next Target -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="font-black text-[17px] sm:text-[20px] text-ink group-hover:text-royal transition-colors">
+                  سطح {{ faNum(user.level) }}، {{ user.level_title }}
+                </p>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-royal/10 text-royal">
+                  <i data-lucide="sparkles" class="w-3 h-3 text-sun"></i>
+                  <span>فعال</span>
+                </span>
+              </div>
+              <p class="text-xs sm:text-sm text-[#5A6E99] mt-0.5 font-medium">
+                {{ nextLevelData.nextTitle ? `${faNum(nextLevelData.pointsNeeded)} امتیاز تا سطح بعد (${nextLevelData.nextTitle})` : 'بالاترین قله افتخار کانون 👑' }}
+              </p>
+              
+              <!-- Clickable Badge Callout -->
+              <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] sm:text-xs font-black text-royal group-hover:text-white bg-blue-50 px-2.5 py-1 rounded-xl border border-blue-100 group-hover:bg-royal transition-all shadow-sm">
+                <i data-lucide="map" class="w-3.5 h-3.5 text-sun"></i>
+                <span>مشاهده نقشه سطوح و جوایز</span>
+                <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+              </div>
             </div>
           </div>
-          <div class="flex-1 min-w-0">
-            <p class="font-extrabold text-[18px]">سطح {{ faNum(user.level) }}، {{ user.level_title }}</p>
-            <p class="text-sm text-[#5A6E99] mt-0.5">۶۰ امتیاز تا سطح بعد (فرزانه)</p>
-          </div>
-          <div class="text-center rounded-2xl px-4 py-3 bg-sun/25">
-            <i data-lucide="trophy" class="w-6 h-6 mx-auto text-[#B07A00]"></i>
-            <p class="font-extrabold text-sm mt-0.5">رتبه {{ faNum(user.rank) }}</p>
-            <p class="text-xs text-[#5A6E99]">از ۳۸ نفر</p>
+
+          <!-- Trophy & Rank Card -->
+          <div class="text-center rounded-2xl px-4 py-3 bg-sun/25 border border-sun/40 shrink-0 self-stretch sm:self-center flex sm:flex-col items-center justify-between sm:justify-center gap-2 group-hover:bg-sun/35 transition-all">
+            <div class="flex items-center sm:block gap-2">
+              <i data-lucide="trophy" class="w-6 h-6 mx-auto text-[#B07A00]"></i>
+              <p class="font-black text-sm mt-0.5 text-ink">رتبه {{ faNum(user.rank) }}</p>
+            </div>
+            <p class="text-xs text-[#5A6E99] font-bold">از ۳۸ نفر</p>
           </div>
         </div>
 
@@ -599,6 +635,27 @@
 
         <!-- Points Breakdown (Identical to Claude mock) -->
         <div v-if="meSubTab === 'pts'" class="space-y-3">
+          <!-- Roadmap Trigger Hero Banner -->
+          <div 
+            @click="handleOpenLevels"
+            class="card p-4 sm:p-5 text-white flex items-center justify-between gap-3 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all relative overflow-hidden"
+            style="background:linear-gradient(135deg,#0A4BD6,#1E90FF 75%,#0B1F4D)"
+          >
+            <div class="dots absolute inset-0 opacity-30"></div>
+            <div class="relative flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur border border-white/30 flex items-center justify-center text-2xl shrink-0 shadow-md">
+                🎯
+              </div>
+              <div>
+                <p class="font-black text-base sm:text-lg">نقشه راه سطوح رشد و جوایز افتخار</p>
+                <p class="text-xs text-white/80 mt-0.5">مشاهده ۱۰ سطح، آستانه امتیازات و جوایز هر مرحله</p>
+              </div>
+            </div>
+            <button class="relative btn btn-sun !min-h-[40px] !px-4 text-xs font-black shadow-lg shrink-0">
+              مشاهده نقشه ➔
+            </button>
+          </div>
+
           <div class="card overflow-hidden">
             <div class="px-5 py-3 bg-[#E6F7EE] text-ok font-extrabold flex items-center gap-2">
               <i data-lucide="trending-up" class="w-5 h-5"></i>
@@ -1254,6 +1311,15 @@
       @add-points="handleGamePoints"
     />
 
+    <!-- Levels & Badges Gamification Roadmap Modal -->
+    <LevelsRoadmapModal 
+      v-if="openLevelsRoadmap"
+      :userPoints="Number(user.total_points || 0)"
+      :currentLevel="Number(user.level || 1)"
+      :currentLevelTitle="user.level_title || 'نوآموز'"
+      @close="openLevelsRoadmap = false"
+    />
+
     <!-- Toast Notification -->
     <div 
       v-if="toastMsg" 
@@ -1270,6 +1336,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { faNum, playBeep, refreshIcons } from '../utils';
 import MathGameModal from './MathGameModal.vue';
 import MathGameSection from './MathGameSection.vue';
+import LevelsRoadmapModal from './LevelsRoadmapModal.vue';
 
 const props = defineProps({
   user: { type: Object, required: true }
@@ -1284,6 +1351,44 @@ const meSubTab = ref('pts');
 const toastMsg = ref('');
 const showBirthday = ref(false);
 const openMathGame = ref(false);
+const openLevelsRoadmap = ref(false);
+
+function handleOpenLevels() {
+  playBeep(880, 0.1);
+  openLevelsRoadmap.value = true;
+  nextTick(() => refreshIcons());
+}
+
+const nextLevelData = computed(() => {
+  const p = Number(props.user.total_points || 0);
+  if (p >= 2500) return { title: 'استاد', pointsNeeded: 0, nextTitle: null };
+  if (p >= 2000) return { title: 'قهرمان', pointsNeeded: 2500 - p, nextTitle: 'استاد' };
+  if (p >= 1600) return { title: 'طلایه‌دار', pointsNeeded: 2000 - p, nextTitle: 'قهرمان' };
+  if (p >= 1250) return { title: 'نخبه', pointsNeeded: 1600 - p, nextTitle: 'طلایه‌دار' };
+  if (p >= 950) return { title: 'فرزانه', pointsNeeded: 1250 - p, nextTitle: 'نخبه' };
+  if (p >= 700) return { title: 'کاوشگر', pointsNeeded: 950 - p, nextTitle: 'فرزانه' };
+  if (p >= 500) return { title: 'دانشور', pointsNeeded: 700 - p, nextTitle: 'کاوشگر' };
+  if (p >= 300) return { title: 'پیشرو', pointsNeeded: 500 - p, nextTitle: 'دانشور' };
+  if (p >= 150) return { title: 'پوینده', pointsNeeded: 300 - p, nextTitle: 'پیشرو' };
+  return { title: 'نوآموز', pointsNeeded: 150 - p, nextTitle: 'پوینده' };
+});
+
+const levelProgressPercent = computed(() => {
+  const p = Number(props.user.total_points || 0);
+  let min = 0;
+  let max = 150;
+  if (p >= 2500) return 100;
+  else if (p >= 2000) { min = 2000; max = 2500; }
+  else if (p >= 1600) { min = 1600; max = 2000; }
+  else if (p >= 1250) { min = 1250; max = 1600; }
+  else if (p >= 950) { min = 950; max = 1250; }
+  else if (p >= 700) { min = 700; max = 950; }
+  else if (p >= 500) { min = 500; max = 700; }
+  else if (p >= 300) { min = 300; max = 500; }
+  else if (p >= 150) { min = 150; max = 300; }
+  const pct = Math.round(((p - min) / (max - min)) * 100);
+  return Math.min(100, Math.max(5, pct));
+});
 
 const homeworks = ref([]);
 const exams = ref([]);
@@ -1331,7 +1436,7 @@ function openOnlinePayment(type, amount, title) {
   openOnlineGatewayModal.value = true;
 }
 
-watch([activeTab, studyTab, examSubTab, meSubTab, paySubTab, takingExam, examResultModal, submittingHomework, openReceiptModal, openMathGame, openOnlineGatewayModal], () => {
+watch([activeTab, studyTab, examSubTab, meSubTab, paySubTab, takingExam, examResultModal, submittingHomework, openReceiptModal, openMathGame, openOnlineGatewayModal, openLevelsRoadmap], () => {
   nextTick(() => refreshIcons());
 });
 
