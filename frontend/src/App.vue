@@ -279,7 +279,7 @@ async function switchDemoView(view) {
       if (data.user) localStorage.setItem('roshd_user', JSON.stringify(data.user));
       currentUser.value = data.user;
       currentView.value = data.user.role;
-      checkUnseenNotices(data.user.id, data.user.grade);
+      showNoticeModal.value = false; // keep view clean in demo testing mode
     }
   } catch (e) {
     console.error('Demo view switch error:', e);
