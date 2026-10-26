@@ -143,6 +143,38 @@
           </div>
         </div>
 
+        <!-- Quick Access: Counselor & Study Timer (Naghsh Yar Style) -->
+        <div class="grid grid-cols-2 gap-3">
+          <button 
+            @click="activeTab = 'chat'"
+            class="card p-3.5 sm:p-4 text-right flex items-center gap-3 border border-line hover:border-royal/50 hover:shadow-md transition-all group bg-white"
+          >
+            <div class="w-10 h-10 rounded-2xl bg-royal/10 text-royal flex items-center justify-center shrink-0 group-hover:bg-royal group-hover:text-white transition-all">
+              <i data-lucide="messages-square" class="w-5 h-5"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="font-bold text-xs sm:text-sm text-ink truncate">گفتگو با مشاور</p>
+              <p class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 mt-0.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>استاد کریمی (آنلاین)</span>
+              </p>
+            </div>
+          </button>
+
+          <button 
+            @click="activeTab = 'study'"
+            class="card p-3.5 sm:p-4 text-right flex items-center gap-3 border border-line hover:border-amber-400/50 hover:shadow-md transition-all group bg-white"
+          >
+            <div class="w-10 h-10 rounded-2xl bg-amber-50 text-[#B07A00] flex items-center justify-center shrink-0 group-hover:bg-amber-400 group-hover:text-ink transition-all">
+              <i data-lucide="timer" class="w-5 h-5"></i>
+            </div>
+            <div class="min-w-0">
+              <p class="font-bold text-xs sm:text-sm text-ink truncate">تایمر مطالعه</p>
+              <p class="text-[11px] text-[#5A6E99] font-medium mt-0.5">۲۵ دقیقه تمرکز</p>
+            </div>
+          </button>
+        </div>
+
         <!-- Near Homeworks -->
         <div class="card p-5">
           <div class="flex items-center justify-between mb-3">
@@ -423,82 +455,18 @@
         </div>
       </section>
 
-      <!-- ================= 3. آزمون (EXAMS) ================= -->
+      <!-- ================= 3. آزمون‌ها (EXAMS - NAGHSH YAR FULL SYSTEM) ================= -->
       <section v-if="activeTab === 'exam'" class="space-y-4">
-        <div class="text-white px-1">
-          <h2 class="text-[26px] font-extrabold">آزمون</h2>
-          <p class="text-white/80 text-sm">آزمون بده و رتبه‌ات را ببین</p>
-        </div>
+        <ExamModuleNaghshYar 
+          :user="user" 
+          :freshExams="exams" 
+          @exam-finished="handleExamFinished" 
+        />
+      </section>
 
-        <div class="seg-ctl">
-          <button 
-            @click="examSubTab = 'list'" 
-            :aria-pressed="examSubTab === 'list'"
-          >
-            آزمون‌های آنلاین
-          </button>
-          <button 
-            @click="examSubTab = 'results'" 
-            :aria-pressed="examSubTab === 'results'"
-          >
-            نتایج
-          </button>
-        </div>
-
-        <!-- Available Exams List -->
-        <div v-if="examSubTab === 'list'" class="space-y-3">
-          <div 
-            v-for="ex in exams" 
-            :key="ex.id" 
-            class="card p-5 space-y-3"
-          >
-            <div class="flex items-start gap-4">
-              <div class="w-14 h-14 rounded-2xl text-white flex items-center justify-center shrink-0" style="background:linear-gradient(135deg,#1E90FF,#0A4BD6)">
-                <i data-lucide="sigma" class="w-7 h-7"></i>
-              </div>
-              <div class="flex-1">
-                <p class="font-extrabold text-[18px]">{{ ex.title }}</p>
-                <p class="text-sm text-[#5A6E99]">{{ faNum(ex.question_count) }} سؤال تستی، {{ faNum(ex.duration_minutes) }} دقیقه</p>
-                <p class="text-xs text-[#5A6E99] mt-1 flex items-center gap-1.5">
-                  <i data-lucide="calendar" class="w-4 h-4"></i>
-                  <span>تا {{ ex.deadline_fa }}</span>
-                </p>
-              </div>
-            </div>
-
-            <button 
-              @click="startExam(ex.id)" 
-              class="btn btn-royal w-full"
-            >
-              <i data-lucide="play" class="w-5 h-5"></i>
-              <span>شروع آزمون</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Results Panel -->
-        <div v-if="examSubTab === 'results'" class="space-y-3">
-          <div class="card p-5 space-y-3">
-            <div class="flex items-center justify-between">
-              <h3 class="font-extrabold text-[17px]">آزمون ریاضی فصل ۳ (کسرها)</h3>
-              <span class="tag bg-[#E6F7EE] text-ok">نمره ۱۸ از ۲۰</span>
-            </div>
-            <div class="grid grid-cols-3 gap-2 text-center pt-2">
-              <div class="p-3 rounded-2xl bg-mist">
-                <p class="text-xs text-[#5A6E99]">درصد کل</p>
-                <p class="font-black text-royal text-xl">۸۰٪</p>
-              </div>
-              <div class="p-3 rounded-2xl bg-mist">
-                <p class="text-xs text-[#5A6E99]">رتبه در پایه</p>
-                <p class="font-black text-ink text-xl">۳ از ۳۸</p>
-              </div>
-              <div class="p-3 rounded-2xl bg-mist">
-                <p class="text-xs text-[#5A6E99]">پاسخ صحیح</p>
-                <p class="font-black text-ok text-xl">۴ درست</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- ================= 4. گفتگو با مشاور (COUNSELOR CHAT - NAGHSH YAR CLONE) ================= -->
+      <section v-if="activeTab === 'chat'" class="space-y-4">
+        <CounselorChatSection :user="user" />
       </section>
 
       <!-- ================= 4. مطالعه و پومودورو (STUDY) ================= -->
@@ -982,7 +950,7 @@
       </section>
     </main>
 
-    <!-- Bottom Navigation Dock (5 Items - Claude Standard) -->
+    <!-- Bottom Navigation Dock (5 Items - Naghsh Yar Standard) -->
     <nav class="dock fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="منوی اصلی">
       <div class="max-w-3xl mx-auto grid grid-cols-5">
         <button 
@@ -991,7 +959,7 @@
           class="dock-item"
         >
           <i data-lucide="house"></i>
-          <span>خانه</span>
+          <span>امروز</span>
         </button>
         <button 
           @click="activeTab = 'hw'" 
@@ -1007,15 +975,17 @@
           class="dock-item"
         >
           <i data-lucide="clipboard-check"></i>
-          <span>آزمون</span>
+          <span>آزمون‌ها</span>
         </button>
         <button 
-          @click="activeTab = 'study'" 
-          :aria-current="activeTab === 'study' ? 'page' : undefined"
-          class="dock-item"
+          @click="activeTab = 'chat'" 
+          :aria-current="activeTab === 'chat' ? 'page' : undefined"
+          class="dock-item relative"
         >
-          <i data-lucide="timer"></i>
-          <span>مطالعه</span>
+          <i data-lucide="messages-square"></i>
+          <span>مشاور</span>
+          <!-- Counselor online subtle dot -->
+          <span class="absolute top-2 right-1/2 translate-x-3 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white"></span>
         </button>
         <button 
           @click="activeTab = 'me'" 
@@ -1023,114 +993,12 @@
           class="dock-item"
         >
           <i data-lucide="circle-user-round"></i>
-          <span>من</span>
+          <span>من و کارنامه</span>
         </button>
       </div>
     </nav>
 
     <!-- ================= MODALS ================= -->
-    <!-- Online Exam Runner Modal -->
-    <div v-if="takingExam" class="fixed inset-0 z-50 bg-mist flex flex-col overflow-y-auto">
-      <header class="brand-bg text-white px-5 py-4 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <i data-lucide="clipboard-check" class="w-6 h-6 text-sun"></i>
-          <div>
-            <h3 class="font-extrabold text-base">{{ currentExamData.title }}</h3>
-            <p class="text-xs text-white/70">سؤال {{ faNum(examQIndex + 1) }} از {{ faNum(currentExamQuestions.length) }}</p>
-          </div>
-        </div>
-        <div class="bg-white/20 px-3 py-1 rounded-xl text-sm font-black flex items-center gap-1.5">
-          <i data-lucide="timer" class="w-4 h-4"></i>
-          <span>{{ formatExamTimer }}</span>
-        </div>
-      </header>
-
-      <main class="flex-1 max-w-2xl w-full mx-auto p-5 flex flex-col justify-between">
-        <div v-if="currentExamQuestions[examQIndex]" class="space-y-5">
-          <div class="card p-6">
-            <span class="tag bg-mist text-royal text-xs mb-3">سؤال شماره {{ faNum(examQIndex + 1) }}</span>
-            <h4 class="text-xl font-bold text-ink leading-relaxed">
-              {{ currentExamQuestions[examQIndex].q }}
-            </h4>
-          </div>
-
-          <!-- Large 4 Options (Claude Style) -->
-          <div class="space-y-3">
-            <button 
-              v-for="(opt, optIdx) in currentExamQuestions[examQIndex].options" 
-              :key="optIdx"
-              @click="selectedAnswers[currentExamQuestions[examQIndex].id] = optIdx"
-              class="opt"
-              :aria-pressed="selectedAnswers[currentExamQuestions[examQIndex].id] === optIdx"
-            >
-              <span class="lt">
-                {{ faNum(optIdx + 1) }}
-              </span>
-              <span class="flex-1">{{ opt }}</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between pt-6 border-t border-line mt-6">
-          <button 
-            @click="examQIndex--" 
-            :disabled="examQIndex === 0" 
-            class="btn btn-soft"
-          >
-            سؤال قبل
-          </button>
-
-          <button 
-            v-if="examQIndex < currentExamQuestions.length - 1"
-            @click="examQIndex++" 
-            class="btn btn-royal"
-          >
-            <span>سؤال بعد</span>
-            <i data-lucide="arrow-left" class="w-4 h-4"></i>
-          </button>
-          <button 
-            v-else 
-            @click="submitExamFinal" 
-            class="btn btn-sun text-ink font-black"
-          >
-            <i data-lucide="check" class="w-5 h-5"></i>
-            <span>ثبت نهایی آزمون</span>
-          </button>
-        </div>
-      </main>
-    </div>
-
-    <!-- Exam Result Dialog -->
-    <div v-if="examResultModal" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="card p-6 max-w-sm w-full text-center rise space-y-4">
-        <div class="w-20 h-20 mx-auto rounded-full bg-[#E6F7EE] text-ok flex items-center justify-center">
-          <i data-lucide="trophy" class="w-10 h-10 text-ok"></i>
-        </div>
-        <h3 class="text-2xl font-extrabold">آزمون به پایان رسید</h3>
-        <p class="text-sm text-[#5A6E99]">کارنامه شما ثبت شد و رتبه لحظه‌ای محاسبه گردید.</p>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div class="p-3 bg-mist rounded-2xl">
-            <p class="text-xs text-[#5A6E99]">درصد پاسخگویی</p>
-            <p class="text-2xl font-black text-royal">{{ faNum(examResultModal.percentage) }}٪</p>
-          </div>
-          <div class="p-3 bg-mist rounded-2xl">
-            <p class="text-xs text-[#5A6E99]">نمره از ۲۰</p>
-            <p class="text-2xl font-black text-ok">{{ faNum(examResultModal.score) }}</p>
-          </div>
-        </div>
-
-        <div class="p-3 rounded-2xl bg-amber-50 text-[#7A5600] font-bold text-sm flex items-center justify-center gap-1.5">
-          <i data-lucide="sparkles" class="w-4 h-4 text-sun"></i>
-          <span>{{ faNum(examResultModal.points_earned) }} امتیاز جدید دریافت کردی!</span>
-        </div>
-
-        <button @click="examResultModal = null; takingExam = false; activeTab = 'exam'" class="btn btn-royal w-full">
-          مشاهده کارنامه
-        </button>
-      </div>
-    </div>
-
     <!-- Submit Homework Modal -->
     <div v-if="submittingHomework" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm flex items-center justify-center p-4">
       <div class="card p-6 max-w-md w-full rise space-y-4">
@@ -1338,6 +1206,8 @@ import { faNum, playBeep, refreshIcons } from '../utils';
 import MathGameModal from './MathGameModal.vue';
 import MathGameSection from './MathGameSection.vue';
 import LevelsRoadmapModal from './LevelsRoadmapModal.vue';
+import ExamModuleNaghshYar from './ExamModuleNaghshYar.vue';
+import CounselorChatSection from './CounselorChatSection.vue';
 
 const props = defineProps({
   user: { type: Object, required: true }
@@ -1353,6 +1223,16 @@ const toastMsg = ref('');
 const showBirthday = ref(false);
 const openMathGame = ref(false);
 const openLevelsRoadmap = ref(false);
+
+function handleExamFinished(result) {
+  loadPoints();
+  loadHomeworks();
+  if (result?.pointsEarned) {
+    const updated = (props.user.total_points || 0) + result.pointsEarned;
+    emit('update-user', { total_points: updated });
+    toast(`آفرین! +${faNum(result.pointsEarned)} امتیاز آزمون به حسابت افزوده شد`);
+  }
+}
 
 function handleOpenLevels() {
   playBeep(880, 0.1);
