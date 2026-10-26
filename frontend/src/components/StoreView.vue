@@ -34,20 +34,32 @@
           </button>
         </nav>
 
-        <!-- Cart Button -->
-        <button 
-          @click="openCart = true" 
-          class="relative w-12 h-12 rounded-2xl bg-[#E8F0FF] text-royal flex items-center justify-center cursor-pointer hover:bg-royal hover:text-white transition-all border-none"
-          aria-label="سبد خرید"
-        >
-          <i data-lucide="shopping-cart" class="w-6 h-6"></i>
-          <span 
-            v-if="cart.length > 0" 
-            class="absolute -top-1 -left-1 min-w-[22px] h-[22px] px-1 rounded-full bg-sun text-ink text-[11px] font-black flex items-center justify-center shadow"
+        <div class="flex items-center gap-2">
+          <!-- Back Button -->
+          <button 
+            @click="$emit('back')" 
+            class="h-11 px-3.5 rounded-2xl bg-[#E8F0FF] text-royal flex items-center gap-1.5 font-bold text-xs hover:bg-royal hover:text-white transition-all border-none cursor-pointer"
+            title="بازگشت به پنل کاربری"
           >
-            {{ faNum(cart.length) }}
-          </span>
-        </button>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <span>بازگشت به پنل</span>
+          </button>
+
+          <!-- Cart Button -->
+          <button 
+            @click="openCart = true" 
+            class="relative w-11 h-11 rounded-2xl bg-[#E8F0FF] text-royal flex items-center justify-center cursor-pointer hover:bg-royal hover:text-white transition-all border-none"
+            aria-label="سبد خرید"
+          >
+            <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+            <span 
+              v-if="cart.length > 0" 
+              class="absolute -top-1 -left-1 min-w-[20px] h-[20px] px-1 rounded-full bg-sun text-ink text-[10px] font-black flex items-center justify-center shadow"
+            >
+              {{ faNum(cart.length) }}
+            </span>
+          </button>
+        </div>
       </div>
     </header>
 

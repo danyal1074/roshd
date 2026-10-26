@@ -16,6 +16,14 @@
 
         <div class="flex items-center gap-2">
           <button 
+            @click="$emit('open-store')" 
+            class="h-11 px-3.5 rounded-2xl bg-white/15 hover:bg-white/25 flex items-center gap-1.5 text-xs font-extrabold text-white transition-all shadow-sm"
+            title="فروشگاه جوایز و دوره‌ها"
+          >
+            <i data-lucide="shopping-bag" class="w-4 h-4 text-sun"></i>
+            <span>فروشگاه</span>
+          </button>
+          <button 
             @click="triggerConfetti" 
             class="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center relative hover:bg-white/25 transition-all"
             title="جشن تولد"

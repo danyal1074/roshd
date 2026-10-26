@@ -93,53 +93,8 @@
           </button>
         </div>
 
-        <!-- Quick Demo Switcher (Touch friendly accordion on mobile) -->
-        <div class="mt-3.5 sm:mt-4 p-3 bg-white border border-line rounded-2xl shadow-sm">
-          <div class="flex items-center justify-between text-xs font-bold text-royal mb-2">
-            <span class="flex items-center gap-1.5">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-sun"></i>
-              <span>حساب‌های پیش‌فرض تست:</span>
-            </span>
-            <span class="text-[10px] text-slate-400 font-normal">کلیک جهت ورود آنی</span>
-          </div>
-          <div class="grid grid-cols-2 gap-1.5 text-xs">
-            <button 
-              type="button"
-              @click="setDemo('0012345678', '123456', 'student')"
-              :class="['px-2 sm:px-2.5 py-1.5 rounded-xl font-bold transition-all text-right flex items-center justify-between', selectedRole === 'student' ? 'bg-royal text-white' : 'bg-mist text-royal hover:bg-royal/10']"
-            >
-              <span class="truncate">علی رضایی (دانش‌آموز)</span>
-              <i data-lucide="chevron-left" class="w-3.5 h-3.5 shrink-0"></i>
-            </button>
-            <button 
-              type="button"
-              @click="setDemo('0022334455', '123456', 'teacher')"
-              :class="['px-2 sm:px-2.5 py-1.5 rounded-xl font-bold transition-all text-right flex items-center justify-between', selectedRole === 'teacher' ? 'bg-royal text-white' : 'bg-mist text-royal hover:bg-royal/10']"
-            >
-              <span class="truncate">خانم احمدی (معلم)</span>
-              <i data-lucide="chevron-left" class="w-3.5 h-3.5 shrink-0"></i>
-            </button>
-            <button 
-              type="button"
-              @click="setDemo('0011223344', '123456', 'admin')"
-              :class="['px-2 sm:px-2.5 py-1.5 rounded-xl font-bold transition-all text-right flex items-center justify-between', selectedRole === 'admin' ? 'bg-royal text-white' : 'bg-mist text-royal hover:bg-royal/10']"
-            >
-              <span class="truncate">آقای کریمی (مدیر)</span>
-              <i data-lucide="chevron-left" class="w-3.5 h-3.5 shrink-0"></i>
-            </button>
-            <button 
-              type="button"
-              @click="setDemo('09121112233', '123456', 'parent')"
-              :class="['px-2 sm:px-2.5 py-1.5 rounded-xl font-bold transition-all text-right flex items-center justify-between', selectedRole === 'parent' ? 'bg-royal text-white' : 'bg-mist text-royal hover:bg-royal/10']"
-            >
-              <span class="truncate">خانواده رضایی (والدین)</span>
-              <i data-lucide="chevron-left" class="w-3.5 h-3.5 shrink-0"></i>
-            </button>
-          </div>
-        </div>
-
         <!-- Login Form with Field Icons -->
-        <form @submit.prevent="handleLogin" class="mt-4 space-y-3 sm:space-y-4" autocomplete="off">
+        <form @submit.prevent="handleLogin" class="mt-6 space-y-3 sm:space-y-4" autocomplete="off">
           <div>
             <label class="block font-semibold mb-1 text-xs sm:text-sm text-[#0B1F4D]">
               کد ملی یا شماره موبایل
@@ -217,8 +172,8 @@ import { playTap, playSuccess } from '../soundEffects';
 const emit = defineEmits(['login-success']);
 
 const selectedRole = ref('student');
-const identifier = ref('0012345678');
-const password = ref('123456');
+const identifier = ref('');
+const password = ref('');
 const showPass = ref(false);
 const loading = ref(false);
 const errorMsg = ref('');
@@ -229,18 +184,6 @@ onMounted(() => {
 
 function selectRole(role) {
   playTap();
-  selectedRole.value = role;
-  if (role === 'student') identifier.value = '0012345678';
-  if (role === 'teacher') identifier.value = '0022334455';
-  if (role === 'admin') identifier.value = '0011223344';
-  if (role === 'parent') identifier.value = '09121112233';
-  nextTick(() => refreshIcons());
-}
-
-function setDemo(id, pass, role) {
-  playTap();
-  identifier.value = id;
-  password.value = pass;
   selectedRole.value = role;
   nextTick(() => refreshIcons());
 }
