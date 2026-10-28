@@ -222,15 +222,20 @@ app.get('/uploads/receipts/:filename', requireAuth, (req, res) => {
     allowed = true;
   } else {
     // Check if receipt belongs to the user or their child
-    const receipt = db.prepare('SELECT student_id FROM fee_receipts WHERE receipt_url LIKE ?').get(`%${filename}`);
+    const receipt = db.prepare('SELECT student_id FROM fee_receipts WHERE receipt_image LIKE ? OR receipt_image = ?').get(`%${filename}`, filename);
     if (receipt) {
       if (role === 'student' && receipt.student_id === userId) {
         allowed = true;
       } else if (role === 'parent') {
-        const parent = db.prepare('SELECT phone FROM users WHERE id = ?').get(userId);
-        const student = db.prepare('SELECT parent_phone FROM users WHERE id = ?').get(receipt.student_id);
-        if (parent && student && parent.phone && parent.phone === student.parent_phone) {
+        const isLinked = db.prepare('SELECT 1 FROM parent_students WHERE parent_id = ? AND student_id = ?').get(userId, receipt.student_id);
+        if (isLinked) {
           allowed = true;
+        } else {
+          const parent = db.prepare('SELECT phone FROM users WHERE id = ?').get(userId);
+          const student = db.prepare('SELECT parent_phone FROM users WHERE id = ?').get(receipt.student_id);
+          if (parent && student && parent.phone && parent.phone === student.parent_phone) {
+            allowed = true;
+          }
         }
       }
     }
@@ -261,15 +266,20 @@ app.get('/uploads/homeworks/:filename', requireAuth, (req, res) => {
   if (role === 'admin' || role === 'teacher') {
     allowed = true;
   } else {
-    const sub = db.prepare('SELECT student_id FROM homework_submissions WHERE file_url LIKE ?').get(`%${filename}`);
+    const sub = db.prepare('SELECT student_id FROM homework_submissions WHERE file_url LIKE ? OR file_url = ?').get(`%${filename}`, filename);
     if (sub) {
       if (role === 'student' && sub.student_id === userId) {
         allowed = true;
       } else if (role === 'parent') {
-        const parent = db.prepare('SELECT phone FROM users WHERE id = ?').get(userId);
-        const student = db.prepare('SELECT parent_phone FROM users WHERE id = ?').get(sub.student_id);
-        if (parent && student && parent.phone && parent.phone === student.parent_phone) {
+        const isLinked = db.prepare('SELECT 1 FROM parent_students WHERE parent_id = ? AND student_id = ?').get(userId, sub.student_id);
+        if (isLinked) {
           allowed = true;
+        } else {
+          const parent = db.prepare('SELECT phone FROM users WHERE id = ?').get(userId);
+          const student = db.prepare('SELECT parent_phone FROM users WHERE id = ?').get(sub.student_id);
+          if (parent && student && parent.phone && parent.phone === student.parent_phone) {
+            allowed = true;
+          }
         }
       }
     }
@@ -1807,8 +1817,29 @@ app.post('/api/upload', requireAuth, upload.single('file'), (req, res) => {
   }
 
   const uploaderId = req.user.id;
-  const category = req.body.category || req.query.category || 'general';
+  const role = req.user.role;
+  const category = String(req.body.category || req.query.category || 'general').toLowerCase();
   const mime = req.file.mimetype || '';
+
+  // Student role restriction: Students can only upload homework, receipt, or avatar
+  if (role === 'student') {
+    if (!['homework', 'receipt', 'avatar'].includes(category)) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      return res.status(403).json({ error: 'دانش‌آموزان تنها مجاز به بارگذاری فیش واریز، تکلیف و تصویر پروفایل هستند.' });
+    }
+    if (mime.startsWith('video/')) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      return res.status(403).json({ error: 'امکان بارگذاری ویدئو برای دانش‌آموزان مجاز نمی‌باشد.' });
+    }
+    if (mime.startsWith('image/') && req.file.size > 5 * 1024 * 1024) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      return res.status(400).json({ error: 'حداکثر حجم مجاز تصویر ۵ مگابایت است.' });
+    }
+    if (req.file.size > 20 * 1024 * 1024) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      return res.status(400).json({ error: 'حداکثر حجم مجاز فایل ارسالی ۲۰ مگابایت است.' });
+    }
+  }
 
   let fileType = 'document';
   let subDir = 'homeworks';
