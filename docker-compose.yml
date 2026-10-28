@@ -6,26 +6,29 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: rosh-platform-app
-    restart: always
+    restart: unless-stopped
     ports:
-      - "80:5000"
+      # Bind exclusively to localhost so Nginx handles public SSL/HTTP and internal port is not exposed
+      - "127.0.0.1:5000:5000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - PORT=5000
       - HOST=0.0.0.0
       - DB_PATH=/app/data/rosh.db
       - UPLOADS_PATH=/app/data/uploads
+      - BACKUPS_PATH=/app/data/backups
     volumes:
-      # Persistent storage for SQLite database & uploaded media (videos, images, homeworks)
-      - rosh_db_data:/app/data
-      - ./backend/rosh.db:/app/data/rosh.db
-      - ./backend/uploads:/app/data/uploads
+      # Single non-overlapping persistent volume for SQLite DB, uploads and backups
+      - rosh_data:/app/data
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:5000/api/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
+      start_period: 10s
       retries: 3
 
 volumes:
-  rosh_db_data:
+  rosh_data:
     driver: local

@@ -1,19 +1,39 @@
+import os
 import sys
 import paramiko
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
-HOST = "89.46.217.44"
-PORT = 22
-USER = "root"
-PASSWORD = "c6khenbR98FpxqnM"
+HOST = os.environ.get("DEPLOY_HOST")
+PORT = int(os.environ.get("DEPLOY_PORT", "22"))
+USER = os.environ.get("DEPLOY_USER", "root")
+KEY_FILE = os.environ.get("DEPLOY_KEY_FILE")
+PASSWORD = os.environ.get("DEPLOY_PASSWORD")
+
+if not HOST:
+    print("ERROR: DEPLOY_HOST environment variable is required.", file=sys.stderr)
+    sys.exit(1)
+
+if not KEY_FILE and not PASSWORD:
+    print("ERROR: Either DEPLOY_KEY_FILE or DEPLOY_PASSWORD environment variable must be set.", file=sys.stderr)
+    sys.exit(1)
 
 def run_remote(cmd):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        client.connect(HOST, port=PORT, username=USER, password=PASSWORD, timeout=15)
+        connect_kwargs = {
+            "hostname": HOST,
+            "port": PORT,
+            "username": USER,
+            "timeout": 15
+        }
+        if KEY_FILE:
+            connect_kwargs["key_filename"] = KEY_FILE
+        else:
+            connect_kwargs["password"] = PASSWORD
+        client.connect(**connect_kwargs)
         stdin, stdout, stderr = client.exec_command(cmd)
         out = stdout.read().decode('utf-8', errors='replace')
         err = stderr.read().decode('utf-8', errors='replace')

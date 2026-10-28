@@ -1,7 +1,35 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'roshd_secure_educational_platform_jwt_secret_key_2026';
+// Load .env if present
+const fs = require('fs');
+const path = require('path');
+function loadEnv() {
+  const paths = [path.join(__dirname, '.env'), path.join(__dirname, '..', '.env')];
+  for (const p of paths) {
+    if (fs.existsSync(p)) {
+      const lines = fs.readFileSync(p, 'utf8').split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const eqIdx = trimmed.indexOf('=');
+        if (eqIdx > 0) {
+          const key = trimmed.slice(0, eqIdx).trim();
+          const val = trimmed.slice(eqIdx + 1).trim();
+          if (process.env[key] === undefined) {
+            process.env[key] = val;
+          }
+        }
+      }
+    }
+  }
+}
+loadEnv();
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.trim().length < 32) {
+  throw new Error('FATAL SECURITY ERROR: JWT_SECRET environment variable is missing or shorter than 32 characters. Server will not start without a secure secret key.');
+}
 const COOKIE_NAME = 'roshd_session';
 
 // Compare password with support for automatic migration from legacy plaintext

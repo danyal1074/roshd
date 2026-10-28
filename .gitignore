@@ -24,10 +24,14 @@ Thumbs.db
 .vscode/
 .idea/
 
-# SQLite WAL and temp files (keep primary rosh.db)
+# SQLite databases and WAL files
+*.db
 *.db-shm
 *.db-wal
+backend/rosh.db
+backend/uploads/
 backend/backups/
+uploads/
 
 # Large audio & video files
 *.mp4
