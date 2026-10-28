@@ -858,6 +858,28 @@
       </div>
     </div>
 
+    <!-- Mobile Bottom Navigation Dock for Admin Panel (lg:hidden) -->
+    <nav class="lg:hidden dock fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="منوی مدیر">
+      <div class="grid grid-cols-6 max-w-lg mx-auto">
+        <button 
+          v-for="item in navItems" 
+          :key="item.key"
+          @click="activeTab = item.key"
+          :aria-current="activeTab === item.key ? 'page' : undefined"
+          class="dock-item relative !py-2 !gap-0.5"
+        >
+          <i :data-lucide="item.icon" class="w-5 h-5"></i>
+          <span class="text-[10px] font-bold">{{ item.label }}</span>
+          <span 
+            v-if="item.badge && item.badge > 0" 
+            class="absolute top-1 right-1/2 translate-x-2.5 w-4 h-4 rounded-full bg-sun text-ink text-[9px] font-black flex items-center justify-center shadow"
+          >
+            {{ faNum(item.badge) }}
+          </span>
+        </button>
+      </div>
+    </nav>
+
     <!-- Toast Notification -->
     <div 
       v-if="toastMsg" 

@@ -161,8 +161,57 @@
 
     .seg-ctl { display: flex; background: #E3ECFF; border-radius: 16px; padding: 4px; gap: 4px; }
     .seg-ctl button { flex: 1; min-height: 42px; border-radius: 12px; font-weight: 700; color: #5A6E99; font-size: 14px; cursor: pointer; transition: all .15s; border: none; background: none; }
-    .seg-ctl button[aria-pressed="true"] { background: #fff; color: var(--royal); font-weight: 800; box-shadow: 0 4px 12px -2px rgba(10,75,214,.2); }
     .seg-ctl button[aria-pressed="true"] { background: #fff; color: var(--royal); box-shadow: 0 4px 12px -4px rgba(10,75,214,.35); font-weight: 800; }
+
+    /* Professional Interactive Chips & Tabs */
+    .chip { 
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 6px; 
+      min-height: 42px; 
+      padding: 0 16px; 
+      border-radius: 9999px; 
+      font-weight: 700; 
+      font-size: 13px; 
+      background: #FFFFFF; 
+      color: #5A6E99; 
+      border: 1.5px solid var(--line); 
+      box-shadow: 0 2px 6px -1px rgba(11,31,77,0.04); 
+      transition: all .2s cubic-bezier(0.34, 1.56, 0.64, 1); 
+      cursor: pointer; 
+      white-space: nowrap; 
+      user-select: none; 
+      text-decoration: none; 
+    }
+    .chip:hover { 
+      border-color: rgba(10,75,214,0.4); 
+      color: var(--royal); 
+      background: #F8FAFF; 
+      transform: translateY(-1px); 
+    }
+    .chip.on, .chip[aria-pressed="true"], .chip[aria-selected="true"] { 
+      background: linear-gradient(135deg, #185DEE, #0A4BD6); 
+      color: #FFFFFF !important; 
+      border-color: #0A4BD6; 
+      box-shadow: 0 6px 16px -3px rgba(10,75,214,0.4), inset 0 1px 0 rgba(255,255,255,0.25); 
+      font-weight: 800; 
+    }
+    .chip-gold { 
+      background: rgba(255, 255, 255, 0.18); 
+      color: #FFFFFF; 
+      border: 1px solid rgba(255, 255, 255, 0.35); 
+      backdrop-filter: blur(8px); 
+    }
+    .chip-gold.on { 
+      background: #FFC531 !important; 
+      color: #0B1F4D !important; 
+      border-color: #FFC531; 
+      box-shadow: 0 4px 14px rgba(255,197,49,0.5); 
+      font-weight: 900; 
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
     .tag { display: inline-flex; align-items: center; gap: .3rem; border-radius: 99px; padding: 2px 12px; font-size: 13px; font-weight: 700; white-space: nowrap; }
     .bar { height: 10px; border-radius: 99px; background: #E3ECFF; overflow: hidden; }
