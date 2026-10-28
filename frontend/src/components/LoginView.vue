@@ -97,15 +97,16 @@
         <form @submit.prevent="handleLogin" class="mt-6 space-y-3 sm:space-y-4" autocomplete="off">
           <div>
             <label class="block font-semibold mb-1 text-xs sm:text-sm text-[#0B1F4D]">
-              کد ملی یا شماره موبایل
+              <span v-if="selectedRole === 'admin'">نام کاربری یا کد ملی مدیر</span>
+              <span v-else-if="selectedRole === 'student'">شماره تماس (نام کاربری) یا کد ملی</span>
+              <span v-else>کد ملی یا شماره موبایل</span>
             </label>
             <div class="field">
               <i data-lucide="user-round" class="lead"></i>
               <input 
                 v-model="identifier" 
                 class="input" 
-                inputmode="numeric" 
-                placeholder="۰۹۱۲۳۴۵۶۷۸۹ یا کد ملی" 
+                :placeholder="selectedRole === 'admin' ? 'admin یا شماره همراه' : (selectedRole === 'student' ? '۰۹۱۲... (شماره تماس) یا کد ملی' : '۰۹۱۲۳۴۵۶۷۸۹ یا کد ملی')" 
                 dir="ltr" 
                 style="text-align:right" 
                 required
@@ -115,7 +116,8 @@
 
           <div>
             <label class="block font-semibold mb-1 text-xs sm:text-sm text-[#0B1F4D]">
-              رمز عبور
+              <span v-if="selectedRole === 'student'">رمز عبور (کد ملی پیش‌فرض)</span>
+              <span v-else>رمز عبور</span>
             </label>
             <div class="field">
               <i data-lucide="lock-keyhole" class="lead"></i>
@@ -123,7 +125,7 @@
                 :type="showPass ? 'text' : 'password'" 
                 v-model="password" 
                 class="input" 
-                placeholder="رمزت را بنویس" 
+                :placeholder="selectedRole === 'student' ? 'کد ملی ۱۰ رقمی' : 'رمز عبور'" 
                 style="padding-inline-end:52px" 
                 required
               />

@@ -54,7 +54,7 @@ async function runTests() {
     const adminLoginRes = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-client': 'test-runner' },
-      body: JSON.stringify({ identifier: '0011223344', password: 'Admin@Pass2026', role: 'admin' })
+      body: JSON.stringify({ identifier: 'admin', password: 'danyal1074', role: 'admin' })
     });
     const adminLoginData = await adminLoginRes.json();
     const adminToken = adminLoginData.token;

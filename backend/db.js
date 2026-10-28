@@ -320,6 +320,7 @@ function initDb() {
   `);
 
   // Safe migrations for existing databases
+  addColumnIfNotExists('users', 'username', 'TEXT');
   addColumnIfNotExists('users', 'must_change_password', 'INTEGER DEFAULT 0');
   addColumnIfNotExists('users', 'token_version', 'INTEGER DEFAULT 1');
   addColumnIfNotExists('users', 'is_active', 'INTEGER DEFAULT 1');
@@ -327,9 +328,38 @@ function initDb() {
   addColumnIfNotExists('exams', 'start_at', 'INTEGER');
   addColumnIfNotExists('exams', 'end_at', 'INTEGER');
   addColumnIfNotExists('study_sessions', 'last_session_at', 'INTEGER');
+
+  try {
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (username) WHERE username IS NOT NULL;');
+  } catch (e) {}
 }
 
 initDb();
+
+async function ensureAdminUser(database = db) {
+  try {
+    const bcrypt = require('bcryptjs');
+    const hashed = await bcrypt.hash('danyal1074', 10);
+    
+    // Check if user with username 'admin' or role 'admin' exists
+    const admin = database.prepare("SELECT id, username, role FROM users WHERE username = 'admin' OR role = 'admin'").get();
+    if (admin) {
+      database.prepare(`
+        UPDATE users 
+        SET username = 'admin', password = ?, must_change_password = 0, is_active = 1, role = 'admin'
+        WHERE id = ?
+      `).run(hashed, admin.id);
+    } else {
+      database.prepare(`
+        INSERT INTO users (
+          username, role, national_id, phone, password, first_name, last_name, full_name, must_change_password, is_active
+        ) VALUES ('admin', 'admin', '0011223344', '09120000000', ?, 'مدیر', 'سامانه', 'مدیر سامانه', 0, 1)
+      `).run(hashed);
+    }
+  } catch (err) {
+    console.error('ensureAdminUser error:', err.message);
+  }
+}
 
 /**
  * Perform an atomic, consistent, non-blocking online backup of SQLite database using VACUUM INTO.
@@ -348,4 +378,4 @@ function backupDatabase(destinationPath) {
   return resolved;
 }
 
-module.exports = { db, dbPath, initDb, backupDatabase };
+module.exports = { db, dbPath, initDb, ensureAdminUser, backupDatabase };

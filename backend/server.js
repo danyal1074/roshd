@@ -6,7 +6,8 @@ const fs = require('fs');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-const { db } = require('./db');
+const { db, ensureAdminUser } = require('./db');
+const XLSX = require('xlsx');
 const { createBackup } = require('./backup');
 const {
   hashPassword,
@@ -435,14 +436,19 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     return res.status(429).json({ error: 'تعداد تلاش‌های ناموفق برای این حساب بیش از حد مجاز است. لطفاً ۱۵ دقیقه دیگر تلاش نمایید.' });
   }
 
-  // Find user strictly by national_id, or parent phone if logging in as parent
+  // Find user by username, national_id, or phone
   let user;
   if (role === 'parent') {
-    user = db.prepare("SELECT * FROM users WHERE (national_id = ? OR phone = ? OR parent_phone = ?) AND role = 'parent'").get(cleanId, cleanId, cleanId);
+    user = db.prepare("SELECT * FROM users WHERE (username = ? OR national_id = ? OR phone = ? OR parent_phone = ?) AND role = 'parent'").get(cleanId, cleanId, cleanId, cleanId);
   } else if (role) {
-    user = db.prepare('SELECT * FROM users WHERE national_id = ? AND role = ?').get(cleanId, role);
+    user = db.prepare('SELECT * FROM users WHERE (username = ? OR national_id = ? OR phone = ?) AND role = ?').get(cleanId, cleanId, cleanId, role);
   } else {
-    user = db.prepare('SELECT * FROM users WHERE national_id = ?').get(cleanId);
+    user = db.prepare('SELECT * FROM users WHERE (username = ? OR national_id = ? OR phone = ?)').get(cleanId, cleanId, cleanId);
+  }
+
+  // Graceful fallback for admin if role selection in UI did not match
+  if (!user && cleanId.toLowerCase() === 'admin') {
+    user = db.prepare("SELECT * FROM users WHERE (username = 'admin' OR role = 'admin')").get();
   }
 
   if (!user) {
@@ -755,89 +761,312 @@ app.post('/api/students', requireAuth, requireRole('admin'), (req, res) => {
   }
 });
 
-// Bulk Import Students via CSV or Structured Array
-app.post('/api/admin/students/import', requireAuth, requireRole('admin'), (req, res) => {
-  const { students, csv_text, dry_run = false } = req.body;
-  let rows = [];
+// ----------------- STUDENT BULK IMPORT & EXCEL ENGINE -----------------
+function cleanDigits(val) {
+  if (val === null || val === undefined) return '';
+  return String(val)
+    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .trim();
+}
 
-  if (Array.isArray(students)) {
-    rows = students;
-  } else if (typeof csv_text === 'string') {
-    const lines = csv_text.split('\n').map(l => l.trim()).filter(Boolean);
-    if (lines.length > 0) {
-      const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const isHeader = header.includes('national_id') || header.includes('کد ملی') || header.some(h => isNaN(h));
-      const dataLines = isHeader ? lines.slice(1) : lines;
+function normalizeGrade(gr) {
+  const clean = cleanDigits(gr).trim();
+  if (clean === '7' || clean === 'هفتم') return 'هفتم';
+  if (clean === '8' || clean === 'هشتم') return 'هشتم';
+  if (clean === '9' || clean === 'نهم') return 'نهم';
+  if (clean === '10' || clean === 'دهم') return 'دهم';
+  if (clean === '11' || clean === 'یازدهم') return 'یازدهم';
+  if (clean === '12' || clean === 'دوازدهم') return 'دوازدهم';
+  return clean || 'هفتم';
+}
 
-      for (const line of dataLines) {
-        const parts = line.split(',').map(p => p.trim());
-        if (parts.length >= 3) {
-          rows.push({
-            national_id: parts[0],
-            first_name: parts[1],
-            last_name: parts[2],
-            grade: parts[3] || 'هفتم',
-            class_name: parts[4] || 'الف',
-            phone: parts[5] || '',
-            parent_phone: parts[6] || ''
-          });
-        }
-      }
-    }
-  }
-
-  if (rows.length === 0) {
-    return res.status(400).json({ error: 'هیچ داده‌ای جهت ایمپورت ارسال نشده است.' });
-  }
-
-  const validGrades = ['هفتم', 'هشتم', 'نهم', '7', '8', '9'];
+function processStudentRows(rawRows) {
   const validRows = [];
   const invalidRows = [];
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const natId = String(row.national_id || '').trim();
-    const fn = String(row.first_name || '').trim();
-    const ln = String(row.last_name || '').trim();
-    const gr = String(row.grade || 'هفتم').trim();
-    const cl = String(row.class_name || 'الف').trim();
-    const ph = String(row.phone || '').trim();
-    const pph = String(row.parent_phone || '').trim();
+  for (let i = 0; i < rawRows.length; i++) {
+    const row = rawRows[i];
+    if (!row || typeof row !== 'object') continue;
+
+    // Support various column names (Persian and English)
+    let fullName = (row['نام و نام خانوادگی'] || row['نام و نام‌خانوادگی'] || row['نام کامل'] || row['full_name'] || '').toString().trim();
+    let fn = (row['نام'] || row['first_name'] || '').toString().trim();
+    let ln = (row['نام خانوادگی'] || row['نام‌خانوادگی'] || row['last_name'] || '').toString().trim();
+
+    if (!fullName && (fn || ln)) {
+      fullName = `${fn} ${ln}`.trim();
+    } else if (fullName && (!fn || !ln)) {
+      const parts = fullName.split(/\s+/);
+      fn = parts[0] || '';
+      ln = parts.slice(1).join(' ') || fn;
+    }
+
+    const rawNatId = row['کد ملی'] || row['کدملی'] || row['کد_ملی'] || row['national_id'] || '';
+    const natId = cleanDigits(rawNatId).replace(/[^0-9]/g, '');
+
+    const rawPhone = row['شماره تماس'] || row['شماره همراه'] || row['موبایل'] || row['تلفن'] || row['phone'] || '';
+    let phone = cleanDigits(rawPhone).replace(/[^0-9]/g, '');
+    if (phone.length === 10 && phone.startsWith('9')) {
+      phone = '0' + phone;
+    }
+
+    const rawParentPhone = row['شماره والد'] || row['شماره ولی'] || row['تلفن والد'] || row['parent_phone'] || '';
+    let parentPhone = cleanDigits(rawParentPhone).replace(/[^0-9]/g, '');
+    if (parentPhone.length === 10 && parentPhone.startsWith('9')) {
+      parentPhone = '0' + parentPhone;
+    }
+
+    const grade = normalizeGrade(row['پایه'] || row['پایه تحصیلی'] || row['grade'] || 'هفتم');
+    const className = (row['کلاس'] || row['نام کلاس'] || row['class_name'] || 'الف').toString().trim();
+    const address = (row['آدرس'] || row['ادرس'] || row['نشانی'] || row['address'] || '').toString().trim();
 
     const errors = [];
-    if (!validateIranianNationalId(natId)) errors.push('کد ملی نامعتبر است');
-    if (!fn) errors.push('نام الزامی است');
-    if (!ln) errors.push('نام خانوادگی الزامی است');
-    if (!validGrades.includes(gr)) errors.push('پایه نامعتبر است');
-    if (ph && !/^09\d{9}$/.test(ph)) errors.push('شماره موبایل نامعتبر است');
-    if (pph && !/^09\d{9}$/.test(pph)) errors.push('شماره موبایل والد نامعتبر است');
-
-    const existing = db.prepare('SELECT id FROM users WHERE national_id = ?').get(natId);
-    if (existing) errors.push('کد ملی قبلاً در سامانه ثبت شده است');
+    if (!natId || natId.length !== 10) {
+      errors.push('کد ملی باید ۱۰ رقم باشد');
+    }
+    if (!fullName) {
+      errors.push('نام و نام خانوادگی الزامی است');
+    }
+    if (phone && !/^09\d{9}$/.test(phone)) {
+      errors.push('شماره تماس معتبر نیست (باید ۱۱ رقم با پیش‌شماره ۰۹ باشد)');
+    }
+    if (parentPhone && !/^09\d{9}$/.test(parentPhone)) {
+      errors.push('شماره همراه والد نامعتبر است');
+    }
 
     if (errors.length > 0) {
       invalidRows.push({ row_number: i + 1, data: row, errors });
     } else {
       validRows.push({
         national_id: natId,
-        first_name: fn,
-        last_name: ln,
-        full_name: `${fn} ${ln}`,
-        grade: gr === '7' ? 'هفتم' : (gr === '8' ? 'هشتم' : (gr === '9' ? 'نهم' : gr)),
-        class_name: cl,
-        phone: ph,
-        parent_phone: pph
+        phone: phone || '',
+        username: phone || natId, // شماره تماس دانش‌آموز به عنوان نام کاربری
+        password: natId, // کد ملی دانش‌آموز به عنوان رمز عبور
+        first_name: fn || fullName,
+        last_name: ln || fullName,
+        full_name: fullName,
+        grade,
+        class_name: className,
+        address,
+        parent_phone: parentPhone || ''
       });
     }
   }
 
+  return { validRows, invalidRows };
+}
+
+async function insertOrUpdateStudents(validRows, req) {
+  const credentials = [];
+  db.exec('BEGIN IMMEDIATE;');
+  try {
+    const checkUser = db.prepare('SELECT id FROM users WHERE national_id = ?');
+    const insertStu = db.prepare(`
+      INSERT INTO users (
+        role, username, national_id, phone, password, first_name, last_name, full_name,
+        grade, class_name, address, parent_phone, must_change_password, is_active
+      ) VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1)
+    `);
+    const updateStu = db.prepare(`
+      UPDATE users 
+      SET role = 'student', username = ?, phone = ?, password = ?, first_name = ?, last_name = ?, full_name = ?,
+          grade = ?, class_name = ?, address = ?, parent_phone = ?, must_change_password = 0, is_active = 1
+      WHERE id = ?
+    `);
+
+    const insertParent = db.prepare(`
+      INSERT OR IGNORE INTO users (
+        role, username, national_id, phone, password, first_name, last_name, full_name, must_change_password, is_active
+      ) VALUES ('parent', ?, ?, ?, ?, 'ولی', ?, ?, 0, 1)
+    `);
+    const linkParent = db.prepare('INSERT OR IGNORE INTO parent_students (parent_id, student_id) VALUES (?, ?)');
+
+    for (const r of validRows) {
+      const hashedPw = await hashPassword(r.password); // Password is national_id!
+      const existing = checkUser.get(r.national_id);
+      let studentId;
+
+      if (existing) {
+        updateStu.run(r.username, r.phone, hashedPw, r.first_name, r.last_name, r.full_name, r.grade, r.class_name, r.address, r.parent_phone, existing.id);
+        studentId = existing.id;
+      } else {
+        const info = insertStu.run(r.username, r.national_id, r.phone, hashedPw, r.first_name, r.last_name, r.full_name, r.grade, r.class_name, r.address, r.parent_phone);
+        studentId = info.lastInsertRowid;
+      }
+
+      if (r.parent_phone) {
+        const parentFullName = `ولی ${r.full_name}`;
+        const parentHashed = await hashPassword(r.parent_phone);
+        insertParent.run(r.parent_phone, r.parent_phone, r.parent_phone, parentHashed, r.last_name, parentFullName);
+        const parentUser = db.prepare('SELECT id FROM users WHERE phone = ? AND role = "parent"').get(r.parent_phone);
+        if (parentUser) {
+          linkParent.run(parentUser.id, studentId);
+        }
+      }
+
+      credentials.push({
+        national_id: r.national_id,
+        username: r.username,
+        password: r.password, // Plain for admin export
+        full_name: r.full_name,
+        grade: r.grade,
+        phone: r.phone
+      });
+    }
+
+    db.exec('COMMIT;');
+    recordAudit(req.user ? req.user.id : null, 'IMPORT_STUDENTS', 'users', null, `Imported/updated ${validRows.length} students`, req.ip);
+    return { success: true, credentials };
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    throw err;
+  }
+}
+
+// Download Sample Excel Template
+app.get('/api/admin/students/excel-template', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const wb = XLSX.utils.book_new();
+    const sampleData = [
+      {
+        'نام و نام خانوادگی': 'امیرعلی رضایی',
+        'پایه': 'هفتم',
+        'کد ملی': '0012345678',
+        'شماره تماس': '09121111111',
+        'آدرس': 'تهران، خیابان کارگر شمالی، پلاک ۱۲'
+      },
+      {
+        'نام و نام خانوادگی': 'محمدحسین حسینی',
+        'پایه': 'هشتم',
+        'کد ملی': '0098765432',
+        'شماره تماس': '09122222222',
+        'آدرس': 'تهران، میدان انقلاب، کوچه مهر، پلاک ۵'
+      },
+      {
+        'نام و نام خانوادگی': 'سید علی موسوی',
+        'پایه': 'نهم',
+        'کد ملی': '0034567890',
+        'شماره تماس': '09123333333',
+        'آدرس': 'تهران، خیابان آزادی، پلاک ۲۰'
+      }
+    ];
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    ws['!cols'] = [
+      { wch: 25 }, // نام و نام خانوادگی
+      { wch: 12 }, // پایه
+      { wch: 16 }, // کد ملی
+      { wch: 16 }, // شماره تماس
+      { wch: 40 }  // آدرس
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'دانش‌آموزان');
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="roshd_students_template.xlsx"');
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).json({ error: 'خطا در ایجاد قالب اکسل: ' + err.message });
+  }
+});
+
+// Import Students via Uploaded Excel / CSV File
+app.post('/api/admin/students/import-file', requireAuth, requireRole('admin'), upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'لطفاً یک فایل اکسل یا CSV انتخاب نمایید.' });
+    }
+
+    const dry_run = req.body.dry_run === 'true' || req.query.dry_run === 'true';
+    let rawRows = [];
+
+    const fileBuffer = fs.readFileSync(req.file.path);
+    try {
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    } finally {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+    }
+
+    if (!rawRows || rawRows.length === 0) {
+      return res.status(400).json({ error: 'فایل اکسل ارسالی خالی است یا ساختار استانداردی ندارد.' });
+    }
+
+    const { validRows, invalidRows } = processStudentRows(rawRows);
+
+    if (dry_run) {
+      return res.json({
+        dry_run: true,
+        total_rows: rawRows.length,
+        valid_count: validRows.length,
+        invalid_count: invalidRows.length,
+        preview: validRows.slice(0, 15),
+        errors: invalidRows
+      });
+    }
+
+    if (validRows.length === 0) {
+      return res.status(400).json({
+        error: 'هیچ ردیف معتبری برای ثبت یافت نشد.',
+        errors: invalidRows
+      });
+    }
+
+    const result = await insertOrUpdateStudents(validRows, req);
+    res.json({
+      success: true,
+      imported_count: validRows.length,
+      invalid_count: invalidRows.length,
+      credentials: result.credentials,
+      message: `تعداد ${validRows.length} دانش‌آموز با موفقیت ایجاد/به‌روزرسانی شدند. نام کاربری شماره تماس و رمز عبور کد ملی است.`
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'خطا در پردازش فایل اکسل: ' + err.message });
+  }
+});
+
+// Bulk Import Students via Structured JSON / CSV
+app.post('/api/admin/students/import', requireAuth, requireRole('admin'), async (req, res) => {
+  const { students, rows: bodyRows, csv_text, dry_run = false } = req.body;
+  let rawRows = [];
+
+  if (Array.isArray(students)) {
+    rawRows = students;
+  } else if (Array.isArray(bodyRows)) {
+    rawRows = bodyRows;
+  } else if (typeof csv_text === 'string') {
+    const lines = csv_text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length > 0) {
+      for (const line of lines) {
+        const parts = line.split(/[,;\t]/).map(p => p.trim());
+        if (parts.length >= 2) {
+          rawRows.push({
+            'نام و نام خانوادگی': parts[0],
+            'پایه': parts[1] || 'هفتم',
+            'کد ملی': parts[2] || '',
+            'شماره تماس': parts[3] || '',
+            'آدرس': parts[4] || ''
+          });
+        }
+      }
+    }
+  }
+
+  if (rawRows.length === 0) {
+    return res.status(400).json({ error: 'هیچ داده‌ای جهت ایمپورت ارسال نشده است.' });
+  }
+
+  const { validRows, invalidRows } = processStudentRows(rawRows);
+
   if (dry_run) {
     return res.json({
       dry_run: true,
-      total_rows: rows.length,
+      total_rows: rawRows.length,
       valid_count: validRows.length,
       invalid_count: invalidRows.length,
-      preview: validRows.slice(0, 10),
+      preview: validRows.slice(0, 15),
       errors: invalidRows
     });
   }
@@ -849,67 +1078,16 @@ app.post('/api/admin/students/import', requireAuth, requireRole('admin'), (req, 
     });
   }
 
-  const crypto = require('crypto');
-  const credentials = [];
-  db.exec('BEGIN IMMEDIATE;');
   try {
-    const insertStu = db.prepare(`
-      INSERT INTO users (
-        role, national_id, phone, password, first_name, last_name, full_name,
-        grade, class_name, parent_phone, must_change_password, is_active
-      ) VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)
-    `);
-
-    const insertParent = db.prepare(`
-      INSERT OR IGNORE INTO users (
-        role, national_id, phone, password, first_name, last_name, full_name, must_change_password, is_active
-      ) VALUES ('parent', ?, ?, ?, 'ولی', ?, ?, 1, 1)
-    `);
-
-    const linkParent = db.prepare('INSERT OR IGNORE INTO parent_students (parent_id, student_id) VALUES (?, ?)');
-
-    for (const r of validRows) {
-      const tempPw = crypto.randomBytes(5).toString('hex');
-      const hashed = hashPassword(tempPw);
-      const resInfo = insertStu.run(r.national_id, r.phone, hashed, r.first_name, r.last_name, r.full_name, r.grade, r.class_name, r.parent_phone);
-      const studentId = resInfo.lastInsertRowid;
-
-      if (r.parent_phone) {
-        const parentFullName = `ولی ${r.full_name}`;
-        const parentPw = crypto.randomBytes(5).toString('hex');
-        insertParent.run(r.parent_phone, r.parent_phone, hashPassword(parentPw), r.last_name, parentFullName);
-        const parentUser = db.prepare('SELECT id FROM users WHERE phone = ? AND role = "parent"').get(r.parent_phone);
-        if (parentUser) {
-          linkParent.run(parentUser.id, studentId);
-        }
-      }
-
-      credentials.push({
-        national_id: r.national_id,
-        full_name: r.full_name,
-        grade: r.grade,
-        class_name: r.class_name,
-        temporary_password: tempPw
-      });
-    }
-
-    db.exec('COMMIT;');
-    recordAudit(req.user.id, 'IMPORT_STUDENTS', 'users', null, `Imported ${validRows.length} students`, req.ip);
-
-    const exportLines = ['کد ملی,نام و نام خانوادگی,پایه,کلاس,رمز عبور موقت'];
-    for (const c of credentials) {
-      exportLines.push(`${c.national_id},${c.full_name},${c.grade},${c.class_name},${c.temporary_password}`);
-    }
-
+    const result = await insertOrUpdateStudents(validRows, req);
     res.json({
       success: true,
       imported_count: validRows.length,
       invalid_count: invalidRows.length,
-      csv_export: exportLines.join('\n'),
-      message: `تعداد ${validRows.length} دانش‌آموز با موفقیت وارد سامانه شدند.`
+      credentials: result.credentials,
+      message: `تعداد ${validRows.length} دانش‌آموز با موفقیت وارد سامانه شدند. نام کاربری شماره تماس و رمز عبور کد ملی تنظیم شد.`
     });
   } catch (err) {
-    db.exec('ROLLBACK;');
     res.status(500).json({ error: 'خطا در ثبت گروهی دانش‌آموزان: ' + err.message });
   }
 });
@@ -2011,6 +2189,7 @@ app.use((err, req, res, next) => {
 // Listen with backlog of 2048 to prevent ECONNREFUSED during student rush hour/morning check-ins
 const server = app.listen(PORT, HOST, 2048, () => {
   console.log(`Roshd Secure Server listening on http://${HOST}:${PORT}`);
+  ensureAdminUser(db).catch(err => console.error('ensureAdminUser error:', err));
 });
 
 server.maxConnections = 4096;

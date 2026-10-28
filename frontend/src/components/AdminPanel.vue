@@ -1079,52 +1079,119 @@
         <div class="flex items-center justify-between border-b border-line pb-3">
           <div class="flex items-center gap-2">
             <i data-lucide="file-spreadsheet" class="w-6 h-6 text-royal"></i>
-            <h3 class="font-extrabold text-lg text-ink">ورود گروهی دانش‌آموزان (CSV / اکسل)</h3>
+            <div>
+              <h3 class="font-extrabold text-lg text-ink">ثبت گروهی دانش‌آموزان از طریق فایل اکسل</h3>
+              <p class="text-xs text-[#5A6E99]">نام کاربری: شماره تماس | رمز عبور: کد ملی دانش‌آموز</p>
+            </div>
           </div>
-          <button @click="openImportModal = false" class="text-[#5A6E99] hover:text-ink">
+          <button @click="closeImportModal" class="text-[#5A6E99] hover:text-ink">
             <i data-lucide="x" class="w-5 h-5"></i>
           </button>
         </div>
 
-        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
-          فرمت هر ردیف به صورت جدا شده با کاما، نقطه ویرگول یا تب:
-          <br />
-          <code class="font-mono font-bold" dir="ltr">کد ملی, نام, نام خانوادگی, پایه (هفتم/هشتم/نهم), کلاس, موبایل دانش‌آموز, موبایل ولی</code>
+        <!-- Download Template and Format Guide -->
+        <div class="p-4 bg-royal/5 border border-royal/20 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h4 class="font-bold text-xs sm:text-sm text-royal">قالب آماده اکسل (Excel Template)</h4>
+            <p class="text-xs text-[#5A6E99] mt-0.5">ستون‌ها: نام و نام خانوادگی | پایه | کد ملی | شماره تماس | آدرس</p>
+          </div>
+          <a 
+            href="/api/admin/students/excel-template" 
+            download="roshd_students_template.xlsx" 
+            class="btn btn-royal !py-2 !px-3 text-xs font-bold shrink-0 flex items-center gap-1.5"
+          >
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>دانلود نمونه اکسل</span>
+          </a>
         </div>
 
-        <div>
-          <label class="lbl">داده‌های متنی (کپی شده از فایل اکسل یا CSV)</label>
-          <textarea 
-            v-model="importCsvText" 
-            class="input font-mono text-xs !h-40 py-2" 
-            placeholder="0098765432,علی,کریمی,هفتم,الف,09121111111,09122222222"
-          ></textarea>
+        <!-- Upload File Area -->
+        <input 
+          type="file" 
+          ref="excelFileInput" 
+          accept=".xlsx,.xls,.csv" 
+          @change="onFileSelected" 
+          class="hidden" 
+        />
+
+        <div 
+          @click="$refs.excelFileInput.click()" 
+          class="border-2 border-dashed border-royal/30 hover:border-royal bg-mist/60 hover:bg-royal/5 p-6 rounded-2xl text-center cursor-pointer transition-all space-y-2"
+        >
+          <div class="w-12 h-12 mx-auto rounded-full bg-royal/10 text-royal flex items-center justify-center">
+            <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+          </div>
+          <div v-if="selectedExcelFile">
+            <p class="font-bold text-sm text-ink">{{ selectedExcelFile.name }}</p>
+            <p class="text-xs text-[#5A6E99]">{{ (selectedExcelFile.size / 1024).toFixed(1) }} کیلوبایت - برای تعویض فایل کلیک کنید</p>
+          </div>
+          <div v-else>
+            <p class="font-bold text-sm text-ink">برای انتخاب یا آپلود فایل اکسل کلیک کنید</p>
+            <p class="text-xs text-[#5A6E99]">پشتیبانی از فرمت‌های XLSX, XLS و CSV</p>
+          </div>
         </div>
 
         <!-- Preview Results -->
-        <div v-if="importDryRunResult" class="p-4 bg-mist rounded-xl space-y-2 text-xs">
+        <div v-if="importDryRunResult" class="p-4 bg-mist rounded-xl space-y-3 text-xs">
           <div class="flex items-center justify-between font-bold">
-            <span class="text-ok">تعداد ردیف‌های معتبر: {{ faNum(importDryRunResult.valid_count) }}</span>
+            <span class="text-ok">تعداد ردیف‌های معتبر شناسایی‌شده: {{ faNum(importDryRunResult.valid_count) }}</span>
             <span v-if="importDryRunResult.invalid_count > 0" class="text-late">ردیف‌های دارای خطا: {{ faNum(importDryRunResult.invalid_count) }}</span>
           </div>
-          <div v-if="importDryRunResult.errors && importDryRunResult.errors.length > 0" class="text-late max-h-28 overflow-y-auto space-y-1">
+
+          <div v-if="importDryRunResult.preview && importDryRunResult.preview.length > 0" class="overflow-x-auto max-h-48 border border-line rounded-lg">
+            <table class="w-full text-right text-xs">
+              <thead class="bg-white/80 sticky top-0 border-b border-line text-[#5A6E99]">
+                <tr>
+                  <th class="p-2">نام و نام خانوادگی</th>
+                  <th class="p-2">پایه</th>
+                  <th class="p-2">کد ملی (رمز عبور)</th>
+                  <th class="p-2">شماره تماس (نام کاربری)</th>
+                  <th class="p-2">آدرس</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-line">
+                <tr v-for="(p, idx) in importDryRunResult.preview" :key="idx">
+                  <td class="p-2 font-bold">{{ p.full_name }}</td>
+                  <td class="p-2">{{ p.grade }}</td>
+                  <td class="p-2 font-mono" dir="ltr">{{ p.national_id }}</td>
+                  <td class="p-2 font-mono" dir="ltr">{{ p.phone || '-' }}</td>
+                  <td class="p-2 truncate max-w-[140px]">{{ p.address || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-if="importDryRunResult.errors && importDryRunResult.errors.length > 0" class="text-late max-h-24 overflow-y-auto space-y-1 bg-red-50 p-2.5 rounded-lg border border-red-200">
             <p v-for="err in importDryRunResult.errors" :key="err.row_number">
               ردیف {{ faNum(err.row_number) }}: {{ err.errors.join('، ') }}
             </p>
           </div>
         </div>
 
+        <!-- Success Result & Download List -->
+        <div v-if="importCredentials && importCredentials.length > 0" class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3 text-xs">
+          <div class="flex items-center gap-2 text-ok font-bold text-sm">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+            <span>حساب کاربری {{ faNum(importCredentials.length) }} دانش‌آموز با موفقیت ایجاد گردید!</span>
+          </div>
+          <p class="text-emerald-800 leading-relaxed">
+            دانش‌آموزان اکنون می‌توانند با <b>شماره تماس خود به عنوان نام کاربری</b> و <b>کد ملی به عنوان رمز عبور</b> وارد سامانه شوند.
+          </p>
+        </div>
+
         <div class="flex items-center justify-end gap-2 pt-2 border-t border-line">
-          <button @click="previewImport" :disabled="importLoading" class="btn btn-soft text-xs font-bold">
-            بررسی و پیش‌نمایش
+          <button @click="closeImportModal" class="btn btn-soft text-xs font-bold">
+            بستن
           </button>
           <button 
-            v-if="importDryRunResult && importDryRunResult.valid_count > 0" 
-            @click="executeImport" 
+            v-if="importDryRunResult && importDryRunResult.valid_count > 0 && (!importCredentials || importCredentials.length === 0)" 
+            @click="executeFileImport" 
             :disabled="importLoading" 
-            class="btn btn-ok text-xs font-bold"
+            class="btn btn-ok text-xs font-bold flex items-center gap-1.5"
           >
-            تأیید و واردسازی {{ faNum(importDryRunResult.valid_count) }} دانش‌آموز
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            <span v-if="importLoading">در حال ثبت در سامانه...</span>
+            <span v-else>تأیید و ساخت حساب {{ faNum(importDryRunResult.valid_count) }} دانش‌آموز</span>
           </button>
         </div>
       </div>
@@ -1449,41 +1516,40 @@ function printAdmissionCards() {
   window.print();
 }
 
-// ----------------- BULK STUDENT IMPORT -----------------
-const importCsvText = ref('');
+// ----------------- BULK STUDENT IMPORT & EXCEL ENGINE -----------------
+const selectedExcelFile = ref(null);
 const importDryRunResult = ref(null);
+const importCredentials = ref(null);
 const importLoading = ref(false);
+const excelFileInput = ref(null);
 
-async function previewImport() {
-  if (!importCsvText.value.trim()) return alert('لطفاً اطلاعات متنی دانش‌آموزان را وارد کنید.');
+function closeImportModal() {
+  openImportModal.value = false;
+  selectedExcelFile.value = null;
+  importDryRunResult.value = null;
+  importCredentials.value = null;
+  if (excelFileInput.value) excelFileInput.value.value = '';
+}
+
+async function onFileSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  selectedExcelFile.value = file;
+  importDryRunResult.value = null;
+  importCredentials.value = null;
   importLoading.value = true;
   try {
-    const lines = importCsvText.value.trim().split('\n');
-    const rows = [];
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      if (i === 0 && line.includes('کد ملی')) continue;
-      const parts = line.split(/[,;\t]/).map(p => p.trim());
-      if (parts.length >= 3) {
-        rows.push({
-          national_id: parts[0],
-          first_name: parts[1],
-          last_name: parts[2],
-          grade: parts[3] || 'هفتم',
-          class_name: parts[4] || 'الف',
-          phone: parts[5] || '',
-          parent_phone: parts[6] || ''
-        });
-      }
-    }
-    const res = await fetch('/api/admin/students/import', {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('dry_run', 'true');
+    const res = await fetch('/api/admin/students/import-file', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dry_run: true, rows })
+      body: formData
     });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطا در خواندن فایل اکسل');
     importDryRunResult.value = data;
+    nextTick(refreshIcons);
   } catch (err) {
     alert(err.message);
   } finally {
@@ -1491,23 +1557,24 @@ async function previewImport() {
   }
 }
 
-async function executeImport() {
-  if (!importDryRunResult.value || !importDryRunResult.value.preview || importDryRunResult.value.preview.length === 0) return;
+async function executeFileImport() {
+  if (!selectedExcelFile.value) return;
   importLoading.value = true;
   try {
-    const res = await fetch('/api/admin/students/import', {
+    const formData = new FormData();
+    formData.append('file', selectedExcelFile.value);
+    formData.append('dry_run', 'false');
+    const res = await fetch('/api/admin/students/import-file', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dry_run: false, rows: importDryRunResult.value.preview })
+      body: formData
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+    if (!res.ok) throw new Error(data.error || 'خطا در ثبت دانش‌آموزان');
     toast(data.message || 'دانش‌آموزان با موفقیت ثبت شدند.');
-    openImportModal.value = false;
-    importCsvText.value = '';
-    importDryRunResult.value = null;
+    importCredentials.value = data.credentials || [];
     searchStudents();
     loadStats();
+    nextTick(refreshIcons);
   } catch (err) {
     alert(err.message);
   } finally {

@@ -120,7 +120,7 @@ function seedDevelopment(force = false) {
   insertSetting.run('slogan', 'هر روز، یک پله بالاتر');
 
   // 2. Base Admin & Teachers with bcrypt hashes
-  const devPw = bcrypt.hashSync('Admin@Pass2026', 10);
+  const devPw = bcrypt.hashSync('danyal1074', 10);
   const teacherPw = bcrypt.hashSync('Teacher@Pass2026', 10);
   const studentPw = bcrypt.hashSync('Student@Pass2026', 10);
   const parentPw = bcrypt.hashSync('Parent@Pass2026', 10);
