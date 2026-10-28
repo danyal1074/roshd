@@ -3,9 +3,6 @@ const bcrypt = require('bcryptjs');
 const { db } = require('./db');
 const { createBackup } = require('./backup');
 
-// Ensure tables exist
-const { initDb } = require('./db');
-
 function seedProduction() {
   console.log('[SEED] Checking production database status...');
   const existingAdmin = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
@@ -68,7 +65,8 @@ function seedDevelopment(force = false) {
   const existingCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   if (!force && process.argv.includes('--force') === false) {
     const prodCount = db.prepare('SELECT COUNT(*) as count FROM store_products').get().count;
-    if (existingCount >= 450 && prodCount > 0) {
+    const examCount = db.prepare('SELECT COUNT(*) as count FROM exams').get().count;
+    if (existingCount >= 450 && prodCount > 0 && examCount > 0) {
       console.log(`Database already has ${existingCount} users and complete dev data. Skipping seed.`);
       return true;
     }
@@ -139,7 +137,7 @@ function seedDevelopment(force = false) {
     )
   `);
 
-  // Admin
+  // Admin (id will be 1)
   insertUser.run(
     'admin', '0011223344', '09121110001', devPw,
     'محمد', 'کریمی', 'محمد کریمی',
@@ -147,7 +145,7 @@ function seedDevelopment(force = false) {
     10, 'مدیر ارشد', 9999, 1, 'paid', 0, 0
   );
 
-  // Teachers
+  // Teachers (id=2, 3, 4)
   insertUser.run(
     'teacher', '0022334455', '09121110002', teacherPw,
     'فاطمه', 'احمدی', 'فاطمه احمدی',
@@ -167,7 +165,7 @@ function seedDevelopment(force = false) {
     4, 'مشاور تحصیلی', 3900, 1, 'paid', 0, 0
   );
 
-  // Student 1 (Ali Rezaei)
+  // Student 1 (Ali Rezaei - id=5)
   insertUser.run(
     'student', '0088776655', '09129876543', studentPw,
     'علی', 'رضایی', 'علی رضایی',
@@ -175,7 +173,7 @@ function seedDevelopment(force = false) {
     3, 'پیشرو دانش', 840, 4, 'paid', 0, 0
   );
 
-  // Parent (Mehdi Rezaei)
+  // Parent (Mehdi Rezaei - id=6)
   insertUser.run(
     'parent', '09121112233', '09121112233', parentPw,
     'مهدی', 'رضایی', 'مهدی رضایی',
@@ -185,7 +183,7 @@ function seedDevelopment(force = false) {
 
   // Link Parent to Student
   const insertParentStudent = db.prepare('INSERT OR IGNORE INTO parent_students (parent_id, student_id) VALUES (?, ?)');
-  insertParentStudent.run(6, 5); // parent user_id=6, student user_id=5
+  insertParentStudent.run(6, 5);
 
   // Assign Teacher Classes
   const insertTeacherClass = db.prepare('INSERT OR IGNORE INTO teacher_classes (teacher_id, grade, class_name) VALUES (?, ?, ?)');
@@ -227,13 +225,106 @@ function seedDevelopment(force = false) {
     }
   }
 
-  // Fee definitions
+  // 3. Notices
+  const insertNotice = db.prepare(`
+    INSERT INTO notices (title, body, date_fa, place, tag, target_audience)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  insertNotice.run(
+    'برگزاری آزمون جامع ورودی مدارس تیزهوشان (مرحله اول)',
+    'دانش‌آموزان گرامی پایه‌های هفتم، هشتم و نهم، آزمون جامع شبیه‌ساز ورودی مدارس استعدادهای درخشان در روز پنج‌شنبه ۱۲ آبان‌ماه رأس ساعت ۸ صبح به صورت آنلاین و حضوری برگزار می‌گردد. همراه داشتن مداد نرم و کارت ورود به جلسه الزامی است.',
+    '۲ آبان ۱۴۰۵', 'کانون شهید آشتیانی', 'فوری', 'all'
+  );
+  insertNotice.run(
+    'کارگاه تخصصی آمادگی المپیاد ریاضی و هوش تحلیلی',
+    'به اطلاع می‌رساند اولین جلسه کارگاه تکنیک‌های محاسبات سریع و حل مسائل خلاقانه ریاضی ویژه دانش‌آموزان پایه نهم با حضور استاد برجسته در روز دوشنبه ۷ آبان‌ماه تشکیل می‌شود.',
+    '۳ آبان ۱۴۰۵', 'سالن اجتماعات', 'آموزشی', 'نهم'
+  );
+  insertNotice.run(
+    'اطلاعیه پرداخت شهریه نیم‌سال اول تحصیلی',
+    'اولیا و دانش‌آموزان محترم، لطفاً جهت جلوگیری از قفل شدن دسترسی به سامانه آزمون‌ها، نسبت به تسویه یا ارسال فیش پرداخت تا تاریخ ۱۵ آبان‌ماه اقدام فرمایید.',
+    '۳ آبان ۱۴۰۵', 'سامانه رشد', 'مالی', 'all'
+  );
+
+  // 4. Homeworks
+  const insertHomework = db.prepare(`
+    INSERT INTO homeworks (title, grade, class_name, subject, teacher_name, deadline_fa, deadline_timestamp, points, description)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  insertHomework.run(
+    'تمرین‌های فصل ۳ ریاضی: کسرها',
+    'هفتم', 'الف', 'ریاضی', 'رضا کریمی',
+    '۵ آبان ۱۴۰۵، ساعت ۱۸:۰۰', Date.now() + 86400000, 20,
+    'تمرین‌های صفحه ۴۲ تا ۴۵ کتاب کار را حل کرده و عکس واضح از پاسخ‌ها ارسال نمایید.'
+  );
+  insertHomework.run(
+    'گزارش آزمایش آونگ و فنر',
+    'هفتم', 'الف', 'علوم', 'فاطمه احمدی',
+    '۶ آبان ۱۴۰۵، ساعت ۲۱:۰۰', Date.now() + 172800000, 15,
+    'جدول داده‌های اندازه‌گیری شده در آزمایشگاه را تکمیل نموده و نمودار مربوطه را رسم کنید.'
+  );
+
+  // 5. Exams
+  const insertExam = db.prepare(`
+    INSERT INTO exams (title, grade, class_name, subject, duration_minutes, question_count, questions_json, deadline_fa, start_at, end_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const mathQuestions = JSON.stringify([
+    {
+      id: 1,
+      q: 'حاصل عبارت (-۸) + (+۱۴) کدام است؟',
+      options: ['-۲۲', '+۶', '-۶', '+۲۲'],
+      correct: 1
+    },
+    {
+      id: 2,
+      q: 'کدام‌یک از اعداد زیر عدد اول است؟',
+      options: ['۲۱', '۳۳', '۳۷', '۴۹'],
+      correct: 2
+    },
+    {
+      id: 3,
+      q: 'مجموع زوایای داخلی یک پنج‌ضلعی محدب چند درجه است؟',
+      options: ['۳۶۰', '۵۴۰', '۷۲۰', '۱۸۰'],
+      correct: 1
+    },
+    {
+      id: 4,
+      q: 'معکوس عدد -۳/۴ برابر با کدام گزینه است؟',
+      options: ['+۳/۴', '-۴/۳', '+۴/۳', '-۳/۴'],
+      correct: 1
+    },
+    {
+      id: 5,
+      q: 'اگر x - ۵ = ۱۲ باشد، مقدار ۲x چند است؟',
+      options: ['۱۷', '۳۴', '۲۴', '۱۴'],
+      correct: 1
+    }
+  ]);
+
+  insertExam.run(
+    'آزمون ریاضی فصل ۳ (کسرها و اعداد صحیح)',
+    'هفتم', 'الف', 'ریاضی', 10, 5, mathQuestions, '۸ آبان ۱۴۰۵، ساعت ۲۳:۰۰',
+    Date.now() - 3600000, Date.now() + 86400000 * 7
+  );
+
+  insertExam.run(
+    'آزمون علوم فصل ۳ (اتم‌ها و پیوندها)',
+    'هفتم', 'الف', 'علوم', 15, 2, JSON.stringify([
+      { id: 1, q: 'ذره باردار منفی در اتم کدام است؟', options: ['پروتون', 'نوترون', 'الکترون', 'پوزیترون'], correct: 2 },
+      { id: 2, q: 'کدام فلز در دمای اتاق مایع است؟', options: ['جیوه', 'سدیم', 'مس', 'آهن'], correct: 0 }
+    ]), '۱۰ آبان ۱۴۰۵، ساعت ۲۳:۰۰',
+    Date.now() - 3600000, Date.now() + 86400000 * 7
+  );
+
+  // 6. Fee definitions
   const insertFee = db.prepare('INSERT INTO fee_defs (grade, amount, deadline_fa, lock_date_fa, is_locked) VALUES (?, ?, ?, ?, ?)');
   insertFee.run('هفتم', 1500000, '۱۴۰۵/۰۸/۱۵', '۱۴۰۵/۰۸/۳۰', 0);
   insertFee.run('هشتم', 1650000, '۱۴۰۵/۰۸/۱۵', '۱۴۰۵/۰۸/۳۰', 0);
   insertFee.run('نهم', 1800000, '۱۴۰۵/۰۸/۱۵', '۱۴۰۵/۰۸/۳۰', 0);
 
-  // Store Products
+  // 7. Store Products
   const insertProd = db.prepare(`
     INSERT INTO store_products (title, type, price, old_price, badge, icon, bg_color, meta, description)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -251,7 +342,15 @@ function seedDevelopment(force = false) {
     'خلاصه نموداری درس‌ها، آزمایش‌های کاربردی و بانک سوالات تستی طبقه‌بندی شده'
   );
 
-  console.log(`--- Dev Seeding Completed: ${count} users created! ---`);
+  // 8. Accounting entries
+  const insertAcc = db.prepare(`
+    INSERT INTO accounting (type, title, amount, date_fa, category)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  insertAcc.run('income', 'واریز حق عضویت آبان (دانش‌آموز علی رضایی)', 1500000, '۱۴۰۵/۰۸/۰۱', 'حق عضویت');
+  insertAcc.run('expense', 'چاپ جزوه‌های آزمون جامع و پاسخ‌برگ', 1800000, '۱۴۰۵/۰۸/۰۲', 'چاپ و نشر');
+
+  console.log(`--- Dev Seeding Completed: ${count} users and complete data created! ---`);
   return true;
 }
 

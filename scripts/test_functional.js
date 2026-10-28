@@ -24,29 +24,29 @@ async function runFunctionalTests() {
     // Authenticate roles
     const studentRes = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: '0012345678', password: '123456', role: 'student' })
+      headers: { 'Content-Type': 'application/json', 'x-api-client': 'test-runner' },
+      body: JSON.stringify({ identifier: '0088776655', password: 'Student@Pass2026', role: 'student' })
     });
     const student = await studentRes.json();
 
     const teacherRes = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: '0022334455', password: '123456', role: 'teacher' })
+      headers: { 'Content-Type': 'application/json', 'x-api-client': 'test-runner' },
+      body: JSON.stringify({ identifier: '0022334455', password: 'Teacher@Pass2026', role: 'teacher' })
     });
     const teacher = await teacherRes.json();
 
     const adminRes = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: '0011223344', password: '123456', role: 'admin' })
+      headers: { 'Content-Type': 'application/json', 'x-api-client': 'test-runner' },
+      body: JSON.stringify({ identifier: '0011223344', password: 'Admin@Pass2026', role: 'admin' })
     });
     const admin = await adminRes.json();
 
     const parentRes = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: '09121112233', password: '123456', role: 'parent' })
+      headers: { 'Content-Type': 'application/json', 'x-api-client': 'test-runner' },
+      body: JSON.stringify({ identifier: '09121112233', password: 'Parent@Pass2026', role: 'parent' })
     });
     const parent = await parentRes.json();
 

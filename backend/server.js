@@ -7,13 +7,15 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const { db } = require('./db');
+const { createBackup } = require('./backup');
 const {
-  verifyAndMigratePassword,
   hashPassword,
+  verifyPassword,
   generateToken,
   setAuthCookie,
   clearAuthCookie,
-  authMiddleware,
+  createAuthMiddleware,
+  invalidateUserCache,
   requireAuth,
   requireRole,
   sanitizeUser,
@@ -24,6 +26,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 
+// Enable trust proxy for correct client IP detection, rate-limiting & HTTPS detection behind Nginx
+app.set('trust proxy', 1);
+
 // ----------------- SECURITY HEADERS & MIDDLEWARES -----------------
 // Helmet with relaxed CSP for fonts/assets
 app.use(helmet({
@@ -31,35 +36,83 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// CORS Configuration
+// CORS Configuration - Strict whitelist (no wildcard)
 const allowedOrigins = [
-  'https://roshd.digiral.ir',
-  'http://roshd.digiral.ir',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:5000',
-  'http://127.0.0.1:5000'
+  'https://roshd.digiral.ir'
 ];
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push(
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:5000',
+    'http://127.0.0.1:5000'
+  );
+}
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps, curl, server-to-server)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) {
       return callback(null, true);
     }
-    return callback(null, true); // Permissive in internal reverse proxy
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // Reject unknown origins without sending Access-Control-Allow-Origin header
+    return callback(null, false);
   },
   credentials: true
 }));
+
+// CSRF Protection for mutating methods
+app.use((req, res, next) => {
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    const origin = req.headers.origin;
+    if (origin && !allowedOrigins.includes(origin)) {
+      return res.status(403).json({ error: 'دسترسی غیرمجاز: مبدأ درخواست نامعتبر است (CSRF Protection).' });
+    }
+  }
+  next();
+});
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(cookieParser());
 
-// Rate Limiting
+// Audit Log Helper
+function recordAudit(userId, action, entity, entityId, details, ip) {
+  try {
+    db.prepare(`
+      INSERT INTO audit_log (user_id, action, entity, entity_id, details, ip)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(userId || null, action, entity || null, entityId ? String(entityId) : null, details || null, ip || null);
+  } catch (err) {
+    // Non-fatal
+  }
+}
+
+// In-memory per-identifier limiter (10 attempts per 15 minutes)
+const identifierAttempts = new Map();
+function checkIdentifierRateLimit(identifier) {
+  if (!identifier) return true;
+  if (process.env.SKIP_RATE_LIMIT === 'true') return true;
+  const now = Date.now();
+  const cleanId = String(identifier).trim();
+  const record = identifierAttempts.get(cleanId);
+  if (!record || record.resetAt < now) {
+    identifierAttempts.set(cleanId, { count: 1, resetAt: now + 15 * 60 * 1000 });
+    return true;
+  }
+  if (record.count >= 10) {
+    return false;
+  }
+  record.count++;
+  return true;
+}
+
+// Rate Limiting (Tuned for 400+ concurrent students behind campus/school NAT network)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // limit to 20 attempts per account per IP
+  max: parseInt(process.env.AUTH_LIMIT_MAX || '60', 10),
   keyGenerator: (req) => `${req.ip}_${req.body?.identifier || 'anon'}`,
   validate: { keyGeneratorIpFallback: false },
   standardHeaders: true,
@@ -70,21 +123,50 @@ const authLimiter = rateLimit({
 
 const generalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 4000, // accommodate 400 concurrent students behind school NAT / campus network
+  max: parseInt(process.env.RATE_LIMIT_MAX || '10000', 10), // Accommodate 400+ active students behind school NAT
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => process.env.SKIP_RATE_LIMIT === 'true'
 });
 
 app.use('/api/', generalLimiter);
+const authMiddleware = createAuthMiddleware(db);
 app.use(authMiddleware);
 
 // ----------------- FILE UPLOADS CONFIGURATION -----------------
-const uploadsDir = path.join(__dirname, 'uploads');
+const uploadsDir = process.env.UPLOADS_PATH 
+  ? path.resolve(process.env.UPLOADS_PATH) 
+  : path.join(__dirname, 'uploads');
+
 const dirs = ['images', 'videos', 'homeworks', 'receipts'].map(d => path.join(uploadsDir, d));
 [uploadsDir, ...dirs].forEach(d => {
   if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
 });
+
+/**
+ * Validates binary signature (magic bytes) to prevent executable masquerading
+ */
+function validateFileMagicBytes(filePath) {
+  if (!fs.existsSync(filePath)) return false;
+  try {
+    const buffer = Buffer.alloc(16);
+    const fd = fs.openSync(filePath, 'r');
+    fs.readSync(fd, buffer, 0, 16, 0);
+    fs.closeSync(fd);
+
+    const isJpeg = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+    const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+    const isPdf = buffer.slice(0, 4).toString() === '%PDF';
+    const isGif = buffer.slice(0, 3).toString() === 'GIF';
+    const isWebp = buffer.slice(0, 4).toString() === 'RIFF' && buffer.slice(8, 12).toString() === 'WEBP';
+    const isZipOrDocx = buffer[0] === 0x50 && buffer[1] === 0x4B && (buffer[2] === 0x03 || buffer[2] === 0x05);
+    const isMp4 = buffer.slice(4, 8).toString() === 'ftyp';
+
+    return isJpeg || isPng || isPdf || isGif || isWebp || isZipOrDocx || isMp4;
+  } catch (e) {
+    return false;
+  }
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -122,22 +204,86 @@ const upload = multer({
   limits: { fileSize: 150 * 1024 * 1024 } // 150MB max
 });
 
-// Serve public uploads (images and videos)
-app.use('/uploads/images', express.static(path.join(uploadsDir, 'images')));
-app.use('/uploads/videos', express.static(path.join(uploadsDir, 'videos')));
+// Serve public uploads (images and videos) with public caching
+app.use('/uploads/images', express.static(path.join(uploadsDir, 'images'), { maxAge: '30d' }));
+app.use('/uploads/videos', express.static(path.join(uploadsDir, 'videos'), { maxAge: '30d' }));
 
-// Protected uploads (receipts and homeworks require authentication)
+// Protected uploads: Receipts require authentication AND strict ownership/role verification
 app.get('/uploads/receipts/:filename', requireAuth, (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(uploadsDir, 'receipts', filename);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'فایل یافت نشد' });
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'رسید پرداخت یافت نشد.' });
+
+  const role = req.user.role;
+  const userId = req.user.id;
+  let allowed = false;
+
+  if (role === 'admin') {
+    allowed = true;
+  } else {
+    // Check if receipt belongs to the user or their child
+    const receipt = db.prepare('SELECT student_id FROM fee_receipts WHERE receipt_url LIKE ?').get(`%${filename}`);
+    if (receipt) {
+      if (role === 'student' && receipt.student_id === userId) {
+        allowed = true;
+      } else if (role === 'parent') {
+        const parent = db.prepare('SELECT phone FROM users WHERE id = ?').get(userId);
+        const student = db.prepare('SELECT parent_phone FROM users WHERE id = ?').get(receipt.student_id);
+        if (parent && student && parent.phone && parent.phone === student.parent_phone) {
+          allowed = true;
+        }
+      }
+    }
+  }
+
+  if (!allowed) {
+    return res.status(403).json({ error: 'دسترسی غیرمجاز به مدرک مالی خصوصی.' });
+  }
+
+  res.set({
+    'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+    'Pragma': 'no-cache',
+    'X-Content-Type-Options': 'nosniff'
+  });
   res.sendFile(filePath);
 });
 
+// Protected uploads: Homeworks require authentication AND strict ownership/role verification
 app.get('/uploads/homeworks/:filename', requireAuth, (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(uploadsDir, 'homeworks', filename);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'فایل یافت نشد' });
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'فایل تکلیف یافت نشد.' });
+
+  const role = req.user.role;
+  const userId = req.user.id;
+  let allowed = false;
+
+  if (role === 'admin' || role === 'teacher') {
+    allowed = true;
+  } else {
+    const sub = db.prepare('SELECT student_id FROM homework_submissions WHERE file_url LIKE ?').get(`%${filename}`);
+    if (sub) {
+      if (role === 'student' && sub.student_id === userId) {
+        allowed = true;
+      } else if (role === 'parent') {
+        const parent = db.prepare('SELECT phone FROM users WHERE id = ?').get(userId);
+        const student = db.prepare('SELECT parent_phone FROM users WHERE id = ?').get(sub.student_id);
+        if (parent && student && parent.phone && parent.phone === student.parent_phone) {
+          allowed = true;
+        }
+      }
+    }
+  }
+
+  if (!allowed) {
+    return res.status(403).json({ error: 'دسترسی غیرمجاز به فایل تکلیف خصوصی.' });
+  }
+
+  res.set({
+    'Cache-Control': 'private, no-store, no-cache, must-revalidate',
+    'Pragma': 'no-cache',
+    'X-Content-Type-Options': 'nosniff'
+  });
   res.sendFile(filePath);
 });
 
@@ -155,57 +301,97 @@ function getJalaliDate() {
   }
 }
 
-// ----------------- HEALTH CHECK -----------------
+// ----------------- COMPREHENSIVE PRODUCTION HEALTH CHECK -----------------
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: Math.round(process.uptime()),
-    database: 'connected'
-  });
+  try {
+    const dbAlive = db.prepare('SELECT 1 as alive;').get();
+    const studentCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student';").get().count;
+    const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users;').get().count;
+    const mem = process.memoryUsage();
+
+    res.json({
+      status: 'ok',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      uptimeSeconds: Math.round(process.uptime()),
+      database: {
+        status: dbAlive && dbAlive.alive === 1 ? 'healthy' : 'degraded',
+        engine: 'SQLite WAL (node:sqlite DatabaseSync)',
+        studentCount,
+        totalUsers
+      },
+      system: {
+        nodeVersion: process.version,
+        rssMb: Math.round(mem.rss / (1024 * 1024)),
+        heapUsedMb: Math.round(mem.heapUsed / (1024 * 1024))
+      }
+    });
+  } catch (err) {
+    res.status(503).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: err.message
+    });
+  }
 });
 
 // ----------------- AUTHENTICATION -----------------
-app.post('/api/auth/login', authLimiter, (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { identifier, password, role } = req.body;
   if (!identifier || !password) {
-    return res.status(400).json({ error: 'کد ملی یا شماره موبایل و رمز عبور الزامی است.' });
+    return res.status(400).json({ error: 'کد ملی و رمز عبور الزامی است.' });
   }
 
   const cleanId = String(identifier).trim();
   const cleanPassword = String(password).trim();
 
-  // Find user by national_id OR phone
+  // Enforce per-identifier rate limiting
+  if (!checkIdentifierRateLimit(cleanId)) {
+    return res.status(429).json({ error: 'تعداد تلاش‌های ناموفق برای این حساب بیش از حد مجاز است. لطفاً ۱۵ دقیقه دیگر تلاش نمایید.' });
+  }
+
+  // Find user strictly by national_id, or parent phone if logging in as parent
   let user;
-  if (role) {
-    user = db.prepare('SELECT * FROM users WHERE (national_id = ? OR phone = ?) AND role = ?').get(cleanId, cleanId, role);
+  if (role === 'parent') {
+    user = db.prepare("SELECT * FROM users WHERE (national_id = ? OR phone = ? OR parent_phone = ?) AND role = 'parent'").get(cleanId, cleanId, cleanId);
+  } else if (role) {
+    user = db.prepare('SELECT * FROM users WHERE national_id = ? AND role = ?').get(cleanId, role);
   } else {
-    user = db.prepare('SELECT * FROM users WHERE national_id = ? OR phone = ?').get(cleanId, cleanId);
+    user = db.prepare('SELECT * FROM users WHERE national_id = ?').get(cleanId);
   }
 
-  // Strict check: No user found -> 401 Unauthorized (No mock fallback!)
   if (!user) {
+    recordAudit(null, 'LOGIN_FAILED', 'user', null, `Failed login attempt for identifier: ${cleanId}`, req.ip);
     return res.status(401).json({ error: 'کد ملی یا رمز عبور اشتباه است.' });
   }
 
-  // Verify Password with automatic migration
-  const isValid = verifyAndMigratePassword(cleanPassword, user.password, (newHash) => {
-    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(newHash, user.id);
-  });
+  if (user.is_active === 0) {
+    return res.status(401).json({ error: 'حساب کاربری شما غیرفعال شده است. لطفاً با مدیریت کانون تماس بگیرید.' });
+  }
 
+  // Verify Password with async bcrypt check
+  const isValid = await verifyPassword(cleanPassword, user.password);
   if (!isValid) {
+    recordAudit(user.id, 'LOGIN_FAILED', 'user', user.id, `Invalid password for user: ${user.national_id}`, req.ip);
     return res.status(401).json({ error: 'کد ملی یا رمز عبور اشتباه است.' });
   }
 
-  // Generate secure token and set HttpOnly Cookie
+  // Generate secure token with current token_version
   const token = generateToken(user);
   setAuthCookie(res, token);
+  recordAudit(user.id, 'LOGIN_SUCCESS', 'user', user.id, `User logged in: ${user.national_id}`, req.ip);
 
-  res.json({
+  const responsePayload = {
     success: true,
-    token,
     user: sanitizeUser(user)
-  });
+  };
+
+  // Provide token in JSON only for explicit non-browser API clients/testing
+  if (req.headers['x-api-client'] || req.query.include_token === 'true') {
+    responsePayload.token = token;
+  }
+
+  res.json(responsePayload);
 });
 
 app.get('/api/auth/me', requireAuth, (req, res) => {
@@ -214,9 +400,96 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
   res.json({ user: sanitizeUser(user) });
 });
 
-app.post('/api/auth/logout', (req, res) => {
+app.post('/api/auth/logout', requireAuth, (req, res) => {
+  try {
+    db.prepare('UPDATE users SET token_version = token_version + 1 WHERE id = ?').run(req.user.id);
+    invalidateUserCache(req.user.id);
+    recordAudit(req.user.id, 'LOGOUT', 'user', req.user.id, 'User logged out', req.ip);
+  } catch (e) {}
   clearAuthCookie(res);
   res.json({ success: true, message: 'با موفقیت خارج شدید.' });
+});
+
+app.post('/api/auth/change-password', requireAuth, async (req, res) => {
+  const { current_password, new_password } = req.body;
+  if (!current_password || !new_password) {
+    return res.status(400).json({ error: 'رمز عبور فعلی و رمز عبور جدید الزامی هستند.' });
+  }
+  const cleanNew = String(new_password).trim();
+  if (cleanNew.length < 8) {
+    return res.status(400).json({ error: 'رمز عبور جدید باید حداقل ۸ نویسه باشد.' });
+  }
+  if (cleanNew === req.user.national_id || (req.user.phone && cleanNew === req.user.phone)) {
+    return res.status(400).json({ error: 'رمز عبور جدید نباید برابر با کد ملی یا شماره موبایل باشد.' });
+  }
+
+  const user = db.prepare('SELECT id, national_id, password, token_version FROM users WHERE id = ?').get(req.user.id);
+  if (!user) {
+    return res.status(404).json({ error: 'کاربر یافت نشد.' });
+  }
+
+  const isCurrentValid = await verifyPassword(String(current_password).trim(), user.password);
+  if (!isCurrentValid) {
+    return res.status(400).json({ error: 'رمز عبور فعلی وارد شده نادرست است.' });
+  }
+
+  const newHash = await hashPassword(cleanNew);
+  const newVersion = (user.token_version || 1) + 1;
+
+  db.prepare(`
+    UPDATE users 
+    SET password = ?, must_change_password = 0, token_version = ?
+    WHERE id = ?
+  `).run(newHash, newVersion, req.user.id);
+
+  invalidateUserCache(req.user.id);
+
+  // Issue refreshed token with updated version
+  const updatedUser = { ...req.user, token_version: newVersion, must_change_password: 0 };
+  const newToken = generateToken(updatedUser);
+  setAuthCookie(res, newToken);
+
+  recordAudit(req.user.id, 'CHANGE_PASSWORD', 'user', req.user.id, 'Password changed successfully', req.ip);
+
+  const resp = {
+    success: true,
+    message: 'رمز عبور با موفقیت به‌روزرسانی شد.',
+    user: sanitizeUser(updatedUser)
+  };
+  if (req.headers['x-api-client'] || req.query.include_token === 'true') {
+    resp.token = newToken;
+  }
+  res.json(resp);
+});
+
+app.post('/api/admin/users/:id/reset-password', requireAuth, requireRole('admin'), async (req, res) => {
+  const targetId = Number(req.params.id);
+  const user = db.prepare('SELECT id, national_id, role, token_version FROM users WHERE id = ?').get(targetId);
+  if (!user) {
+    return res.status(404).json({ error: 'کاربر مورد نظر یافت نشد.' });
+  }
+
+  const crypto = require('crypto');
+  const tempPassword = crypto.randomBytes(5).toString('hex'); // 10 chars secure random
+  const newHash = await hashPassword(tempPassword);
+  const newVersion = (user.token_version || 1) + 1;
+
+  db.prepare(`
+    UPDATE users 
+    SET password = ?, must_change_password = 1, token_version = ?
+    WHERE id = ?
+  `).run(newHash, newVersion, targetId);
+
+  invalidateUserCache(targetId);
+  recordAudit(req.user.id, 'RESET_PASSWORD', 'user', targetId, `Admin reset password for user ${user.national_id}`, req.ip);
+
+  res.json({
+    success: true,
+    message: 'رمز عبور با موفقیت بازنشانی شد.',
+    new_password: tempPassword,
+    user_id: targetId,
+    national_id: user.national_id
+  });
 });
 
 // ----------------- NOTICES -----------------
@@ -334,16 +607,17 @@ app.post('/api/students', requireAuth, requireRole('admin'), (req, res) => {
   }
 
   const fullName = `${first_name} ${last_name}`;
-  const rawPw = password || '123456';
+  const crypto = require('crypto');
+  const rawPw = password && password.trim() ? password.trim() : crypto.randomBytes(5).toString('hex');
   const hashedPw = hashPassword(rawPw);
 
   try {
     const info = db.prepare(`
-      INSERT INTO users (role, national_id, phone, password, first_name, last_name, full_name, grade, class_name)
-      VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (role, national_id, phone, password, first_name, last_name, full_name, grade, class_name, must_change_password)
+      VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?, 1)
     `).run(national_id, phone || '', hashedPw, first_name, last_name, fullName, grade || 'هفتم', class_name || 'الف');
 
-    res.json({ success: true, id: info.lastInsertRowid });
+    res.json({ success: true, id: info.lastInsertRowid, initial_password: rawPw });
   } catch (err) {
     if (err.message.includes('UNIQUE constraint failed')) {
       return res.status(400).json({ error: 'کاربری با این کد ملی قبلاً ثبت شده است.' });
@@ -1046,6 +1320,12 @@ app.post('/api/upload', requireAuth, upload.single('file'), (req, res) => {
     return res.status(400).json({ error: 'هیچ فایلی ارسال نشد.' });
   }
 
+  // Validate magic bytes to prevent executable/script masquerading
+  if (!validateFileMagicBytes(req.file.path)) {
+    try { fs.unlinkSync(req.file.path); } catch (e) {}
+    return res.status(400).json({ error: 'محتوای باینری فایل نامعتبر است یا فرمت واقعی با پسوند فایل همخوانی ندارد.' });
+  }
+
   const uploaderId = req.user.id;
   const category = req.body.category || req.query.category || 'general';
   const mime = req.file.mimetype || '';
@@ -1077,6 +1357,20 @@ app.post('/api/upload', requireAuth, upload.single('file'), (req, res) => {
   });
 });
 
+// Admin Online Atomic Database Backup Endpoint
+app.post('/api/admin/backup', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const backupResult = createBackup();
+    res.json({
+      success: true,
+      message: 'پشتیبان‌گیری برخط و اتمیک با موفقیت انجام شد.',
+      backup: backupResult
+    });
+  } catch (err) {
+    res.status(500).json({ error: `خطا در فرآیند پشتیبان‌گیری: ${err.message}` });
+  }
+});
+
 app.get('/api/media', requireAuth, requireRole('admin'), (req, res) => {
   const { category, type } = req.query;
   let query = 'SELECT * FROM media_files';
@@ -1103,20 +1397,30 @@ app.get('/api/media', requireAuth, requireRole('admin'), (req, res) => {
 
 // ----------------- PROFILE UPDATE -----------------
 app.post('/api/user/profile', requireAuth, (req, res) => {
-  const userId = req.user.id; // User can only update their own profile
-  const { phone, address, parent_phone } = req.body;
+  const userId = req.user.id;
+  const address = typeof req.body?.address === 'string' ? req.body.address.trim() : null;
 
-  db.prepare(`
-    UPDATE users 
-    SET phone = COALESCE(?, phone), 
-        address = COALESCE(?, address),
-        parent_phone = COALESCE(?, parent_phone)
-    WHERE id = ?
-  `).run(phone, address, parent_phone, userId);
+  if (address !== null) {
+    db.prepare('UPDATE users SET address = ? WHERE id = ?').run(address, userId);
+    invalidateUserCache(userId);
+    recordAudit(userId, 'UPDATE_PROFILE', 'user', userId, 'User updated address', req.ip);
+  }
 
   const updatedUser = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   res.json({ success: true, user: sanitizeUser(updatedUser) });
 });
+
+// ----------------- SERVE BUILT FRONTEND IN STANDALONE PRODUCTION / DOCKER -----------------
+const publicDist = path.join(__dirname, 'public');
+if (fs.existsSync(publicDist)) {
+  app.use(express.static(publicDist));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
+      return next();
+    }
+    res.sendFile(path.join(publicDist, 'index.html'));
+  });
+}
 
 // ----------------- GLOBAL ERROR HANDLER -----------------
 app.use((err, req, res, next) => {
@@ -1127,6 +1431,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, HOST, () => {
+// Listen with backlog of 2048 to prevent ECONNREFUSED during student rush hour/morning check-ins
+const server = app.listen(PORT, HOST, 2048, () => {
   console.log(`Roshd Secure Server listening on http://${HOST}:${PORT}`);
 });
+
+server.maxConnections = 4096;
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;

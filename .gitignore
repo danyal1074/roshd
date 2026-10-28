@@ -32,6 +32,7 @@ backend/rosh.db
 backend/uploads/
 backend/backups/
 uploads/
+backups/
 
 # Large audio & video files
 *.mp4

@@ -1,9 +1,9 @@
+const fs = require('fs');
+const path = require('path');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-// Load .env if present
-const fs = require('fs');
-const path = require('path');
+// 1. Load .env if present
 function loadEnv() {
   const paths = [path.join(__dirname, '.env'), path.join(__dirname, '..', '.env')];
   for (const p of paths) {
@@ -30,45 +30,33 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.trim().length < 32) {
   throw new Error('FATAL SECURITY ERROR: JWT_SECRET environment variable is missing or shorter than 32 characters. Server will not start without a secure secret key.');
 }
+
 const COOKIE_NAME = 'roshd_session';
 
-// Compare password with support for automatic migration from legacy plaintext
-function verifyAndMigratePassword(inputPassword, storedPassword, onMigrate) {
-  if (!inputPassword || !storedPassword) return false;
-
-  // If already hashed with bcrypt ($2a$ or $2b$)
-  if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$')) {
-    return bcrypt.compareSync(inputPassword, storedPassword);
-  }
-
-  // Legacy plaintext match
-  if (inputPassword === storedPassword) {
-    if (typeof onMigrate === 'function') {
-      const newHash = bcrypt.hashSync(inputPassword, 10);
-      onMigrate(newHash);
-    }
-    return true;
-  }
-
-  return false;
+// Asynchronous password hashing and verification
+async function hashPassword(password) {
+  return await bcrypt.hash(password, 10);
 }
 
-function hashPassword(password) {
-  return bcrypt.hashSync(password, 10);
+async function verifyPassword(inputPassword, storedHash) {
+  if (!inputPassword || !storedHash) return false;
+  // Strictly enforce bcrypt hash format ($2a$ or $2b$) - no legacy plaintext allowed
+  if (!storedHash.startsWith('$2a$') && !storedHash.startsWith('$2b$') && !storedHash.startsWith('$2y$')) {
+    return false;
+  }
+  return await bcrypt.compare(inputPassword, storedHash);
 }
 
+// Token generation with 12h lifetime and token_version
 function generateToken(user) {
   return jwt.sign(
     {
       id: user.id,
       national_id: user.national_id,
-      role: user.role,
-      full_name: user.full_name,
-      grade: user.grade,
-      class_name: user.class_name
+      token_version: user.token_version || 1
     },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '12h' }
   );
 }
 
@@ -76,9 +64,9 @@ function setAuthCookie(res, token) {
   const isProd = process.env.NODE_ENV === 'production';
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: isProd, // true in production HTTPS
+    secure: isProd,
     sameSite: 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    maxAge: 12 * 60 * 60 * 1000 // 12 hours
   });
 }
 
@@ -89,43 +77,127 @@ function clearAuthCookie(res) {
   });
 }
 
-// Extract authenticated user from Cookie or Authorization header
-function authMiddleware(req, res, next) {
-  let token = null;
+// Short-lived in-memory cache for user database state (2 seconds) to avoid per-request query spam
+const userDbCache = new Map();
 
-  if (req.cookies && req.cookies[COOKIE_NAME]) {
-    token = req.cookies[COOKIE_NAME];
-  } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-    token = req.headers.authorization.split(' ')[1];
-  }
-
-  if (!token) {
-    req.user = null;
-    return next();
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-  } catch (err) {
-    req.user = null;
-  }
-  next();
+function invalidateUserCache(userId) {
+  userDbCache.delete(Number(userId));
 }
 
-// Guard: Must be authenticated
+function getCachedUser(db, userId) {
+  const id = Number(userId);
+  const now = Date.now();
+  const cached = userDbCache.get(id);
+  if (cached && cached.expiresAt > now) {
+    return cached.user;
+  }
+
+  const user = db.prepare(`
+    SELECT id, role, national_id, phone, full_name, first_name, last_name,
+           grade, class_name, is_locked, fee_status,
+           must_change_password, token_version, is_active
+    FROM users 
+    WHERE id = ?
+  `).get(id);
+
+  if (user) {
+    userDbCache.set(id, { user, expiresAt: now + 2000 });
+  }
+  return user;
+}
+
+// Authentication Middleware with DB verification of role, active status & token_version
+function createAuthMiddleware(db) {
+  return (req, res, next) => {
+    let token = null;
+
+    if (req.cookies && req.cookies[COOKIE_NAME]) {
+      token = req.cookies[COOKIE_NAME];
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      req.user = null;
+      return next();
+    }
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      const dbUser = getCachedUser(db, decoded.id);
+
+      if (!dbUser) {
+        req.user = null;
+        return next();
+      }
+
+      // Check if user is deactivated
+      if (dbUser.is_active === 0) {
+        clearAuthCookie(res);
+        req.user = null;
+        return res.status(401).json({ error: 'حساب کاربری شما غیرفعال شده است. با مدیر تماس بگیرید.' });
+      }
+
+      // Check if token_version was bumped (e.g. logout or password change)
+      if (Number(decoded.token_version) !== Number(dbUser.token_version)) {
+        clearAuthCookie(res);
+        req.user = null;
+        return res.status(401).json({ error: 'نشست شما منقضی شده است. لطفاً مجدداً وارد شوید.' });
+      }
+
+      // User state populated directly from live DB record (not stale token payload)
+      req.user = {
+        id: dbUser.id,
+        national_id: dbUser.national_id,
+        phone: dbUser.phone,
+        role: dbUser.role,
+        full_name: dbUser.full_name,
+        first_name: dbUser.first_name,
+        last_name: dbUser.last_name,
+        grade: dbUser.grade,
+        class_name: dbUser.class_name,
+        is_locked: dbUser.is_locked,
+        fee_status: dbUser.fee_status,
+        must_change_password: dbUser.must_change_password,
+        token_version: dbUser.token_version
+      };
+    } catch (err) {
+      req.user = null;
+    }
+    next();
+  };
+}
+
+// Guard: Enforce password change if must_change_password is 1
 function requireAuth(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ error: 'احراز هویت الزامی است. لطفاً وارد حساب خود شوید.' });
   }
+
+  // If password change is required, block all non-password change endpoints
+  if (req.user.must_change_password === 1) {
+    const allowedPaths = ['/api/auth/change-password', '/api/auth/logout', '/api/auth/me'];
+    if (!allowedPaths.includes(req.path)) {
+      return res.status(403).json({
+        error: 'تغییر رمز عبور در اولین ورود الزامی است.',
+        code: 'MUST_CHANGE_PASSWORD'
+      });
+    }
+  }
+
   next();
 }
 
-// Guard: Must have one of the required roles
 function requireRole(...allowedRoles) {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ error: 'احراز هویت الزامی است.' });
+    }
+    if (req.user.must_change_password === 1) {
+      return res.status(403).json({
+        error: 'تغییر رمز عبور در اولین ورود الزامی است.',
+        code: 'MUST_CHANGE_PASSWORD'
+      });
     }
     if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ error: 'شما دسترسی لازم برای این عملیات را ندارید.' });
@@ -134,21 +206,22 @@ function requireRole(...allowedRoles) {
   };
 }
 
-// Sanitize user object to prevent password disclosure
 function sanitizeUser(user) {
   if (!user) return null;
   const copy = { ...user };
   delete copy.password;
+  delete copy.password_hash;
   return copy;
 }
 
 module.exports = {
-  verifyAndMigratePassword,
   hashPassword,
+  verifyPassword,
   generateToken,
   setAuthCookie,
   clearAuthCookie,
-  authMiddleware,
+  createAuthMiddleware,
+  invalidateUserCache,
   requireAuth,
   requireRole,
   sanitizeUser,
