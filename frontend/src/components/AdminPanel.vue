@@ -1097,7 +1097,7 @@
           <textarea 
             v-model="importCsvText" 
             class="input font-mono text-xs !h-40 py-2" 
-            placeholder="0012345678,علی,کریمی,هفتم,الف,09121111111,09122222222"
+            placeholder="0098765432,علی,کریمی,هفتم,الف,09121111111,09122222222"
           ></textarea>
         </div>
 

@@ -45,3 +45,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 scratch/
+test-dribbble-redesign/
+*.zip
+scripts/capture_*.py
+scripts/debug_*.py
+scripts/verify_*.py
+scripts/take_*.py
+scripts/test_click_*.py
