@@ -120,16 +120,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue';
+import { ref, onMounted, nextTick, watch, defineAsyncComponent } from 'vue';
 import { refreshIcons } from './utils';
 import { playTap, playSwitch, toggleSound, isSoundEnabled } from './soundEffects';
 import LoginView from './components/LoginView.vue';
 import NoticeModal from './components/NoticeModal.vue';
-import StudentPanel from './components/StudentPanel.vue';
-import TeacherPanel from './components/TeacherPanel.vue';
-import AdminPanel from './components/AdminPanel.vue';
-import ParentPanel from './components/ParentPanel.vue';
-import StoreView from './components/StoreView.vue';
+
+// Code-split heavy role panels via dynamic imports for sub-second initial load
+const StudentPanel = defineAsyncComponent(() => import('./components/StudentPanel.vue'));
+const TeacherPanel = defineAsyncComponent(() => import('./components/TeacherPanel.vue'));
+const AdminPanel = defineAsyncComponent(() => import('./components/AdminPanel.vue'));
+const ParentPanel = defineAsyncComponent(() => import('./components/ParentPanel.vue'));
+const StoreView = defineAsyncComponent(() => import('./components/StoreView.vue'));
 
 const currentView = ref('login');
 const currentUser = ref(null);

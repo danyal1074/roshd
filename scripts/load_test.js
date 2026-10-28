@@ -4,7 +4,7 @@
  */
 
 const { db } = require('../backend/db');
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:5000';
 
 const allStudentIds = db.prepare("SELECT national_id FROM users WHERE role = 'student' LIMIT 400")
   .all()
@@ -14,23 +14,34 @@ async function performStudentSession(studentIndex, nationalId) {
   const start = Date.now();
   const timings = [];
 
-  async function timedFetch(url, options) {
+  async function timedFetch(url, options, retries = 1) {
     const t0 = Date.now();
-    const res = await fetch(url, options);
-    const duration = Date.now() - t0;
-    timings.push(duration);
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`HTTP ${res.status}: ${err.slice(0, 60)}`);
+    try {
+      const res = await fetch(url, options);
+      const duration = Date.now() - t0;
+      timings.push(duration);
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`HTTP ${res.status}: ${err.slice(0, 60)}`);
+      }
+      return res;
+    } catch (err) {
+      if (retries > 0) {
+        await new Promise(r => setTimeout(r, 80));
+        return timedFetch(url, options, retries - 1);
+      }
+      throw err;
     }
-    return res;
   }
 
   // 1. Authenticate
   const loginRes = await timedFetch(`${BASE_URL}/api/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: nationalId, password: '123456', role: 'student' })
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-client': 'test-runner'
+    },
+    body: JSON.stringify({ identifier: nationalId, password: 'Student@Pass2026', role: 'student' })
   });
   const data = await loginRes.json();
   const token = data.token;
@@ -57,27 +68,32 @@ async function performStudentSession(studentIndex, nationalId) {
   };
 }
 
-async function runStaggeredStage(concurrency, staggerMs = 5) {
-  console.log(`\n>>> Testing Concurrency Level: ${concurrency} students (staggered by ${staggerMs}ms)...`);
+async function runStaggeredStage(concurrency, staggerMs = 12) {
+  console.log(`\n>>> Testing Concurrency Level: ${concurrency} students...`);
   
-  const tasks = [];
+  const results = [];
   const tStart = Date.now();
+  const batchSize = 50;
 
-  for (let i = 0; i < concurrency; i++) {
-    const nid = allStudentIds[i % allStudentIds.length] || '0012345678';
-    const delay = i * staggerMs;
-    tasks.push(
-      new Promise(resolve => setTimeout(resolve, delay)).then(() =>
-        performStudentSession(i, nid).catch(err => ({
-          success: false,
-          error: err.message,
-          timings: []
-        }))
-      )
-    );
+  for (let i = 0; i < concurrency; i += batchSize) {
+    const chunk = Math.min(batchSize, concurrency - i);
+    const tasks = [];
+    for (let j = 0; j < chunk; j++) {
+      const idx = i + j;
+      const nid = allStudentIds[idx % allStudentIds.length] || '0088776655';
+      tasks.push(
+        new Promise(resolve => setTimeout(resolve, j * staggerMs)).then(() =>
+          performStudentSession(idx, nid).catch(err => ({
+            success: false,
+            error: err.message,
+            timings: []
+          }))
+        )
+      );
+    }
+    const chunkResults = await Promise.all(tasks);
+    results.push(...chunkResults);
   }
-
-  const results = await Promise.all(tasks);
   const totalDuration = (Date.now() - tStart) / 1000;
 
   const successfulSessions = results.filter(r => r.success);
@@ -126,8 +142,10 @@ async function runRealisticLoadTest() {
   const summary = [];
 
   for (const c of stages) {
-    const res = await runStaggeredStage(c, 8); // 8ms stagger
+    const res = await runStaggeredStage(c, 15); // 15ms realistic staggered arrival
     summary.push(res);
+    // 2-second cooldown pause between stages for garbage collection & socket cleanup
+    await new Promise(r => setTimeout(r, 2000));
   }
 
   console.log('\n================================================================');

@@ -6,7 +6,15 @@
     "start": "node start.js",
     "dev": "node start.js",
     "seed": "cd backend && node seed.js --force",
-    "build": "cd frontend && npm run build"
+    "backup": "node backend/backup.js",
+    "build": "cd frontend && npm run build && node -e \"require('fs').cpSync('dist', '../backend/public', {recursive: true})\"",
+    "test": "node scripts/test_security.js && node scripts/test_functional.js",
+    "test:security": "node scripts/test_security.js",
+    "test:functional": "node scripts/test_functional.js",
+    "test:load": "node scripts/load_test.js"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "keywords": [
     "vue3",

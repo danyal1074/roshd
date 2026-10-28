@@ -12,6 +12,9 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@vitejs/plugin-vue": "^6.0.10",
     "lucide-vue-next": "^0.577.0",

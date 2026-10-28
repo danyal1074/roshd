@@ -122,6 +122,24 @@ function checkIdentifierRateLimit(identifier) {
   return true;
 }
 
+// Lightweight In-Memory Route Cache for High Concurrent Performance (400+ Students)
+const routeCache = new Map();
+function getOrSetCache(key, ttlSeconds, computeFn) {
+  const now = Date.now();
+  const cached = routeCache.get(key);
+  if (cached && (now - cached.timestamp < ttlSeconds * 1000)) {
+    return cached.data;
+  }
+  const freshData = computeFn();
+  routeCache.set(key, { timestamp: now, data: freshData });
+  return freshData;
+}
+function invalidateRouteCache(keyPrefix) {
+  for (const k of routeCache.keys()) {
+    if (k.startsWith(keyPrefix)) routeCache.delete(k);
+  }
+}
+
 // Rate Limiting (Tuned for 400+ concurrent students behind campus/school NAT network)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -1337,13 +1355,15 @@ app.post('/api/study/pomodoro', requireAuth, requireRole('student'), (req, res) 
 });
 
 app.get('/api/study/leaderboard', requireAuth, (req, res) => {
-  const leaderboard = db.prepare(`
-    SELECT id, full_name, grade, class_name, level, level_title, total_points, rank
-    FROM users
-    WHERE role = 'student'
-    ORDER BY total_points DESC
-    LIMIT 30
-  `).all();
+  const leaderboard = getOrSetCache('study:leaderboard', 15, () => {
+    return db.prepare(`
+      SELECT id, full_name, grade, class_name, level, level_title, total_points, rank
+      FROM users
+      WHERE role = 'student'
+      ORDER BY total_points DESC
+      LIMIT 30
+    `).all();
+  });
   res.json(leaderboard);
 });
 
@@ -1371,7 +1391,9 @@ app.get('/api/points/:student_id', requireAuth, (req, res) => {
 
 // ----------------- FINANCIAL & FEES -----------------
 app.get('/api/fees/defs', requireAuth, (req, res) => {
-  const defs = db.prepare('SELECT * FROM fee_defs').all();
+  const defs = getOrSetCache('fees:defs', 30, () => {
+    return db.prepare('SELECT * FROM fee_defs ORDER BY grade ASC').all();
+  });
   res.json(defs);
 });
 
@@ -1385,6 +1407,8 @@ app.put('/api/fees/defs', requireAuth, requireRole('admin'), (req, res) => {
       deadline_fa = excluded.deadline_fa,
       lock_date_fa = excluded.lock_date_fa
   `).run(grade, amount, deadline_fa, lock_date_fa);
+  invalidateRouteCache('fees');
+  invalidateRouteCache('settings');
   res.json({ success: true });
 });
 
@@ -1479,30 +1503,33 @@ app.get('/api/fees/report', requireAuth, requireRole('admin'), (req, res) => {
 // ----------------- SYSTEM & PAYMENT SETTINGS (ADMIN MANAGED) -----------------
 app.get('/api/settings/public', (req, res) => {
   try {
-    const rows = db.prepare('SELECT key, value FROM settings').all();
-    const settings = {};
-    for (const r of rows) {
-      settings[r.key] = r.value;
-    }
-    const feeDefs = db.prepare('SELECT * FROM fee_defs ORDER BY grade ASC').all();
-    res.json({
-      success: true,
-      settings: {
-        brand_name: settings.brand_name || 'کانون نخبه‌پروری شهید کاظم آشتیانی',
-        platform_name: settings.platform_name || 'پلتفرم رشد',
-        slogan: settings.slogan || 'سامانه جامع مدیریت آموزشی و نخبه‌پروری',
-        card_number: settings.card_number || '۶۰۳۷-۹۹۷۰-۰۰۰۰-۰۰۰۰',
-        card_holder: settings.card_holder || 'کانون نخبه‌پروری آشتیانی',
-        shaba_number: settings.shaba_number || 'IR000000000000000000000000',
-        bank_name: settings.bank_name || 'بانک ملی ایران',
-        contact_phone: settings.contact_phone || '۰۲۱-۸۸۸۸۴۴۲۲',
-        address: settings.address || 'تهران، خیابان آزادی، پلاک ۱۲',
-        tuition_rules: settings.tuition_rules || 'واریز شهریه حداکثر تا پایان مهلت مقرر الزامی است.',
-        announcement_banner: settings.announcement_banner || '',
-        platform_fee_amount: parseInt(settings.platform_fee_amount) || 150000
-      },
-      fee_defs: feeDefs
+    const data = getOrSetCache('settings:public', 30, () => {
+      const rows = db.prepare('SELECT key, value FROM settings').all();
+      const settings = {};
+      for (const r of rows) {
+        settings[r.key] = r.value;
+      }
+      const feeDefs = db.prepare('SELECT * FROM fee_defs ORDER BY grade ASC').all();
+      return {
+        success: true,
+        settings: {
+          brand_name: settings.brand_name || 'کانون نخبه‌پروری شهید کاظم آشتیانی',
+          platform_name: settings.platform_name || 'پلتفرم رشد',
+          slogan: settings.slogan || 'سامانه جامع مدیریت آموزشی و نخبه‌پروری',
+          card_number: settings.card_number || '۶۰۳۷-۹۹۷۰-۰۰۰۰-۰۰۰۰',
+          card_holder: settings.card_holder || 'کانون نخبه‌پروری آشتیانی',
+          shaba_number: settings.shaba_number || 'IR000000000000000000000000',
+          bank_name: settings.bank_name || 'بانک ملی ایران',
+          contact_phone: settings.contact_phone || '۰۲۱-۸۸۸۸۴۴۲۲',
+          address: settings.address || 'تهران، خیابان آزادی، پلاک ۱۲',
+          tuition_rules: settings.tuition_rules || 'واریز شهریه حداکثر تا پایان مهلت مقرر الزامی است.',
+          announcement_banner: settings.announcement_banner || '',
+          platform_fee_amount: parseInt(settings.platform_fee_amount) || 150000
+        },
+        fee_defs: feeDefs
+      };
     });
+    res.json(data);
   } catch (err) {
     res.status(500).json({ error: 'خطا در دریافت تنظیمات سامانه.' });
   }
@@ -1574,6 +1601,8 @@ app.put('/api/admin/settings', requireAuth, requireRole('admin'), (req, res) => 
     }
 
     db.exec('COMMIT;');
+    invalidateRouteCache('settings');
+    invalidateRouteCache('fees');
     recordAudit(req.user.id, 'UPDATE_SETTINGS', 'settings', null, 'Admin updated platform and payment settings', req.ip);
     res.json({ success: true, message: 'تنظیمات سامانه و مشخصات پرداخت با موفقیت ذخیره شد.' });
   } catch (err) {
@@ -1676,7 +1705,9 @@ app.post('/api/messages', requireAuth, (req, res) => {
 
 // ----------------- STORE -----------------
 app.get('/api/store/products', (req, res) => {
-  const products = db.prepare('SELECT * FROM store_products ORDER BY id ASC').all();
+  const products = getOrSetCache('store:products', 30, () => {
+    return db.prepare('SELECT * FROM store_products ORDER BY id ASC').all();
+  });
   res.json(products);
 });
 
@@ -1952,7 +1983,7 @@ app.post('/api/user/profile', requireAuth, (req, res) => {
 const publicDist = path.join(__dirname, 'public');
 if (fs.existsSync(publicDist)) {
   app.use(express.static(publicDist));
-  app.get('*', (req, res, next) => {
+  app.use((req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
       return next();
     }
