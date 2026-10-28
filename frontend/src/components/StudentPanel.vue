@@ -845,9 +845,9 @@
                   <span class="tag bg-mist text-slate-700 text-[10px] font-bold">واریز فیش</span>
                   <div class="rounded-2xl p-2.5 text-white relative overflow-hidden mt-2" style="background:linear-gradient(135deg,#0A4BD6,#0B1F4D)">
                     <div class="dots absolute inset-0 opacity-40"></div>
-                    <p class="relative text-[9px] text-white/80">حساب شهریه کانون شهید کاظم آشتیانی</p>
+                    <p class="relative text-[9px] text-white/80">{{ publicSettings.card_holder }} - {{ publicSettings.bank_name }}</p>
                     <p class="relative text-sm font-extrabold tracking-widest mt-0.5" dir="ltr">
-                      ۶۰۳۷ ۹۹۷۰ ۰۰۰۰ ۰۰۰۰
+                      {{ publicSettings.card_number }}
                     </p>
                   </div>
                 </div>
@@ -1042,7 +1042,7 @@
         </div>
 
         <p class="text-xs text-[#5A6E99]">
-          مبلغ ۱٬۵۰۰٬۰۰۰ تومان به شماره کارت کانون واریز کرده و شماره پیگیری را وارد کنید.
+          مبلغ شهریه را به شماره کارت کانون ({{ publicSettings.card_number }} - {{ publicSettings.bank_name }}) واریز کرده و شماره پیگیری را وارد کنید.
         </p>
 
         <div>
@@ -1341,8 +1341,32 @@ function triggerConfetti() {
   toast('روز تولدت مبارک! کانون رشد همراه همیشگی توست.');
 }
 
+const publicSettings = ref({
+  brand_name: 'کانون نخبه‌پروری شهید کاظم آشتیانی',
+  card_number: '۶۰۳۷-۹۹۷۰-۰۰۰۰-۰۰۰۰',
+  card_holder: 'کانون نخبه‌پروری آشتیانی',
+  bank_name: 'بانک ملی ایران',
+  shaba_number: 'IR000000000000000000000000',
+  tuition_rules: ''
+});
+
+async function loadPublicSettings() {
+  try {
+    const res = await fetch('/api/settings/public');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.settings) {
+        publicSettings.value = { ...publicSettings.value, ...data.settings };
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
 function copyCard() {
-  navigator.clipboard?.writeText('6037997000000000');
+  const cardNum = (publicSettings.value.card_number || '6037997000000000').replace(/[\s-]/g, '');
+  navigator.clipboard?.writeText(cardNum);
   toast('شماره کارت کانون با موفقیت کپی شد!');
 }
 
@@ -1616,6 +1640,7 @@ async function submitReceipt() {
 }
 
 onMounted(() => {
+  loadPublicSettings();
   loadHomeworks();
   loadExams();
   loadStudy();

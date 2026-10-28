@@ -204,10 +204,16 @@
               <h2 class="text-[26px] font-extrabold text-white lg:text-ink">دانش‌آموزان</h2>
               <p class="text-sm text-white/80 lg:text-[#5A6E99]">{{ faNum(totalStudentsCount) }} دانش‌آموز ثبت‌شده</p>
             </div>
-            <button @click="openRegModal = true" class="btn btn-sun font-black text-sm">
-              <i data-lucide="user-plus" class="w-5 h-5"></i>
-              <span>ثبت‌نام</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <button @click="openImportModal = true" class="btn btn-soft font-bold text-xs sm:text-sm !min-h-[42px]">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                <span>ورود اکسل/CSV</span>
+              </button>
+              <button @click="openRegModal = true" class="btn btn-sun font-black text-xs sm:text-sm !min-h-[42px]">
+                <i data-lucide="user-plus" class="w-5 h-5"></i>
+                <span>ثبت‌نام تکی</span>
+              </button>
+            </div>
           </div>
 
           <!-- Search & Filter Card -->
@@ -273,7 +279,10 @@
                 <span class="tag bg-mist text-royal font-black text-xs">
                   {{ faNum(st.total_points) }} امتیاز
                 </span>
-                <button @click="deleteStudent(st.id)" class="text-late hover:bg-red-50 p-2 rounded-xl text-sm" title="حذف">
+                <button @click="resetStudentPassword(st)" class="text-royal hover:bg-blue-50 p-2 rounded-xl text-sm" title="بازنشانی رمز عبور">
+                  <i data-lucide="key-round" class="w-4 h-4"></i>
+                </button>
+                <button @click="deleteStudent(st.id)" class="text-late hover:bg-red-50 p-2 rounded-xl text-sm" title="غیرفعال‌سازی پرونده">
                   <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
               </div>
@@ -409,6 +418,203 @@
                   <p class="text-xl font-black text-late">{{ faNum(g.unpaid) }}</p>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= 3.5. تنظیمات سامانه و مشخصات پرداخت شهریه (SYSTEM & TUITION SETTINGS) ================= -->
+        <section v-if="activeTab === 'settings'" class="space-y-4">
+          <div class="min-h-[48px] flex items-center justify-between">
+            <div>
+              <h2 class="text-[26px] font-extrabold text-white lg:text-ink">تنظیمات سامانه و پرداخت</h2>
+              <p class="text-sm text-white/80 lg:text-[#5A6E99]">مدیریت شماره کارت، حساب بانکی، مبالغ شهریه و مشخصات آموزشگاه</p>
+            </div>
+            <button @click="saveAllSettings" :disabled="savingSettings" class="btn btn-sun font-black text-sm shadow-md">
+              <i data-lucide="save" class="w-5 h-5"></i>
+              <span>{{ savingSettings ? 'در حال ذخیره...' : 'ذخیره تمام تنظیمات' }}</span>
+            </button>
+          </div>
+
+          <!-- Live Card Preview & Quick Stats -->
+          <div class="grid lg:grid-cols-3 gap-4">
+            <!-- Iranian Bank Card Live Preview Widget -->
+            <div class="card p-5 relative overflow-hidden text-white flex flex-col justify-between min-h-[190px]" style="background: linear-gradient(135deg, #0A4BD6 0%, #082977 50%, #051846 100%);">
+              <div class="dots absolute inset-0 opacity-40 pointer-events-none"></div>
+              <div class="relative flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] text-white/70 block">پیش‌نمایش کارت بانکی کانون</span>
+                  <p class="font-black text-sm text-sun">{{ sysSettings.bank_name || 'بانک ملی ایران' }}</p>
+                </div>
+                <div class="w-9 h-7 rounded-md bg-amber-400/80 border border-amber-200/50 flex items-center justify-center text-[9px] font-black text-ink shadow">
+                  CHIP
+                </div>
+              </div>
+
+              <div class="relative text-center my-2">
+                <p class="text-lg sm:text-xl font-extrabold tracking-[0.2em] font-mono select-all" dir="ltr">
+                  {{ sysSettings.card_number || '۶۰۳۷-۹۹۷۰-۰۰۰۰-۰۰۰۰' }}
+                </p>
+              </div>
+
+              <div class="relative flex items-end justify-between text-xs text-white/90">
+                <div>
+                  <span class="text-[9px] text-white/60 block">صاحب حساب</span>
+                  <p class="font-bold">{{ sysSettings.card_holder || 'کانون نخبه‌پروری آشتیانی' }}</p>
+                </div>
+                <div class="text-left" dir="ltr">
+                  <span class="text-[9px] text-white/60 block text-right" dir="rtl">شماره شبا</span>
+                  <p class="text-[10px] font-mono tracking-wider">{{ sysSettings.shaba_number || 'IR000000000000000000000000' }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tuition Policy Summary Card -->
+            <div class="card p-5 lg:col-span-2 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <i data-lucide="shield-check" class="w-5 h-5 text-royal"></i>
+                  <h3 class="font-extrabold text-base text-ink">سیاست پرداخت شهریه و قفل هوشمند</h3>
+                </div>
+                <p class="text-xs text-[#5A6E99] leading-relaxed">
+                  اطلاعات حساب بانکی واردشده در این بخش مستقیماً در درگاه واریز و صفحه ثبت فیش دانش‌آموزان و اولیا نمایش داده می‌شود. با تنظیم تاریخ قفل پنل برای هر پایه، دانش‌آموزانی که تا سررسید اقدام به تسویه نکنند با پیام اختصاصی هدایت به واریز مواجه خواهند شد.
+                </p>
+              </div>
+              <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-line text-center text-xs">
+                <div class="p-2.5 bg-mist rounded-xl">
+                  <span class="text-[#5A6E99] block text-[10px]">پایه هفتم</span>
+                  <b class="text-royal">{{ money(feeDefs.find(f => f.grade === 'هفتم')?.amount || 1500000) }} تومان</b>
+                </div>
+                <div class="p-2.5 bg-mist rounded-xl">
+                  <span class="text-[#5A6E99] block text-[10px]">پایه هشتم</span>
+                  <b class="text-royal">{{ money(feeDefs.find(f => f.grade === 'هشتم')?.amount || 1650000) }} تومان</b>
+                </div>
+                <div class="p-2.5 bg-mist rounded-xl">
+                  <span class="text-[#5A6E99] block text-[10px]">پایه نهم</span>
+                  <b class="text-royal">{{ money(feeDefs.find(f => f.grade === 'نهم')?.amount || 1800000) }} تومان</b>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Settings Form Tabs / Panels -->
+          <div class="grid lg:grid-cols-2 gap-4">
+            <!-- 1. Bank Account Details -->
+            <div class="card p-5 space-y-3.5">
+              <h3 class="font-extrabold text-base text-ink flex items-center gap-2 border-b border-line pb-2.5">
+                <i data-lucide="credit-card" class="w-5 h-5 text-royal"></i>
+                <span>مشخصات حساب و واریز شهریه</span>
+              </h3>
+
+              <div>
+                <label class="lbl">شماره کارت بانکی (۱۶ رقمی)</label>
+                <input v-model="sysSettings.card_number" class="input font-mono font-bold text-left" dir="ltr" placeholder="۶۰۳۷-۹۹۷۰-۰۰۰۰-۰۰۰۰" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="lbl">نام صاحب حساب</label>
+                  <input v-model="sysSettings.card_holder" class="input text-xs font-bold" placeholder="کانون نخبه‌پروری آشتیانی" />
+                </div>
+                <div>
+                  <label class="lbl">نام بانک</label>
+                  <input v-model="sysSettings.bank_name" class="input text-xs font-bold" placeholder="بانک ملی ایران" />
+                </div>
+              </div>
+
+              <div>
+                <label class="lbl">شماره شبا (با IR)</label>
+                <input v-model="sysSettings.shaba_number" class="input font-mono text-xs text-left" dir="ltr" placeholder="IR000000000000000000000000" />
+              </div>
+
+              <div>
+                <label class="lbl">قوانین و راهنمای پرداخت شهریه برای دانش‌آموزان</label>
+                <textarea v-model="sysSettings.tuition_rules" class="input !h-20 text-xs py-2 leading-relaxed" placeholder="متن توضیحات و ضوابط تسویه شهریه"></textarea>
+              </div>
+            </div>
+
+            <!-- 2. Organization & School Branding -->
+            <div class="card p-5 space-y-3.5">
+              <h3 class="font-extrabold text-base text-ink flex items-center gap-2 border-b border-line pb-2.5">
+                <i data-lucide="building" class="w-5 h-5 text-royal"></i>
+                <span>مشخصات کانون و آموزشگاه</span>
+              </h3>
+
+              <div>
+                <label class="lbl">نام کانون / مرکز آموزشی</label>
+                <input v-model="sysSettings.brand_name" class="input text-xs font-bold" placeholder="کانون نخبه‌پروری شهید کاظم آشتیانی" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="lbl">نام پلتفرم</label>
+                  <input v-model="sysSettings.platform_name" class="input text-xs font-bold" placeholder="پلتفرم رشد" />
+                </div>
+                <div>
+                  <label class="lbl">تلفن تماس و پشتیبانی</label>
+                  <input v-model="sysSettings.contact_phone" class="input text-xs font-mono text-left" dir="ltr" placeholder="۰۲۱-۸۸۸۸۴۴۲۲" />
+                </div>
+              </div>
+
+              <div>
+                <label class="lbl">شعار یا زیرعنوان سامانه</label>
+                <input v-model="sysSettings.slogan" class="input text-xs" placeholder="سامانه جامع مدیریت آموزشی و نخبه‌پروری" />
+              </div>
+
+              <div>
+                <label class="lbl">نشانی فیزیکی آموزشگاه</label>
+                <input v-model="sysSettings.address" class="input text-xs" placeholder="تهران، خیابان آزادی، پلاک ۱۲" />
+              </div>
+
+              <div>
+                <label class="lbl">مبلغ اشتراک سالانه سامانه رشد (تومان)</label>
+                <input type="number" v-model.number="sysSettings.platform_fee_amount" class="input text-xs font-black" placeholder="150000" />
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Per-Grade Fee Definitions & Access Lock Control -->
+          <div class="card p-5 space-y-4">
+            <div class="flex items-center justify-between border-b border-line pb-2.5">
+              <h3 class="font-extrabold text-base text-ink flex items-center gap-2">
+                <i data-lucide="sliders-horizontal" class="w-5 h-5 text-royal"></i>
+                <span>تعرفه‌های شهریه و وضعیت قفل پنل بر اساس پایه</span>
+              </h3>
+              <span class="text-xs text-[#5A6E99]">کنترل دسترسی خودکار</span>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-3.5">
+              <div v-for="f in feeDefs" :key="f.grade" class="p-4 rounded-2xl border border-line bg-mist/40 space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="tag bg-royal text-white font-extrabold text-xs">پایه {{ f.grade }}</span>
+                  <label class="flex items-center gap-1.5 text-xs font-bold cursor-pointer select-none">
+                    <input type="checkbox" :checked="f.is_locked === 1" @change="f.is_locked = $event.target.checked ? 1 : 0" class="rounded accent-royal w-4 h-4 cursor-pointer" />
+                    <span>قفل دسترسی فعال</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label class="lbl">مبلغ شهریه (تومان)</label>
+                  <input type="number" v-model.number="f.amount" class="input font-black text-sm" />
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="lbl">مهلت پرداخت</label>
+                    <input v-model="f.deadline_fa" class="input text-xs text-center" />
+                  </div>
+                  <div>
+                    <label class="lbl">تاریخ قفل پنل</label>
+                    <input v-model="f.lock_date_fa" class="input text-xs text-center" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end pt-2">
+              <button @click="saveAllSettings" :disabled="savingSettings" class="btn btn-royal font-black text-sm shadow-md">
+                <i data-lucide="check-check" class="w-5 h-5"></i>
+                <span>{{ savingSettings ? 'در حال ثبت...' : 'ذخیره تمام تغییرات و به‌روزرسانی پنل‌ها' }}</span>
+              </button>
             </div>
           </div>
         </section>
@@ -844,7 +1050,7 @@
 
     <!-- Mobile Bottom Navigation Dock for Admin Panel (lg:hidden) -->
     <nav class="lg:hidden dock fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="منوی مدیر">
-      <div class="grid grid-cols-6 max-w-lg mx-auto">
+      <div class="grid grid-cols-7 max-w-xl mx-auto">
         <button 
           v-for="item in navItems" 
           :key="item.key"
@@ -853,7 +1059,7 @@
           class="dock-item relative !py-2 !gap-0.5"
         >
           <i :data-lucide="item.icon" class="w-5 h-5"></i>
-          <span class="text-[10px] font-bold">{{ item.label }}</span>
+          <span class="text-[9px] font-bold truncate">{{ item.label }}</span>
           <span 
             v-if="item.badge && item.badge > 0" 
             class="absolute top-1 right-1/2 translate-x-2.5 w-4 h-4 rounded-full bg-sun text-ink text-[9px] font-black flex items-center justify-center shadow"
@@ -863,6 +1069,66 @@
         </button>
       </div>
     </nav>
+
+    <!-- Bulk Student Import Modal -->
+    <div 
+      v-if="openImportModal" 
+      class="fixed inset-0 z-[70] bg-ink/70 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <div class="card p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto space-y-4 rise bg-white">
+        <div class="flex items-center justify-between border-b border-line pb-3">
+          <div class="flex items-center gap-2">
+            <i data-lucide="file-spreadsheet" class="w-6 h-6 text-royal"></i>
+            <h3 class="font-extrabold text-lg text-ink">ورود گروهی دانش‌آموزان (CSV / اکسل)</h3>
+          </div>
+          <button @click="openImportModal = false" class="text-[#5A6E99] hover:text-ink">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
+          فرمت هر ردیف به صورت جدا شده با کاما، نقطه ویرگول یا تب:
+          <br />
+          <code class="font-mono font-bold" dir="ltr">کد ملی, نام, نام خانوادگی, پایه (هفتم/هشتم/نهم), کلاس, موبایل دانش‌آموز, موبایل ولی</code>
+        </div>
+
+        <div>
+          <label class="lbl">داده‌های متنی (کپی شده از فایل اکسل یا CSV)</label>
+          <textarea 
+            v-model="importCsvText" 
+            class="input font-mono text-xs !h-40 py-2" 
+            placeholder="0012345678,علی,کریمی,هفتم,الف,09121111111,09122222222"
+          ></textarea>
+        </div>
+
+        <!-- Preview Results -->
+        <div v-if="importDryRunResult" class="p-4 bg-mist rounded-xl space-y-2 text-xs">
+          <div class="flex items-center justify-between font-bold">
+            <span class="text-ok">تعداد ردیف‌های معتبر: {{ faNum(importDryRunResult.valid_count) }}</span>
+            <span v-if="importDryRunResult.invalid_count > 0" class="text-late">ردیف‌های دارای خطا: {{ faNum(importDryRunResult.invalid_count) }}</span>
+          </div>
+          <div v-if="importDryRunResult.errors && importDryRunResult.errors.length > 0" class="text-late max-h-28 overflow-y-auto space-y-1">
+            <p v-for="err in importDryRunResult.errors" :key="err.row_number">
+              ردیف {{ faNum(err.row_number) }}: {{ err.errors.join('، ') }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-line">
+          <button @click="previewImport" :disabled="importLoading" class="btn btn-soft text-xs font-bold">
+            بررسی و پیش‌نمایش
+          </button>
+          <button 
+            v-if="importDryRunResult && importDryRunResult.valid_count > 0" 
+            @click="executeImport" 
+            :disabled="importLoading" 
+            class="btn btn-ok text-xs font-bold"
+          >
+            تأیید و واردسازی {{ faNum(importDryRunResult.valid_count) }} دانش‌آموز
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Toast Notification -->
     <div 
@@ -890,6 +1156,7 @@ const feeSubTab = ref('def');
 const annSubTab = ref('new');
 const toastMsg = ref('');
 const openRegModal = ref(false);
+const openImportModal = ref(false);
 const rejectingReceipt = ref(null);
 const openQrModal = ref(false);
 
@@ -897,12 +1164,13 @@ const navItems = [
   { key: 'dash', label: 'داشبورد', icon: 'layout-dashboard' },
   { key: 'stu', label: 'دانش‌آموزان', icon: 'users' },
   { key: 'fee', label: 'حق عضویت', icon: 'wallet', badge: 3 },
+  { key: 'settings', label: 'تنظیمات و پرداخت', icon: 'settings' },
   { key: 'ann', label: 'اطلاعیه', icon: 'megaphone' },
   { key: 'acc', label: 'حسابداری', icon: 'calculator' },
   { key: 'exm', label: 'آزمون جامع', icon: 'trophy' }
 ];
 
-watch([activeTab, feeSubTab, annSubTab, openRegModal, rejectingReceipt, openQrModal], () => {
+watch([activeTab, feeSubTab, annSubTab, openRegModal, openImportModal, rejectingReceipt, openQrModal], () => {
   nextTick(() => refreshIcons());
 });
 
@@ -1181,10 +1449,149 @@ function printAdmissionCards() {
   window.print();
 }
 
+// ----------------- BULK STUDENT IMPORT -----------------
+const importCsvText = ref('');
+const importDryRunResult = ref(null);
+const importLoading = ref(false);
+
+async function previewImport() {
+  if (!importCsvText.value.trim()) return alert('لطفاً اطلاعات متنی دانش‌آموزان را وارد کنید.');
+  importLoading.value = true;
+  try {
+    const lines = importCsvText.value.trim().split('\n');
+    const rows = [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      if (i === 0 && line.includes('کد ملی')) continue;
+      const parts = line.split(/[,;\t]/).map(p => p.trim());
+      if (parts.length >= 3) {
+        rows.push({
+          national_id: parts[0],
+          first_name: parts[1],
+          last_name: parts[2],
+          grade: parts[3] || 'هفتم',
+          class_name: parts[4] || 'الف',
+          phone: parts[5] || '',
+          parent_phone: parts[6] || ''
+        });
+      }
+    }
+    const res = await fetch('/api/admin/students/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: true, rows })
+    });
+    const data = await res.json();
+    importDryRunResult.value = data;
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    importLoading.value = false;
+  }
+}
+
+async function executeImport() {
+  if (!importDryRunResult.value || !importDryRunResult.value.preview || importDryRunResult.value.preview.length === 0) return;
+  importLoading.value = true;
+  try {
+    const res = await fetch('/api/admin/students/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: false, rows: importDryRunResult.value.preview })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    toast(data.message || 'دانش‌آموزان با موفقیت ثبت شدند.');
+    openImportModal.value = false;
+    importCsvText.value = '';
+    importDryRunResult.value = null;
+    searchStudents();
+    loadStats();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    importLoading.value = false;
+  }
+}
+
+async function resetStudentPassword(student) {
+  if (!confirm(`آیا از بازنشانی رمز عبور دانش‌آموز «${student.full_name}» اطمینان دارید؟`)) return;
+  try {
+    const res = await fetch(`/api/admin/users/${student.id}/reset-password`, {
+      method: 'POST'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    alert(`رمز عبور موقت جدید برای ${student.full_name}:\n\n${data.temp_password}\n\nدانش‌آموز در اولین ورود ملزم به تغییر این رمز خواهد بود.`);
+  } catch (err) {
+    alert('خطا در بازنشانی رمز: ' + err.message);
+  }
+}
+
+// ----------------- PLATFORM & PAYMENT SETTINGS -----------------
+const sysSettings = ref({
+  brand_name: 'کانون نخبه‌پروری شهید کاظم آشتیانی',
+  platform_name: 'پلتفرم رشد',
+  slogan: 'سامانه جامع مدیریت آموزشی و نخبه‌پروری',
+  card_number: '۶۰۳۷-۹۹۷۰-۰۰۰۰-۰۰۰۰',
+  card_holder: 'کانون نخبه‌پروری آشتیانی',
+  shaba_number: 'IR000000000000000000000000',
+  bank_name: 'بانک ملی ایران',
+  contact_phone: '۰۲۱-۸۸۸۸۴۴۲۲',
+  address: 'تهران، خیابان آزادی، پلاک ۱۲',
+  tuition_rules: 'واریز شهریه حداکثر تا پایان مهلت مقرر الزامی است.',
+  announcement_banner: '',
+  platform_fee_amount: 150000
+});
+const savingSettings = ref(false);
+
+async function loadSystemSettings() {
+  try {
+    const res = await fetch('/api/admin/settings');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.settings) {
+        sysSettings.value = { ...sysSettings.value, ...data.settings };
+      }
+      if (data.fee_defs && data.fee_defs.length > 0) {
+        feeDefs.value = data.fee_defs;
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    nextTick(() => refreshIcons());
+  }
+}
+
+async function saveAllSettings() {
+  savingSettings.value = true;
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        settings: sysSettings.value,
+        fee_defs: feeDefs.value
+      })
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'خطا در ذخیره تنظیمات');
+    toast('تمام تنظیمات سامانه و مشخصات پرداخت با موفقیت ذخیره شد.');
+    loadFees();
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    savingSettings.value = false;
+  }
+}
+
 onMounted(() => {
   loadStats();
   searchStudents();
   loadFees();
+  loadSystemSettings();
   loadNoticeReports();
   loadAccounting();
   loadComprehensiveRankings();

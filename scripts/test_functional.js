@@ -116,26 +116,65 @@ async function runFunctionalTests() {
 
     // 3. Exam Workflow
     console.log('\n3. Testing Exam Workflow...');
+    const examCreateRes = await fetch(`${BASE_URL}/api/exams`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${teacher.token}`
+      },
+      body: JSON.stringify({
+        title: 'آزمون آزمایشی علوم و فیزیک',
+        grade: 'هفتم',
+        class_name: 'الف',
+        subject: 'علوم تجربی',
+        duration_minutes: 20,
+        question_count: 2,
+        questions: [
+          { id: 1, question: 'واحد بار الکتریکی چیست؟', options: ['کولن', 'آمپر', 'ولت', 'اهم'], correct: 0 },
+          { id: 2, question: 'نقطه جوش آب در سطح دریا چند درجه است؟', options: ['۵۰', '۱۰۰', '۰', '۳۷'], correct: 1 }
+        ]
+      })
+    });
+    const createdExam = await examCreateRes.json();
+    assert(examCreateRes.status === 200 && !!createdExam.id, 'Teacher creates new exam');
+
     const examListRes = await fetch(`${BASE_URL}/api/exams?grade=${encodeURIComponent('هفتم')}&class_name=${encodeURIComponent('الف')}`, {
       headers: { 'Authorization': `Bearer ${student.token}` }
     });
     const exams = await examListRes.json();
     assert(Array.isArray(exams) && exams.length > 0, 'Student lists available exams');
 
-    const targetExam = exams[0];
-    const examSubmitRes = await fetch(`${BASE_URL}/api/exams/${targetExam.id}/submit`, {
+    // Student starts exam
+    const startRes = await fetch(`${BASE_URL}/api/exams/${createdExam.id}/start`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${student.token}` }
+    });
+    assert(startRes.status === 200, 'Student starts exam session');
+
+    // Student submits exam
+    const examSubmitRes = await fetch(`${BASE_URL}/api/exams/${createdExam.id}/submit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${student.token}`
       },
       body: JSON.stringify({
-        student_id: student.user.id,
-        answers: { 0: 0, 1: 1 }
+        answers: { '1': 0, '2': 1 }
       })
     });
     const examScore = await examSubmitRes.json();
     assert(examSubmitRes.status === 200 && typeof examScore.percentage === 'number', 'Student submits exam and receives automated score');
+
+    // Duplicate submission blocked with 409
+    const dupRes = await fetch(`${BASE_URL}/api/exams/${createdExam.id}/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${student.token}`
+      },
+      body: JSON.stringify({ answers: { '1': 0 } })
+    });
+    assert(dupRes.status === 409, 'Duplicate exam submission is blocked with 409 Conflict');
 
     // 4. Store Checkout Workflow
     console.log('\n4. Testing Store & Checkout Workflow...');
@@ -204,6 +243,53 @@ async function runFunctionalTests() {
       })
     });
     assert(noticeSeenRes.status === 200, 'Student marks notice as read');
+
+    // 7. Testing Admin Settings & Payment Management
+    console.log('\n7. Testing System Settings & Tuition Management...');
+    const pubSetRes = await fetch(`${BASE_URL}/api/settings/public`);
+    const pubSet = await pubSetRes.json();
+    assert(pubSetRes.status === 200 && pubSet.settings && !!pubSet.settings.card_number, 'Public settings returns valid bank & brand info');
+
+    const adminSetRes = await fetch(`${BASE_URL}/api/admin/settings`, {
+      headers: { 'Authorization': `Bearer ${admin.token}` }
+    });
+    const adminSet = await adminSetRes.json();
+    assert(adminSetRes.status === 200 && Array.isArray(adminSet.fee_defs), 'Admin retrieves full settings and fee definitions');
+
+    const updateSetRes = await fetch(`${BASE_URL}/api/admin/settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${admin.token}`
+      },
+      body: JSON.stringify({
+        settings: {
+          brand_name: 'کانون نخبه‌پروری شهید کاظم آشتیانی',
+          card_number: '۶۰۳۷-۹۹۷۰-۱۱۱۱-۲۲۲۲',
+          card_holder: 'کانون مرکزی آشتیانی',
+          bank_name: 'بانک ملی ایران',
+          contact_phone: '۰۲۱-۸۸۸۸۴۴۲۲'
+        },
+        fee_defs: [
+          { grade: 'هفتم', amount: 1550000, deadline_fa: '۱۴۰۵/۰۸/۲۰', lock_date_fa: '۱۴۰۵/۰۹/۰۱', is_locked: 0 },
+          { grade: 'هشتم', amount: 1700000, deadline_fa: '۱۴۰۵/۰۸/۲۰', lock_date_fa: '۱۴۰۵/۰۹/۰۱', is_locked: 0 },
+          { grade: 'نهم', amount: 1850000, deadline_fa: '۱۴۰۵/۰۸/۲۰', lock_date_fa: '۱۴۰۵/۰۹/۰۱', is_locked: 0 }
+        ]
+      })
+    });
+    const updateSet = await updateSetRes.json();
+    assert(updateSetRes.status === 200 && updateSet.success, 'Admin updates settings and fee definitions');
+
+    // Online payment disabled guard (501)
+    const payOnlineRes = await fetch(`${BASE_URL}/api/fees/pay-online`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${student.token}`
+      },
+      body: JSON.stringify({ amount: 1500000, fee_type: 'tuition' })
+    });
+    assert(payOnlineRes.status === 501, 'Unconfigured online payment gateway returns 501 Not Implemented');
 
     // Summary
     console.log('\n=== FUNCTIONAL TEST RESULTS ===');

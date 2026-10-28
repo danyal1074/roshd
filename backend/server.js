@@ -297,8 +297,42 @@ function getJalaliDate() {
   try {
     return new Intl.DateTimeFormat('fa-IR-u-ca-persian', options).format(d);
   } catch (e) {
-    return '۱۴۰۳/۰۸/۰۵';
+    return '۱۴۰۵/۰۸/۰۵';
   }
+}
+
+// Official Iranian 10-digit National ID validation algorithm with check digit verification
+function validateIranianNationalId(code) {
+  if (!code || typeof code !== 'string') return false;
+  const clean = code.trim();
+  // Allow test IDs in dev/test environment
+  if (process.env.NODE_ENV !== 'production' && (clean.startsWith('00') || clean.startsWith('test_'))) {
+    return clean.length === 10;
+  }
+  if (!/^\d{10}$/.test(clean)) return false;
+  if (/^(\d)\1{9}$/.test(clean)) return false;
+
+  const check = parseInt(clean[9], 10);
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(clean[i], 10) * (10 - i);
+  }
+  const rem = sum % 11;
+  return (rem < 2 && check === rem) || (rem >= 2 && check === 11 - rem);
+}
+
+// Tuition Lock Enforcement Middleware
+function checkTuitionLock(req, res, next) {
+  if (req.user && req.user.role === 'student' && req.user.fee_status !== 'paid') {
+    const feeDef = db.prepare('SELECT is_locked FROM fee_defs WHERE grade = ?').get(req.user.grade);
+    if ((feeDef && feeDef.is_locked === 1) || req.user.is_locked === 1) {
+      return res.status(403).json({
+        error: 'دسترسی شما به دلیل عدم تسویه شهریه موقتاً مسدود شده است. لطفاً نسبت به ارسال فیش واریز اقدام فرمایید.',
+        code: 'TUITION_LOCKED'
+      });
+    }
+  }
+  next();
 }
 
 // ----------------- COMPREHENSIVE PRODUCTION HEALTH CHECK -----------------
@@ -601,35 +635,239 @@ app.get('/api/students', requireAuth, requireRole('admin', 'teacher'), (req, res
 });
 
 app.post('/api/students', requireAuth, requireRole('admin'), (req, res) => {
-  const { national_id, phone, first_name, last_name, grade, class_name, password } = req.body;
+  const { national_id, phone, first_name, last_name, grade, class_name, parent_phone } = req.body;
   if (!national_id || !first_name || !last_name) {
     return res.status(400).json({ error: 'کد ملی، نام و نام خانوادگی الزامی است.' });
   }
 
-  const fullName = `${first_name} ${last_name}`;
+  const cleanNatId = String(national_id).trim();
+  if (!validateIranianNationalId(cleanNatId)) {
+    return res.status(400).json({ error: 'کد ملی وارد شده نامعتبر است (الگوریتم ۱۰ رقمی ایران).' });
+  }
+
+  const cleanPhone = phone ? String(phone).trim() : '';
+  if (cleanPhone && !/^09\d{9}$/.test(cleanPhone)) {
+    return res.status(400).json({ error: 'شماره موبایل دانش‌آموز نامعتبر است (الگوی صحیح: ۰۹۱۲۳۴۵۶۷۸۹).' });
+  }
+
+  const cleanParentPhone = parent_phone ? String(parent_phone).trim() : '';
+  if (cleanParentPhone && !/^09\d{9}$/.test(cleanParentPhone)) {
+    return res.status(400).json({ error: 'شماره موبایل ولی نامعتبر است (الگوی صحیح: ۰۹۱۲۳۴۵۶۷۸۹).' });
+  }
+
+  const validGrades = ['هفتم', 'هشتم', 'نهم'];
+  const cleanGrade = grade && validGrades.includes(grade) ? grade : 'هفتم';
+  const cleanClass = class_name ? String(class_name).trim() : 'الف';
+
+  const fullName = `${first_name.trim()} ${last_name.trim()}`;
   const crypto = require('crypto');
-  const rawPw = password && password.trim() ? password.trim() : crypto.randomBytes(5).toString('hex');
-  const hashedPw = hashPassword(rawPw);
+  const tempPassword = crypto.randomBytes(5).toString('hex'); // Secure 10-char random password
+  const hashedPw = hashPassword(tempPassword);
 
   try {
     const info = db.prepare(`
-      INSERT INTO users (role, national_id, phone, password, first_name, last_name, full_name, grade, class_name, must_change_password)
-      VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `).run(national_id, phone || '', hashedPw, first_name, last_name, fullName, grade || 'هفتم', class_name || 'الف');
+      INSERT INTO users (
+        role, national_id, phone, password, first_name, last_name, full_name, 
+        grade, class_name, parent_phone, must_change_password, is_active
+      ) VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)
+    `).run(cleanNatId, cleanPhone, hashedPw, first_name.trim(), last_name.trim(), fullName, cleanGrade, cleanClass, cleanParentPhone);
 
-    res.json({ success: true, id: info.lastInsertRowid, initial_password: rawPw });
+    const studentId = info.lastInsertRowid;
+
+    // Link parent if phone provided
+    if (cleanParentPhone) {
+      db.prepare(`
+        INSERT OR IGNORE INTO users (role, national_id, phone, password, first_name, last_name, full_name, must_change_password, is_active)
+        VALUES ('parent', ?, ?, ?, 'ولی', ?, ?, 1, 1)
+      `).run(cleanParentPhone, cleanParentPhone, hashPassword(crypto.randomBytes(5).toString('hex')), last_name.trim(), `ولی ${fullName}`);
+
+      const parentUser = db.prepare('SELECT id FROM users WHERE phone = ? AND role = "parent"').get(cleanParentPhone);
+      if (parentUser) {
+        db.prepare('INSERT OR IGNORE INTO parent_students (parent_id, student_id) VALUES (?, ?)').run(parentUser.id, studentId);
+      }
+    }
+
+    recordAudit(req.user.id, 'CREATE_STUDENT', 'users', studentId, `Admin enrolled student: ${cleanNatId} (${fullName})`, req.ip);
+
+    res.json({
+      success: true,
+      id: studentId,
+      initial_password: tempPassword,
+      message: 'دانش‌آموز با موفقیت ثبت‌نام شد. رمز موقت یک‌بار برای تحویل به دانش‌آموز نمایش داده می‌شود.'
+    });
   } catch (err) {
     if (err.message.includes('UNIQUE constraint failed')) {
-      return res.status(400).json({ error: 'کاربری با این کد ملی قبلاً ثبت شده است.' });
+      return res.status(400).json({ error: 'کاربری با این کد ملی قبلاً در سامانه ثبت شده است.' });
     }
     res.status(500).json({ error: 'خطا در ثبت‌نام دانش‌آموز.' });
   }
 });
 
+// Bulk Import Students via CSV or Structured Array
+app.post('/api/admin/students/import', requireAuth, requireRole('admin'), (req, res) => {
+  const { students, csv_text, dry_run = false } = req.body;
+  let rows = [];
+
+  if (Array.isArray(students)) {
+    rows = students;
+  } else if (typeof csv_text === 'string') {
+    const lines = csv_text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length > 0) {
+      const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const isHeader = header.includes('national_id') || header.includes('کد ملی') || header.some(h => isNaN(h));
+      const dataLines = isHeader ? lines.slice(1) : lines;
+
+      for (const line of dataLines) {
+        const parts = line.split(',').map(p => p.trim());
+        if (parts.length >= 3) {
+          rows.push({
+            national_id: parts[0],
+            first_name: parts[1],
+            last_name: parts[2],
+            grade: parts[3] || 'هفتم',
+            class_name: parts[4] || 'الف',
+            phone: parts[5] || '',
+            parent_phone: parts[6] || ''
+          });
+        }
+      }
+    }
+  }
+
+  if (rows.length === 0) {
+    return res.status(400).json({ error: 'هیچ داده‌ای جهت ایمپورت ارسال نشده است.' });
+  }
+
+  const validGrades = ['هفتم', 'هشتم', 'نهم', '7', '8', '9'];
+  const validRows = [];
+  const invalidRows = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const natId = String(row.national_id || '').trim();
+    const fn = String(row.first_name || '').trim();
+    const ln = String(row.last_name || '').trim();
+    const gr = String(row.grade || 'هفتم').trim();
+    const cl = String(row.class_name || 'الف').trim();
+    const ph = String(row.phone || '').trim();
+    const pph = String(row.parent_phone || '').trim();
+
+    const errors = [];
+    if (!validateIranianNationalId(natId)) errors.push('کد ملی نامعتبر است');
+    if (!fn) errors.push('نام الزامی است');
+    if (!ln) errors.push('نام خانوادگی الزامی است');
+    if (!validGrades.includes(gr)) errors.push('پایه نامعتبر است');
+    if (ph && !/^09\d{9}$/.test(ph)) errors.push('شماره موبایل نامعتبر است');
+    if (pph && !/^09\d{9}$/.test(pph)) errors.push('شماره موبایل والد نامعتبر است');
+
+    const existing = db.prepare('SELECT id FROM users WHERE national_id = ?').get(natId);
+    if (existing) errors.push('کد ملی قبلاً در سامانه ثبت شده است');
+
+    if (errors.length > 0) {
+      invalidRows.push({ row_number: i + 1, data: row, errors });
+    } else {
+      validRows.push({
+        national_id: natId,
+        first_name: fn,
+        last_name: ln,
+        full_name: `${fn} ${ln}`,
+        grade: gr === '7' ? 'هفتم' : (gr === '8' ? 'هشتم' : (gr === '9' ? 'نهم' : gr)),
+        class_name: cl,
+        phone: ph,
+        parent_phone: pph
+      });
+    }
+  }
+
+  if (dry_run) {
+    return res.json({
+      dry_run: true,
+      total_rows: rows.length,
+      valid_count: validRows.length,
+      invalid_count: invalidRows.length,
+      preview: validRows.slice(0, 10),
+      errors: invalidRows
+    });
+  }
+
+  if (validRows.length === 0) {
+    return res.status(400).json({
+      error: 'هیچ ردیف معتبری برای ثبت یافت نشد.',
+      errors: invalidRows
+    });
+  }
+
+  const crypto = require('crypto');
+  const credentials = [];
+  db.exec('BEGIN IMMEDIATE;');
+  try {
+    const insertStu = db.prepare(`
+      INSERT INTO users (
+        role, national_id, phone, password, first_name, last_name, full_name,
+        grade, class_name, parent_phone, must_change_password, is_active
+      ) VALUES ('student', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)
+    `);
+
+    const insertParent = db.prepare(`
+      INSERT OR IGNORE INTO users (
+        role, national_id, phone, password, first_name, last_name, full_name, must_change_password, is_active
+      ) VALUES ('parent', ?, ?, ?, 'ولی', ?, ?, 1, 1)
+    `);
+
+    const linkParent = db.prepare('INSERT OR IGNORE INTO parent_students (parent_id, student_id) VALUES (?, ?)');
+
+    for (const r of validRows) {
+      const tempPw = crypto.randomBytes(5).toString('hex');
+      const hashed = hashPassword(tempPw);
+      const resInfo = insertStu.run(r.national_id, r.phone, hashed, r.first_name, r.last_name, r.full_name, r.grade, r.class_name, r.parent_phone);
+      const studentId = resInfo.lastInsertRowid;
+
+      if (r.parent_phone) {
+        const parentFullName = `ولی ${r.full_name}`;
+        const parentPw = crypto.randomBytes(5).toString('hex');
+        insertParent.run(r.parent_phone, r.parent_phone, hashPassword(parentPw), r.last_name, parentFullName);
+        const parentUser = db.prepare('SELECT id FROM users WHERE phone = ? AND role = "parent"').get(r.parent_phone);
+        if (parentUser) {
+          linkParent.run(parentUser.id, studentId);
+        }
+      }
+
+      credentials.push({
+        national_id: r.national_id,
+        full_name: r.full_name,
+        grade: r.grade,
+        class_name: r.class_name,
+        temporary_password: tempPw
+      });
+    }
+
+    db.exec('COMMIT;');
+    recordAudit(req.user.id, 'IMPORT_STUDENTS', 'users', null, `Imported ${validRows.length} students`, req.ip);
+
+    const exportLines = ['کد ملی,نام و نام خانوادگی,پایه,کلاس,رمز عبور موقت'];
+    for (const c of credentials) {
+      exportLines.push(`${c.national_id},${c.full_name},${c.grade},${c.class_name},${c.temporary_password}`);
+    }
+
+    res.json({
+      success: true,
+      imported_count: validRows.length,
+      invalid_count: invalidRows.length,
+      csv_export: exportLines.join('\n'),
+      message: `تعداد ${validRows.length} دانش‌آموز با موفقیت وارد سامانه شدند.`
+    });
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    res.status(500).json({ error: 'خطا در ثبت گروهی دانش‌آموزان: ' + err.message });
+  }
+});
+
 app.delete('/api/students/:id', requireAuth, requireRole('admin'), (req, res) => {
   const studentId = parseInt(req.params.id);
-  db.prepare("DELETE FROM users WHERE id = ? AND role = 'student'").run(studentId);
-  res.json({ success: true });
+  db.prepare("UPDATE users SET is_active = 0, token_version = token_version + 1 WHERE id = ? AND role = 'student'").run(studentId);
+  invalidateUserCache(studentId);
+  recordAudit(req.user.id, 'DEACTIVATE_USER', 'users', studentId, 'Admin deactivated student', req.ip);
+  res.json({ success: true, message: 'دانش‌آموز با موفقیت غیرفعال شد.' });
 });
 
 // ----------------- ATTENDANCE -----------------
@@ -803,13 +1041,24 @@ app.get('/api/exams', requireAuth, (req, res) => {
   res.json(exams);
 });
 
-// GET EXAM: Strip correct answers for students to prevent cheating!
+// GET EXAM: Verify grade/class and strip correct answers for students to prevent cheating!
 app.get('/api/exams/:id', requireAuth, (req, res) => {
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(req.params.id);
   if (!exam) return res.status(404).json({ error: 'آزمون یافت نشد.' });
 
-  const rawQuestions = JSON.parse(exam.questions_json || '[]');
   const isTeacherOrAdmin = ['teacher', 'admin'].includes(req.user.role);
+
+  // Grade and class restriction for students
+  if (!isTeacherOrAdmin && req.user.role === 'student') {
+    if (exam.grade && exam.grade !== 'all' && exam.grade !== req.user.grade) {
+      return res.status(403).json({ error: 'این آزمون مختص پایه تحصیلی شما نمی‌باشد.' });
+    }
+    if (exam.class_name && exam.class_name !== 'all' && exam.class_name !== req.user.class_name) {
+      return res.status(403).json({ error: 'این آزمون مختص کلاس شما نمی‌باشد.' });
+    }
+  }
+
+  const rawQuestions = JSON.parse(exam.questions_json || '[]');
 
   // If student: remove 'correct' answer key!
   if (!isTeacherOrAdmin) {
@@ -825,6 +1074,35 @@ app.get('/api/exams/:id', requireAuth, (req, res) => {
 
   delete exam.questions_json;
   res.json(exam);
+});
+
+// START EXAM: Record start timestamp to enforce anti-cheat countdown
+app.post('/api/exams/:id/start', requireAuth, requireRole('student'), (req, res) => {
+  const examId = parseInt(req.params.id);
+  const studentId = req.user.id;
+
+  const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(examId);
+  if (!exam) return res.status(404).json({ error: 'آزمون یافت نشد.' });
+
+  // Check if student has already completed the exam
+  const existingResult = db.prepare('SELECT id FROM exam_results WHERE exam_id = ? AND student_id = ?').get(examId, studentId);
+  if (existingResult) {
+    return res.status(409).json({ error: 'شما قبلاً در این آزمون شرکت کرده‌اید و آزمون خاتمه یافته است.' });
+  }
+
+  const existingAttempt = db.prepare('SELECT started_at FROM exam_attempts WHERE exam_id = ? AND student_id = ?').get(examId, studentId);
+  let startedAt = Date.now();
+  if (existingAttempt) {
+    startedAt = existingAttempt.started_at;
+  } else {
+    db.prepare('INSERT INTO exam_attempts (exam_id, student_id, started_at) VALUES (?, ?, ?)').run(examId, studentId, startedAt);
+  }
+
+  res.json({
+    success: true,
+    started_at: startedAt,
+    duration_minutes: exam.duration_minutes
+  });
 });
 
 app.post('/api/exams', requireAuth, requireRole('teacher', 'admin'), (req, res) => {
@@ -845,7 +1123,7 @@ app.post('/api/exams', requireAuth, requireRole('teacher', 'admin'), (req, res) 
   res.json({ success: true, id: info.lastInsertRowid });
 });
 
-// Strict server-side exam evaluation
+// Strict server-side exam evaluation and anti-cheat validation
 app.post('/api/exams/:id/submit', requireAuth, requireRole('student'), (req, res) => {
   const examId = parseInt(req.params.id);
   const studentId = req.user.id; // Trusted from session
@@ -858,7 +1136,22 @@ app.post('/api/exams/:id/submit', requireAuth, requireRole('student'), (req, res
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(examId);
   if (!exam) return res.status(404).json({ error: 'آزمون یافت نشد.' });
 
-  // Evaluate against master key
+  // 1. Prevent duplicate submission (409 Conflict)
+  const existingResult = db.prepare('SELECT id FROM exam_results WHERE exam_id = ? AND student_id = ?').get(examId, studentId);
+  if (existingResult) {
+    return res.status(409).json({ error: 'پاسخ‌های این آزمون قبلاً ثبت شده است و امکان ارسال مجدد وجود ندارد.' });
+  }
+
+  // 2. Strict duration check against exam_attempts
+  const attempt = db.prepare('SELECT started_at FROM exam_attempts WHERE exam_id = ? AND student_id = ?').get(examId, studentId);
+  if (attempt) {
+    const allowedMs = (exam.duration_minutes * 60 * 1000) + 45000; // 45s grace period for network latency
+    if (Date.now() - attempt.started_at > allowedMs) {
+      return res.status(400).json({ error: 'مهلت زمانی تعیین‌شده برای این آزمون منقضی گردیده است.' });
+    }
+  }
+
+  // 3. Evaluate against master key
   const questions = JSON.parse(exam.questions_json || '[]');
   let correct = 0;
   let wrong = 0;
@@ -881,17 +1174,22 @@ app.post('/api/exams/:id/submit', requireAuth, requireRole('student'), (req, res
 
   const currentDate = getJalaliDate();
 
+  // 4. Calculate dynamic real-time rank
+  const higherScores = db.prepare('SELECT COUNT(*) as c FROM exam_results WHERE exam_id = ? AND score > ?').get(examId, score).c;
+  const calculatedRank = higherScores + 1;
+
   db.prepare(`
     INSERT INTO exam_results (exam_id, student_id, score, total_questions, correct_count, wrong_count, unanswered_count, percentage, rank, submitted_at_fa)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
-    ON CONFLICT(exam_id, student_id) DO UPDATE SET
-      score = excluded.score,
-      correct_count = excluded.correct_count,
-      wrong_count = excluded.wrong_count,
-      unanswered_count = excluded.unanswered_count,
-      percentage = excluded.percentage,
-      submitted_at_fa = excluded.submitted_at_fa
-  `).run(examId, studentId, score, total, correct, wrong, unanswered, percentage, currentDate);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(examId, studentId, score, total, correct, wrong, unanswered, percentage, calculatedRank, currentDate);
+
+  // 5. Award XP and record in points_log
+  const xpEarned = Math.max(10, Math.round(score * 2.5));
+  db.prepare('UPDATE users SET total_points = total_points + ? WHERE id = ?').run(xpEarned, studentId);
+  db.prepare(`
+    INSERT INTO points_log (student_id, type, title, points, date_fa)
+    VALUES (?, 'plus', ?, ?, ?)
+  `).run(studentId, `شرکت در آزمون ${exam.title}`, xpEarned, currentDate);
 
   res.json({
     success: true,
@@ -900,11 +1198,26 @@ app.post('/api/exams/:id/submit', requireAuth, requireRole('student'), (req, res
     correct_count: correct,
     wrong_count: wrong,
     unanswered_count: unanswered,
-    percentage
+    percentage,
+    rank: calculatedRank,
+    xp_earned: xpEarned
   });
 });
 
 app.get('/api/exams/comprehensive/rankings', requireAuth, (req, res) => {
+  // If student: only return student's own exam results
+  if (req.user.role === 'student') {
+    const myRankings = db.prepare(`
+      SELECT er.*, u.full_name, u.grade, u.class_name
+      FROM exam_results er
+      JOIN users u ON er.student_id = u.id
+      WHERE er.student_id = ?
+      ORDER BY er.id DESC
+    `).all(req.user.id);
+    return res.json(myRankings);
+  }
+
+  // Staff and Admin see top 50
   const rankings = db.prepare(`
     SELECT er.*, u.full_name, u.grade, u.class_name
     FROM exam_results er
@@ -949,17 +1262,40 @@ app.post('/api/study/pomodoro', requireAuth, requireRole('student'), (req, res) 
   }
 
   const today = getJalaliDate();
+  const currentSession = db.prepare('SELECT pomodoros_count, total_minutes, last_session_at FROM study_sessions WHERE student_id = ? AND date_fa = ?').get(studentId, today);
+
+  // Enforce daily limits: Max 300 minutes or 12 pomodoro sessions
+  if (currentSession) {
+    if (currentSession.total_minutes + minutes > 300 || currentSession.pomodoros_count >= 12) {
+      return res.status(400).json({ error: 'سقف مجاز مطالعه روزانه (۳۰۰ دقیقه یا ۱۲ جلسه) تکمیل شده است.' });
+    }
+
+    // Anti-replay interval check in production
+    if (process.env.NODE_ENV === 'production' && currentSession.last_session_at) {
+      const minIntervalMs = minutes * 60 * 1000 * 0.8;
+      if (Date.now() - currentSession.last_session_at < minIntervalMs) {
+        return res.status(400).json({ error: 'فاصله زمانی بین ثبت جلسات مطالعه رعایت نشده است.' });
+      }
+    }
+  }
+
+  const nowMs = Date.now();
   db.prepare(`
-    INSERT INTO study_sessions (student_id, date_fa, pomodoros_count, total_minutes)
-    VALUES (?, ?, 1, ?)
+    INSERT INTO study_sessions (student_id, date_fa, pomodoros_count, total_minutes, last_session_at)
+    VALUES (?, ?, 1, ?, ?)
     ON CONFLICT(student_id, date_fa) DO UPDATE SET
       pomodoros_count = pomodoros_count + 1,
-      total_minutes = total_minutes + excluded.total_minutes
-  `).run(studentId, today, minutes);
+      total_minutes = total_minutes + excluded.total_minutes,
+      last_session_at = excluded.last_session_at
+  `).run(studentId, today, minutes, nowMs);
 
-  // Award XP points
+  // Award XP points and record in points_log
   const pointsAwarded = Math.min(25, Math.max(5, Math.round(minutes * 0.4)));
   db.prepare('UPDATE users SET total_points = total_points + ? WHERE id = ?').run(pointsAwarded, studentId);
+  db.prepare(`
+    INSERT INTO points_log (student_id, type, title, points, date_fa)
+    VALUES (?, 'plus', ?, ?, ?)
+  `).run(studentId, `تکمیل جلسه مطالعه (${minutes} دقیقه)`, pointsAwarded, today);
 
   res.json({ success: true, points_awarded: pointsAwarded });
 });
@@ -1057,46 +1393,37 @@ app.put('/api/fees/receipts/:id', requireAuth, requireRole('admin'), (req, res) 
   const receipt = db.prepare('SELECT * FROM fee_receipts WHERE id = ?').get(receiptId);
   if (!receipt) return res.status(404).json({ error: 'رسید یافت نشد.' });
 
-  db.prepare('UPDATE fee_receipts SET status = ?, reject_reason = ? WHERE id = ?').run(status, reject_reason || '', receiptId);
-  db.prepare('UPDATE users SET fee_status = ? WHERE id = ?').run(status === 'approved' ? 'paid' : 'rejected', receipt.student_id);
-
-  if (status === 'approved') {
-    db.prepare(`
-      INSERT INTO accounting (type, title, amount, date_fa, category)
-      VALUES ('income', ?, ?, ?, 'شهریه')
-    `).run(`شهریه دانش‌آموز (کد رهگیری: ${receipt.tracking_code})`, receipt.amount, receipt.date_fa);
+  // Prevent double approval
+  if (receipt.status === 'approved' && status === 'approved') {
+    return res.status(400).json({ error: 'این رسید قبلاً تأیید گردیده و سند حسابداری آن ثبت شده است.' });
   }
 
-  res.json({ success: true });
+  db.exec('BEGIN IMMEDIATE;');
+  try {
+    db.prepare('UPDATE fee_receipts SET status = ?, reject_reason = ? WHERE id = ?').run(status, reject_reason || '', receiptId);
+    db.prepare('UPDATE users SET fee_status = ? WHERE id = ?').run(status === 'approved' ? 'paid' : 'rejected', receipt.student_id);
+
+    if (status === 'approved') {
+      db.prepare(`
+        INSERT INTO accounting (type, title, amount, date_fa, category)
+        VALUES ('income', ?, ?, ?, 'شهریه')
+      `).run(`شهریه دانش‌آموز (کد رهگیری: ${receipt.tracking_code})`, receipt.amount, receipt.date_fa);
+    }
+
+    db.exec('COMMIT;');
+    recordAudit(req.user.id, 'VERIFY_RECEIPT', 'fee_receipts', receiptId, `Receipt ${status}`, req.ip);
+    res.json({ success: true, message: `وضعیت رسید با موفقیت به ${status} تغییر یافت.` });
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    res.status(500).json({ error: 'خطا در ثبت وضعیت رسید: ' + err.message });
+  }
 });
 
-// Digital Payment Gateway Simulation with verified Server-side Accounting
+// Digital Payment Gateway Simulation - Disabled in Production
 app.post('/api/fees/pay-online', requireAuth, requireRole('student'), (req, res) => {
-  const studentId = req.user.id;
-  const { type, amount } = req.body; // 'tuition' or 'platform'
-
-  const trackingCode = 'SHP-' + Math.floor(10000000 + Math.random() * 90000000);
-  const currentDate = getJalaliDate();
-
-  if (type === 'platform') {
-    db.prepare("UPDATE users SET platform_fee_status = 'paid' WHERE id = ?").run(studentId);
-    db.prepare(`
-      INSERT INTO accounting (type, title, amount, date_fa, category)
-      VALUES ('income', ?, ?, ?, 'اشتراک سامانه')
-    `).run(`هزینه اشتراک سالانه سامانه دانش‌آموز کد ${studentId}`, amount || 150000, currentDate);
-  } else {
-    db.prepare("UPDATE users SET fee_status = 'paid' WHERE id = ?").run(studentId);
-    db.prepare(`
-      INSERT INTO accounting (type, title, amount, date_fa, category)
-      VALUES ('income', ?, ?, ?, 'شهریه کانون')
-    `).run(`پرداخت آنلاین شهریه کانون دانش‌آموز کد ${studentId}`, amount || 1500000, currentDate);
-  }
-
-  res.json({
-    success: true,
-    tracking_code: trackingCode,
-    date_fa: currentDate,
-    message: 'پرداخت امن با موفقیت انجام شد و رسید صادر گردید.'
+  return res.status(501).json({
+    error: 'درگاه پرداخت اینترنتی موقتاً غیرفعال است. لطفاً مبلغ شهریه را به شماره کارت رسمی کانون واریز نموده و تصویر فیش را در بخش ثبت فیش ارسال فرمایید.',
+    code: 'PAYMENT_GATEWAY_NOT_CONFIGURED'
   });
 });
 
@@ -1111,6 +1438,112 @@ app.get('/api/fees/report', requireAuth, requireRole('admin'), (req, res) => {
     pending_count: pendingStudents,
     unpaid_count: totalStudents - paidStudents - pendingStudents
   });
+});
+
+// ----------------- SYSTEM & PAYMENT SETTINGS (ADMIN MANAGED) -----------------
+app.get('/api/settings/public', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT key, value FROM settings').all();
+    const settings = {};
+    for (const r of rows) {
+      settings[r.key] = r.value;
+    }
+    const feeDefs = db.prepare('SELECT * FROM fee_defs ORDER BY grade ASC').all();
+    res.json({
+      success: true,
+      settings: {
+        brand_name: settings.brand_name || 'کانون نخبه‌پروری شهید کاظم آشتیانی',
+        platform_name: settings.platform_name || 'پلتفرم رشد',
+        slogan: settings.slogan || 'سامانه جامع مدیریت آموزشی و نخبه‌پروری',
+        card_number: settings.card_number || '۶۰۳۷-۹۹۷۰-۰۰۰۰-۰۰۰۰',
+        card_holder: settings.card_holder || 'کانون نخبه‌پروری آشتیانی',
+        shaba_number: settings.shaba_number || 'IR000000000000000000000000',
+        bank_name: settings.bank_name || 'بانک ملی ایران',
+        contact_phone: settings.contact_phone || '۰۲۱-۸۸۸۸۴۴۲۲',
+        address: settings.address || 'تهران، خیابان آزادی، پلاک ۱۲',
+        tuition_rules: settings.tuition_rules || 'واریز شهریه حداکثر تا پایان مهلت مقرر الزامی است.',
+        announcement_banner: settings.announcement_banner || '',
+        platform_fee_amount: parseInt(settings.platform_fee_amount) || 150000
+      },
+      fee_defs: feeDefs
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'خطا در دریافت تنظیمات سامانه.' });
+  }
+});
+
+app.get('/api/admin/settings', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const rows = db.prepare('SELECT key, value FROM settings').all();
+    const settings = {};
+    for (const r of rows) {
+      settings[r.key] = r.value;
+    }
+    const feeDefs = db.prepare('SELECT * FROM fee_defs ORDER BY grade ASC').all();
+    res.json({
+      settings,
+      fee_defs: feeDefs
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'خطا در دریافت تنظیمات مدیریت.' });
+  }
+});
+
+app.put('/api/admin/settings', requireAuth, requireRole('admin'), (req, res) => {
+  const { settings, fee_defs } = req.body;
+  if (!settings && !fee_defs) {
+    return res.status(400).json({ error: 'تنظیمات یا تعرفه‌های شهریه برای ذخیره ارسال نشده است.' });
+  }
+
+  db.exec('BEGIN IMMEDIATE;');
+  try {
+    if (settings && typeof settings === 'object') {
+      const allowedKeys = [
+        'brand_name', 'platform_name', 'slogan', 'card_number', 'card_holder',
+        'shaba_number', 'bank_name', 'contact_phone', 'address', 'tuition_rules',
+        'announcement_banner', 'platform_fee_amount'
+      ];
+      const upsertSetting = db.prepare(`
+        INSERT INTO settings (key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+      `);
+      for (const [key, val] of Object.entries(settings)) {
+        if (allowedKeys.includes(key)) {
+          upsertSetting.run(key, String(val ?? '').trim());
+        }
+      }
+    }
+
+    if (fee_defs && Array.isArray(fee_defs)) {
+      const upsertFee = db.prepare(`
+        INSERT INTO fee_defs (grade, amount, deadline_fa, lock_date_fa, is_locked)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(grade) DO UPDATE SET
+          amount = excluded.amount,
+          deadline_fa = excluded.deadline_fa,
+          lock_date_fa = excluded.lock_date_fa,
+          is_locked = excluded.is_locked
+      `);
+      for (const fd of fee_defs) {
+        if (fd.grade) {
+          upsertFee.run(
+            String(fd.grade).trim(),
+            parseInt(fd.amount) || 1500000,
+            String(fd.deadline_fa || '۱۴۰۵/۰۸/۱۵').trim(),
+            String(fd.lock_date_fa || '۱۴۰۵/۰۸/۳۰').trim(),
+            fd.is_locked ? 1 : 0
+          );
+        }
+      }
+    }
+
+    db.exec('COMMIT;');
+    recordAudit(req.user.id, 'UPDATE_SETTINGS', 'settings', null, 'Admin updated platform and payment settings', req.ip);
+    res.json({ success: true, message: 'تنظیمات سامانه و مشخصات پرداخت با موفقیت ذخیره شد.' });
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    res.status(500).json({ error: 'خطا در ذخیره تنظیمات: ' + err.message });
+  }
 });
 
 // ----------------- ACCOUNTING -----------------
@@ -1166,10 +1599,31 @@ app.get('/api/messages', requireAuth, (req, res) => {
 app.post('/api/messages', requireAuth, (req, res) => {
   const senderId = req.user.id; // Trusted from session
   const senderName = req.user.full_name;
-  const { receiver_id, receiver_name, text } = req.body;
+  const { receiver_id, text } = req.body;
 
   if (!receiver_id || !text || !String(text).trim()) {
-    return res.status(400).json({ error: 'گیرنده و متن پیام الزامی است.' });
+    return res.status(400).json({ error: 'شناسه گیرنده و متن پیام الزامی است.' });
+  }
+
+  const cleanText = String(text).trim();
+  if (cleanText.length > 1000) {
+    return res.status(400).json({ error: 'طول پیام نمی‌تواند بیش از ۱۰۰۰ نویسه باشد.' });
+  }
+
+  const receiver = db.prepare('SELECT id, role, full_name, is_active FROM users WHERE id = ?').get(parseInt(receiver_id));
+  if (!receiver || receiver.is_active === 0) {
+    return res.status(404).json({ error: 'کاربر گیرنده یافت نشد یا حساب وی غیرفعال است.' });
+  }
+
+  // Role permissions
+  const senderRole = req.user.role;
+  const targetRole = receiver.role;
+
+  if (senderRole === 'student' && !['teacher', 'admin'].includes(targetRole)) {
+    return res.status(403).json({ error: 'دانش‌آموزان تنها مجاز به ارسال پیام به معلمان و مدیریت سامانه هستند.' });
+  }
+  if (senderRole === 'parent' && !['teacher', 'admin'].includes(targetRole)) {
+    return res.status(403).json({ error: 'اولیا تنها مجاز به ارسال پیام به معلمان و مدیریت سامانه هستند.' });
   }
 
   const now = new Date();
@@ -1178,7 +1632,7 @@ app.post('/api/messages', requireAuth, (req, res) => {
   db.prepare(`
     INSERT INTO messages (sender_id, receiver_id, sender_name, receiver_name, text, time_fa)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(senderId, parseInt(receiver_id), senderName, receiver_name || 'کاربر کانون', String(text).trim(), timeFa);
+  `).run(senderId, receiver.id, senderName, receiver.full_name, cleanText, timeFa);
 
   res.json({ success: true, time_fa: timeFa });
 });
@@ -1191,53 +1645,65 @@ app.get('/api/store/products', (req, res) => {
 
 app.post('/api/store/checkout', requireAuth, (req, res) => {
   const userId = req.user.id;
-  const { items, product_id, shipping_address, recipient_name, recipient_phone } = req.body;
+  const { items, product_id, quantity, shipping_address, recipient_name, recipient_phone } = req.body;
   const trackingCode = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
   const currentDate = getJalaliDate();
 
-  if (items && Array.isArray(items) && items.length > 0) {
-    let total = 0;
-    for (const item of items) {
-      total += (item.price || 0) * (item.quantity || 1);
-      db.prepare(`
-        INSERT INTO store_orders (user_id, product_id, product_title, price, tracking_code, recipient_name, recipient_phone, shipping_address, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')
-      `).run(
-        userId, item.id || 1, item.title || 'بسته آموزشی', item.price || 0,
-        trackingCode, recipient_name || req.user.full_name, recipient_phone || req.user.phone || '۰۹۱۲۳۴۵۶۷۸۹',
-        shipping_address || 'آدرس ثبت‌شده'
-      );
+  const cleanAddress = shipping_address ? String(shipping_address).trim() : 'آدرس ثبت‌شده کاربر';
+  const cleanRecipientName = recipient_name ? String(recipient_name).trim() : req.user.full_name;
+  const cleanRecipientPhone = recipient_phone ? String(recipient_phone).trim() : (req.user.phone || '');
+
+  db.exec('BEGIN IMMEDIATE;');
+  try {
+    if (items && Array.isArray(items) && items.length > 0) {
+      let total = 0;
+      for (const item of items) {
+        const pId = parseInt(item.id || item.product_id);
+        const qty = Math.max(1, Math.min(10, parseInt(item.quantity) || 1));
+        const dbProduct = db.prepare('SELECT * FROM store_products WHERE id = ?').get(pId);
+        if (!dbProduct) {
+          db.exec('ROLLBACK;');
+          return res.status(400).json({ error: `محصولی با شناسه ${pId} در فروشگاه یافت نشد.` });
+        }
+
+        const itemTotal = dbProduct.price * qty;
+        total += itemTotal;
+
+        db.prepare(`
+          INSERT INTO store_orders (user_id, product_id, product_title, price, tracking_code, recipient_name, recipient_phone, shipping_address, status)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+        `).run(userId, dbProduct.id, `${dbProduct.title} (تعداد: ${qty})`, itemTotal, trackingCode, cleanRecipientName, cleanRecipientPhone, cleanAddress);
+      }
+
+      db.exec('COMMIT;');
+      return res.json({ success: true, tracking_code: trackingCode, total, status: 'pending' });
     }
+
+    const pId = parseInt(product_id);
+    const qty = Math.max(1, Math.min(10, parseInt(quantity) || 1));
+    const dbProduct = db.prepare('SELECT * FROM store_products WHERE id = ?').get(pId);
+    if (!dbProduct) {
+      db.exec('ROLLBACK;');
+      return res.status(400).json({ error: 'محصول انتخابی در فروشگاه یافت نشد.' });
+    }
+
+    const orderPrice = dbProduct.price * qty;
     db.prepare(`
-      INSERT INTO accounting (type, title, amount, date_fa, category)
-      VALUES ('income', ?, ?, ?, 'فروشگاه سمپاد')
-    `).run(`خرید فروشگاه آنلاین سبد خرید (${items.length} قلم)`, total, currentDate);
+      INSERT INTO store_orders (user_id, product_id, product_title, price, tracking_code, recipient_name, recipient_phone, shipping_address, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+    `).run(userId, dbProduct.id, `${dbProduct.title} (تعداد: ${qty})`, orderPrice, trackingCode, cleanRecipientName, cleanRecipientPhone, cleanAddress);
 
-    return res.json({ success: true, tracking_code: trackingCode, total });
+    db.exec('COMMIT;');
+    res.json({
+      success: true,
+      tracking_code: trackingCode,
+      status: 'pending',
+      order: { product_title: dbProduct.title, price: orderPrice, tracking_code: trackingCode }
+    });
+  } catch (err) {
+    db.exec('ROLLBACK;');
+    res.status(500).json({ error: 'خطا در ثبت سفارش فروشگاه: ' + err.message });
   }
-
-  const pId = product_id || 1;
-  const product = db.prepare('SELECT * FROM store_products WHERE id = ?').get(pId) || { id: 1, title: 'کتاب سمپاد', price: 180000 };
-
-  db.prepare(`
-    INSERT INTO store_orders (user_id, product_id, product_title, price, tracking_code, recipient_name, recipient_phone, shipping_address, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')
-  `).run(
-    userId, product.id, product.title, product.price, trackingCode,
-    recipient_name || req.user.full_name, recipient_phone || req.user.phone || '۰۹۱۲۳۴۵۶۷۸۹',
-    shipping_address || 'آدرس ثبت‌شده'
-  );
-
-  db.prepare(`
-    INSERT INTO accounting (type, title, amount, date_fa, category)
-    VALUES ('income', ?, ?, ?, 'فروشگاه سمپاد')
-  `).run(`فروش بسته آموزشی: ${product.title}`, product.price, currentDate);
-
-  res.json({
-    success: true,
-    tracking_code: trackingCode,
-    order: { product_title: product.title, price: product.price, tracking_code: trackingCode }
-  });
 });
 
 app.get('/api/store/orders', requireAuth, (req, res) => {
@@ -1283,34 +1749,48 @@ app.get('/api/stats/dashboard', requireAuth, requireRole('admin'), (req, res) =>
 
 // ----------------- PARENT PORTAL -----------------
 app.get('/api/parent/overview', requireAuth, requireRole('parent'), (req, res) => {
-  // Find linked student by phone or family name
-  const parentPhone = req.user.phone || '';
-  let student = parentPhone ? db.prepare("SELECT * FROM users WHERE role = 'student' AND parent_phone = ?").get(parentPhone) : null;
+  // Query strictly linked student via parent_students or matching parent phone
+  let student = db.prepare(`
+    SELECT u.* FROM users u
+    JOIN parent_students ps ON u.id = ps.student_id
+    WHERE ps.parent_id = ? AND u.role = 'student'
+    LIMIT 1
+  `).get(req.user.id);
 
-  if (!student && req.user.last_name) {
-    student = db.prepare("SELECT * FROM users WHERE role = 'student' AND last_name = ?").get(req.user.last_name);
+  if (!student && req.user.phone) {
+    student = db.prepare("SELECT * FROM users WHERE role = 'student' AND parent_phone = ? LIMIT 1").get(req.user.phone);
   }
+
   if (!student) {
-    student = db.prepare("SELECT * FROM users WHERE role = 'student' LIMIT 1").get();
+    return res.status(404).json({ error: 'هیچ دانش‌آموزی به حساب کاربری شما متصل نشده است. لطفاً با مدیریت کانون تماس بگیرید.' });
   }
 
-  const absentees = student ? db.prepare('SELECT * FROM attendance WHERE student_id = ? ORDER BY id DESC LIMIT 10').all(student.id) : [];
+  // Dynamic attendance records
+  const absences = db.prepare('SELECT * FROM attendance WHERE student_id = ? ORDER BY id DESC LIMIT 20').all(student.id);
+
+  // Dynamic exam results
+  const examResults = db.prepare(`
+    SELECT er.*, e.title as exam_title, e.subject
+    FROM exam_results er
+    JOIN exams e ON er.exam_id = e.id
+    WHERE er.student_id = ?
+    ORDER BY er.id DESC LIMIT 10
+  `).all(student.id);
+
+  // Dynamic teacher notes
+  const teacherNotes = db.prepare(`
+    SELECT tn.*, u.full_name as teacher_name
+    FROM teacher_notes tn
+    JOIN users u ON tn.teacher_id = u.id
+    WHERE tn.student_id = ?
+    ORDER BY tn.id DESC LIMIT 10
+  `).all(student.id);
 
   res.json({
     student: sanitizeUser(student),
-    absences: absentees,
-    report_card: {
-      average: 19.2,
-      rank: 4,
-      total_students: 38,
-      courses: [
-        { name: 'ریاضی', score: 19.5, teacher: 'رضا کریمی' },
-        { name: 'علوم تجربی', score: 19.0, teacher: 'فاطمه احمدی' },
-        { name: 'ادبیات فارسی', score: 19.0, teacher: 'مریم حسینی' },
-        { name: 'عربی و قرآن', score: 20.0, teacher: 'استاد حسنی' }
-      ]
-    },
-    teacher_note: 'علی دانش‌آموز بسیار کوشا و بااستعدادی است. در مباحث تستی کسرها و توان نیاز به تمرین بیشتر دارد تا به نمره ۲۰ کامل برسد.'
+    absences,
+    exam_results: examResults,
+    teacher_notes: teacherNotes
   });
 });
 
