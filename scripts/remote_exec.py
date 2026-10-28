@@ -27,7 +27,8 @@ def run_remote(cmd):
             "hostname": HOST,
             "port": PORT,
             "username": USER,
-            "timeout": 15
+            "timeout": 30,
+            "banner_timeout": 30
         }
         if KEY_FILE:
             connect_kwargs["key_filename"] = KEY_FILE
