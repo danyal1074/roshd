@@ -11,73 +11,92 @@
     <!-- Top Demo Presentation Control Bar (Collapsible) -->
     <header 
       v-if="demoBarOpen"
-      class="no-print w-full bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white px-3 sm:px-4 py-2 sticky top-0 z-50 shadow-xl transition-all"
+      class="no-print w-full bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white px-2.5 sm:px-4 py-2 sticky top-0 z-50 shadow-xl transition-all overflow-hidden"
     >
-      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <!-- Brand & Mode Title -->
-        <div class="flex items-center gap-2 sm:gap-3">
-          <div class="w-8 h-8 rounded-xl brand-bg flex items-center justify-center text-sun shadow-md shrink-0">
-            <i data-lucide="sparkles" class="w-4 h-4"></i>
-          </div>
-          <div class="leading-tight">
-            <div class="flex items-center gap-1.5">
-              <span class="font-extrabold text-xs sm:text-sm text-white">حالت مشاهده دمو پنل‌ها</span>
-              <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">
-                داده‌های نمونه آزمایشی
-              </span>
+        <div class="flex items-center justify-between w-full sm:w-auto">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl brand-bg flex items-center justify-center text-sun shadow-md shrink-0">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
             </div>
-            <span class="text-[10px] text-slate-400 hidden sm:inline">بررسی و تست لحظه‌ای تمام بخش‌های سامانه رشد</span>
+            <div class="leading-tight">
+              <div class="flex items-center gap-1.5">
+                <span class="font-extrabold text-xs sm:text-sm text-white">حالت مشاهده دمو</span>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-400 text-slate-950">
+                  داده‌های آزمایشی
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Controls: Sound Toggle & Minimize for mobile -->
+          <div class="flex items-center gap-1.5 sm:hidden">
+            <button 
+              @click="handleToggleSound"
+              class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all text-xs cursor-pointer"
+              :title="soundActive ? 'قطع صدا' : 'فعال‌سازی افکت صدا'"
+            >
+              <i :data-lucide="soundActive ? 'volume-2' : 'volume-x'" class="w-3.5 h-3.5"></i>
+            </button>
+            <button 
+              @click="demoBarOpen = false" 
+              class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all text-xs font-bold cursor-pointer"
+              title="بستن نوار"
+            >
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
           </div>
         </div>
 
         <!-- Role Switcher Buttons -->
-        <div class="flex items-center gap-1 bg-slate-800/90 p-1 rounded-2xl border border-slate-700/60 text-xs font-bold overflow-x-auto no-scrollbar">
+        <div class="w-full sm:w-auto max-w-full flex items-center gap-1 bg-slate-800/90 p-1 rounded-2xl border border-slate-700/60 text-xs font-bold overflow-x-auto no-scrollbar">
           <button 
             @click="switchDemoView('student')" 
-            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer', currentView === 'student' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
+            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer shrink-0', currentView === 'student' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
           >
             <i data-lucide="backpack" class="w-3.5 h-3.5 text-sun"></i>
             <span>دانش‌آموز</span>
           </button>
           <button 
             @click="switchDemoView('parent')" 
-            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer', currentView === 'parent' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
+            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer shrink-0', currentView === 'parent' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
           >
             <i data-lucide="users" class="w-3.5 h-3.5 text-sun"></i>
             <span>اولیا</span>
           </button>
           <button 
             @click="switchDemoView('teacher')" 
-            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer', currentView === 'teacher' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
+            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer shrink-0', currentView === 'teacher' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
           >
             <i data-lucide="presentation" class="w-3.5 h-3.5 text-sun"></i>
-            <span>معلم / دبیر</span>
+            <span>دبیر</span>
           </button>
           <button 
             @click="switchDemoView('admin')" 
-            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer', currentView === 'admin' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
+            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer shrink-0', currentView === 'admin' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
           >
             <i data-lucide="shield-check" class="w-3.5 h-3.5 text-sun"></i>
-            <span>مدیر کانون</span>
+            <span>مدیر</span>
           </button>
           <button 
             @click="switchDemoView('store')" 
-            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer', currentView === 'store' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
+            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer shrink-0', currentView === 'store' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
           >
             <i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-sun"></i>
             <span>فروشگاه</span>
           </button>
           <button 
             @click="switchDemoView('login')" 
-            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer', currentView === 'login' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
+            :class="['px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 text-xs whitespace-nowrap cursor-pointer shrink-0', currentView === 'login' ? 'bg-royal text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-slate-700/50']"
           >
             <i data-lucide="log-in" class="w-3.5 h-3.5 text-sun"></i>
-            <span>صفحه ورود</span>
+            <span>ورود</span>
           </button>
         </div>
 
-        <!-- Controls: Sound Toggle & Minimize -->
-        <div class="flex items-center gap-1.5">
+        <!-- Controls: Desktop Sound Toggle & Minimize -->
+        <div class="hidden sm:flex items-center gap-1.5">
           <button 
             @click="handleToggleSound"
             class="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all text-xs cursor-pointer"
@@ -92,7 +111,7 @@
             title="بستن نوار بالای صفحه"
           >
             <i data-lucide="minimize-2" class="w-3.5 h-3.5"></i>
-            <span class="hidden sm:inline">مخفی کردن نوار</span>
+            <span>مخفی</span>
           </button>
         </div>
       </div>

@@ -38,11 +38,12 @@
           <!-- Back Button -->
           <button 
             @click="$emit('back')" 
-            class="h-11 px-3.5 rounded-2xl bg-[#E8F0FF] text-royal flex items-center gap-1.5 font-bold text-xs hover:bg-royal hover:text-white transition-all border-none cursor-pointer"
+            class="h-11 px-3 sm:px-3.5 rounded-2xl bg-[#E8F0FF] text-royal flex items-center gap-1.5 font-bold text-xs hover:bg-royal hover:text-white transition-all border-none cursor-pointer"
             title="بازگشت به پنل کاربری"
           >
             <i data-lucide="arrow-right" class="w-4 h-4"></i>
-            <span>بازگشت به پنل</span>
+            <span class="hidden sm:inline">بازگشت به پنل</span>
+            <span class="sm:hidden">بازگشت</span>
           </button>
 
           <!-- Cart Button -->

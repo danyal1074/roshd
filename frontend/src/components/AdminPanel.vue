@@ -674,22 +674,6 @@
       </main>
     </div>
 
-    <!-- Mobile Bottom Dock -->
-    <nav class="lg:hidden dock fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="منوی اصلی">
-      <div class="grid grid-cols-5">
-        <button 
-          v-for="item in navItems.slice(0, 5)" 
-          :key="item.key"
-          @click="activeTab = item.key"
-          :aria-current="activeTab === item.key ? 'page' : undefined"
-          class="dock-item"
-        >
-          <i :data-lucide="item.icon"></i>
-          <span class="text-[11px]">{{ item.label }}</span>
-        </button>
-      </div>
-    </nav>
-
     <!-- ================= MODALS ================= -->
     <!-- Student Registration Modal -->
     <div v-if="openRegModal" class="fixed inset-0 z-[60] bg-ink/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
