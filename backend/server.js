@@ -30,9 +30,22 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.set('trust proxy', 1);
 
 // ----------------- SECURITY HEADERS & MIDDLEWARES -----------------
-// Helmet with relaxed CSP for fonts/assets
+// Helmet with hardened Content Security Policy
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      fontSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'", 'https://roshd.digiral.ir', 'http://localhost:5000', 'http://127.0.0.1:5000'],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'self'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"]
+    }
+  },
   crossOriginEmbedderPolicy: false
 }));
 
@@ -345,8 +358,22 @@ function checkTuitionLock(req, res, next) {
   next();
 }
 
-// ----------------- COMPREHENSIVE PRODUCTION HEALTH CHECK -----------------
+// ----------------- PRODUCTION HEALTH & DIAGNOSTICS -----------------
+// Public Minimal Health Check (for uptime monitors & load balancers, no sensitive leakage)
 app.get('/api/health', (req, res) => {
+  try {
+    const dbAlive = db.prepare('SELECT 1 as alive;').get();
+    if (dbAlive && dbAlive.alive === 1) {
+      return res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    }
+    return res.status(503).json({ status: 'error', code: 'DB_UNAVAILABLE' });
+  } catch (err) {
+    return res.status(503).json({ status: 'error', code: 'SERVICE_UNAVAILABLE' });
+  }
+});
+
+// Admin Diagnostic Health Check (Protected, full internal telemetry)
+app.get('/api/health/diagnostics', requireAuth, requireRole('admin'), (req, res) => {
   try {
     const dbAlive = db.prepare('SELECT 1 as alive;').get();
     const studentCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'student';").get().count;
@@ -371,11 +398,7 @@ app.get('/api/health', (req, res) => {
       }
     });
   } catch (err) {
-    res.status(503).json({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      error: err.message
-    });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -566,6 +589,7 @@ app.post('/api/notices', requireAuth, requireRole('admin'), (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(title, bodyText, currentDate, place || 'کانون', tag || 'مهم', target_audience || 'all');
 
+  recordAudit(req.user.id, 'CREATE_NOTICE', 'notices', info.lastInsertRowid, `Created notice: ${title}`, req.ip);
   res.json({ success: true, id: info.lastInsertRowid });
 });
 
@@ -983,6 +1007,7 @@ app.post('/api/homeworks', requireAuth, requireRole('teacher', 'admin'), (req, r
     deadline_fa || '۱۰ آبان ۱۴۰۳', Date.now() + 7 * 86400000, points || 20, description || ''
   );
 
+  recordAudit(req.user.id, 'CREATE_HOMEWORK', 'homeworks', info.lastInsertRowid, `Created homework: ${title}`, req.ip);
   res.json({ success: true, id: info.lastInsertRowid });
 });
 
@@ -1130,6 +1155,7 @@ app.post('/api/exams', requireAuth, requireRole('teacher', 'admin'), (req, res) 
     JSON.stringify(questions), '۱۰ آبان ۱۴۰۳'
   );
 
+  recordAudit(req.user.id, 'CREATE_EXAM', 'exams', info.lastInsertRowid, `Created exam: ${title}`, req.ip);
   res.json({ success: true, id: info.lastInsertRowid });
 });
 
@@ -1580,11 +1606,12 @@ app.post('/api/accounting/expense', requireAuth, requireRole('admin'), (req, res
   }
 
   const currentDate = date_fa || getJalaliDate();
-  db.prepare(`
+  const info = db.prepare(`
     INSERT INTO accounting (type, title, amount, date_fa, category)
     VALUES ('expense', ?, ?, ?, ?)
   `).run(title, parseInt(amount), currentDate, category || 'هزینه‌های جاری');
 
+  recordAudit(req.user.id, 'CREATE_EXPENSE', 'accounting', info.lastInsertRowid, `Recorded expense: ${title} (${amount})`, req.ip);
   res.json({ success: true });
 });
 
@@ -1935,10 +1962,18 @@ if (fs.existsSync(publicDist)) {
 
 // ----------------- GLOBAL ERROR HANDLER -----------------
 app.use((err, req, res, next) => {
-  // Never expose raw stack traces in production
-  console.error('Server Error:', err.message);
-  res.status(err.status || 500).json({
-    error: err.message || 'خطای غیرمنتظره‌ای در سرور رخ داده است.'
+  const status = err.status || 500;
+  console.error(`[${new Date().toISOString()}] Server Error (${status}):`, err.message);
+
+  // In production, sanitize 500 errors to prevent system information disclosure
+  if (status >= 500 && process.env.NODE_ENV === 'production') {
+    return res.status(500).json({
+      error: 'خطای غیرمنتظره‌ای در سرور رخ داد. لطفاً چند لحظه بعد مجدداً تلاش فرمایید.'
+    });
+  }
+
+  res.status(status).json({
+    error: err.message || 'خطای غیرمنتظره‌ای در پردازش درخواست رخ داده است.'
   });
 });
 
