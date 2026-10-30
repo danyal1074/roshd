@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const { db, ensureAdminUser } = require('./db');
 const XLSX = require('xlsx');
 const { createBackup } = require('./backup');
+const { loadDemoData, clearDemoData } = require('./demoData');
 const {
   hashPassword,
   verifyPassword,
@@ -36,10 +37,10 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'blob:'],
-      fontSrc: ["'self'", 'data:'],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tailwindcss.com", "https://unpkg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      fontSrc: ["'self'", 'data:', "https://fonts.gstatic.com"],
       connectSrc: ["'self'", 'https://roshd.digiral.ir', 'http://localhost:5000', 'http://127.0.0.1:5000'],
       objectSrc: ["'none'"],
       frameAncestors: ["'self'"],
@@ -740,7 +741,7 @@ app.post('/api/students', requireAuth, requireRole('admin'), (req, res) => {
         VALUES ('parent', ?, ?, ?, 'ولی', ?, ?, 1, 1)
       `).run(cleanParentPhone, cleanParentPhone, hashPassword(crypto.randomBytes(5).toString('hex')), last_name.trim(), `ولی ${fullName}`);
 
-      const parentUser = db.prepare('SELECT id FROM users WHERE phone = ? AND role = "parent"').get(cleanParentPhone);
+      const parentUser = db.prepare("SELECT id FROM users WHERE phone = ? AND role = 'parent'").get(cleanParentPhone);
       if (parentUser) {
         db.prepare('INSERT OR IGNORE INTO parent_students (parent_id, student_id) VALUES (?, ?)').run(parentUser.id, studentId);
       }
@@ -900,7 +901,7 @@ async function insertOrUpdateStudents(validRows, req) {
         const parentFullName = `ولی ${r.full_name}`;
         const parentHashed = await hashPassword(r.parent_phone);
         insertParent.run(r.parent_phone, r.parent_phone, r.parent_phone, parentHashed, r.last_name, parentFullName);
-        const parentUser = db.prepare('SELECT id FROM users WHERE phone = ? AND role = "parent"').get(r.parent_phone);
+        const parentUser = db.prepare("SELECT id FROM users WHERE phone = ? AND role = 'parent'").get(r.parent_phone);
         if (parentUser) {
           linkParent.run(parentUser.id, studentId);
         }
@@ -1235,15 +1236,22 @@ app.post('/api/homeworks/:id/submit', requireAuth, requireRole('student'), (req,
 
 app.get('/api/homeworks/report', requireAuth, requireRole('teacher', 'admin'), (req, res) => {
   const { homework_id } = req.query;
-  if (!homework_id) return res.status(400).json({ error: 'شناسه تکلیف الزامی است.' });
 
-  const submissions = db.prepare(`
-    SELECT hs.*, u.full_name, u.grade, u.class_name
+  let query = `
+    SELECT hs.*, u.full_name, u.grade, u.class_name, h.title as homework_title, h.points as max_points
     FROM homework_submissions hs
     JOIN users u ON hs.student_id = u.id
-    WHERE hs.homework_id = ?
-    ORDER BY hs.id DESC
-  `).all(homework_id);
+    LEFT JOIN homeworks h ON hs.homework_id = h.id
+  `;
+  const params = [];
+
+  if (homework_id) {
+    query += ' WHERE hs.homework_id = ?';
+    params.push(homework_id);
+  }
+
+  query += ' ORDER BY hs.id DESC LIMIT 100';
+  const submissions = db.prepare(query).all(...params);
 
   res.json(submissions);
 });
@@ -1667,9 +1675,9 @@ app.post('/api/fees/pay-online', requireAuth, requireRole('student'), (req, res)
 });
 
 app.get('/api/fees/report', requireAuth, requireRole('admin'), (req, res) => {
-  const totalStudents = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student"').get().c;
-  const paidStudents = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student" AND fee_status = "paid"').get().c;
-  const pendingStudents = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student" AND fee_status = "pending"').get().c;
+  const totalStudents = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student'").get().c;
+  const paidStudents = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student' AND fee_status = 'paid'").get().c;
+  const pendingStudents = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student' AND fee_status = 'pending'").get().c;
 
   res.json({
     total_students: totalStudents,
@@ -1968,12 +1976,12 @@ app.get('/api/store/orders', requireAuth, (req, res) => {
 
 // ----------------- ADMIN DASHBOARD STATS -----------------
 app.get('/api/stats/dashboard', requireAuth, requireRole('admin'), (req, res) => {
-  const totalStudents = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student"').get().c;
-  const paidCount = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student" AND fee_status = "paid"').get().c;
-  const pendingCount = db.prepare('SELECT COUNT(*) as c FROM users WHERE role = "student" AND fee_status = "pending"').get().c;
+  const totalStudents = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student'").get().c;
+  const paidCount = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student' AND fee_status = 'paid'").get().c;
+  const pendingCount = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student' AND fee_status = 'pending'").get().c;
 
   const today = getJalaliDate();
-  const absentToday = db.prepare('SELECT COUNT(*) as c FROM attendance WHERE date_fa = ? AND status = "a"').get(today)?.c || 0;
+  const absentToday = db.prepare("SELECT COUNT(*) as c FROM attendance WHERE date_fa = ? AND status = 'a'").get(today)?.c || 0;
 
   const absentees = db.prepare(`
     SELECT a.*, u.full_name, u.grade, u.class_name, u.parent_phone
@@ -2116,6 +2124,29 @@ app.post('/api/admin/backup', requireAuth, requireRole('admin'), (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: `خطا در فرآیند پشتیبان‌گیری: ${err.message}` });
+  }
+});
+
+// Admin Demo Data Management Endpoints
+app.post('/api/admin/demo-data/load', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const result = loadDemoData(db);
+    recordAudit(req.user.id, 'LOAD_DEMO_DATA', 'system', null, 'Admin loaded comprehensive sample demo data across all panels', req.ip);
+    res.json(result);
+  } catch (err) {
+    console.error('Error loading demo data:', err);
+    res.status(500).json({ error: `خطا در بارگذاری داده‌های نمونه: ${err.message}` });
+  }
+});
+
+app.post('/api/admin/demo-data/clear', requireAuth, requireRole('admin'), (req, res) => {
+  try {
+    const result = clearDemoData(db);
+    recordAudit(req.user.id, 'CLEAR_DEMO_DATA', 'system', null, 'Admin safely cleared sample demo data', req.ip);
+    res.json(result);
+  } catch (err) {
+    console.error('Error clearing demo data:', err);
+    res.status(500).json({ error: `خطا در حذف داده‌های نمونه: ${err.message}` });
   }
 });
 

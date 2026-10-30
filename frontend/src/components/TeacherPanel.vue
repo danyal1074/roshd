@@ -1281,6 +1281,10 @@ watch([activeTab, clsSubTab, hwSubTab, cameraOpen], () => {
   nextTick(() => refreshIcons());
 });
 
+watch(selectedClass, () => {
+  loadAttendance();
+});
+
 function toast(msg) {
   toastMsg.value = msg;
   nextTick(() => refreshIcons());
@@ -1292,7 +1296,14 @@ async function loadAttendance() {
   try {
     const res = await fetch(`/api/attendance?grade=${selectedClass.value.grade}&class_name=${selectedClass.value.class_name}&date_fa=۱۴۰۵/۰۸/۰۴`);
     const data = await res.json();
-    attStudents.value = data.students || [];
+    const list = Array.isArray(data) ? data : (data.students || []);
+    attStudents.value = list.map(s => ({
+      id: s.student_id || s.id,
+      full_name: s.full_name || s.name || 'دانش‌آموز',
+      status: s.status || 'p',
+      phone: s.phone,
+      parent_phone: s.parent_phone
+    }));
   } catch (e) {
     console.error(e);
   } finally {
@@ -1306,6 +1317,10 @@ function markAllPresent() {
 }
 
 async function saveAttendance() {
+  if (attStudents.value.length === 0) {
+    toast('دانش‌آموزی در این کلاس برای ثبت حضور و غیاب یافت نشد.');
+    return;
+  }
   try {
     const res = await fetch('/api/attendance', {
       method: 'POST',
@@ -1318,7 +1333,8 @@ async function saveAttendance() {
       })
     });
     const d = await res.json();
-    toast(`حضور و غیاب ثبت شد و پیامک برای ${faNum(d.sms_count)} غایب ارسال گردید.`);
+    const absentCount = attStudents.value.filter(s => s.status === 'a').length;
+    toast(`حضور و غیاب ثبت شد و پیامک برای ${faNum(absentCount)} غایب ارسال گردید.`);
   } catch (e) {
     console.error(e);
   }

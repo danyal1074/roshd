@@ -161,7 +161,9 @@ async function initAuth() {
       if (data && data.user) {
         currentUser.value = data.user;
         currentView.value = data.user.role;
-        checkUnseenNotices(data.user.id, data.user.grade);
+        if (data.user.role === 'student' || data.user.role === 'parent') {
+          checkUnseenNotices(data.user.id, data.user.grade);
+        }
       }
     }
   } catch (e) {
@@ -223,7 +225,9 @@ async function checkUnseenNotices(userId, grade) {
 function handleLoginSuccess(user) {
   currentUser.value = user;
   currentView.value = user.role;
-  checkUnseenNotices(user.id, user.grade);
+  if (user.role === 'student' || user.role === 'parent') {
+    checkUnseenNotices(user.id, user.grade);
+  }
   nextTick(() => refreshIcons());
 }
 

@@ -71,9 +71,33 @@
       <main class="px-4 lg:px-10 -mt-[64px] lg:mt-0 lg:pt-8 pb-28 lg:pb-12 relative max-w-5xl mx-auto space-y-6">
         <!-- ================= 1. داشبورد (DASHBOARD) ================= -->
         <section v-if="activeTab === 'dash'" class="space-y-6">
-          <div class="min-h-[48px]">
-            <h2 class="text-[26px] font-extrabold text-white lg:text-ink">داشبورد</h2>
-            <p class="text-sm text-white/80 lg:text-[#5A6E99]">دوشنبه ۴ آبان ۱۴۰۵</p>
+          <div class="min-h-[48px] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-[26px] font-extrabold text-white lg:text-ink">داشبورد</h2>
+              <p class="text-sm text-white/80 lg:text-[#5A6E99]">دوشنبه ۴ آبان ۱۴۰۵</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button 
+                type="button"
+                @click="handleLoadDemoData" 
+                :disabled="demoDataLoading"
+                class="btn !bg-white/20 hover:!bg-white/30 text-white lg:!bg-royal/10 lg:hover:!bg-royal/20 lg:!text-royal text-xs font-black px-3.5 py-2 rounded-xl backdrop-blur flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                title="بارگذاری نمونه کامل داده‌ها در تمام پنل‌ها"
+              >
+                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                <span>{{ demoDataLoading ? 'در حال بارگذاری...' : 'بارگذاری داده‌های نمونه' }}</span>
+              </button>
+              <button 
+                type="button"
+                @click="handleClearDemoData" 
+                :disabled="demoDataLoading"
+                class="btn !bg-red-500 hover:!bg-red-600 text-white text-xs font-black px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                title="حذف تمام داده‌های تستی و آماده‌سازی برای ورود دانش‌آموزان واقعی"
+              >
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                <span>حذف داده‌های نمونه</span>
+              </button>
+            </div>
           </div>
 
           <!-- 4 KPI Cards (Identical to rosh-step4-admin.html) -->
@@ -611,10 +635,64 @@
             </div>
 
             <div class="flex items-center justify-end pt-2">
-              <button @click="saveAllSettings" :disabled="savingSettings" class="btn btn-royal font-black text-sm shadow-md">
+              <button @click="saveAllSettings" :disabled="savingSettings" class="btn btn-royal font-black text-sm shadow-md cursor-pointer">
                 <i data-lucide="check-check" class="w-5 h-5"></i>
                 <span>{{ savingSettings ? 'در حال ثبت...' : 'ذخیره تمام تغییرات و به‌روزرسانی پنل‌ها' }}</span>
               </button>
+            </div>
+          </div>
+
+          <!-- 3. Demo Data Management Card -->
+          <div class="card p-5 space-y-4 border-2 border-royal/20 bg-gradient-to-br from-white via-mist/50 to-blue-50/30">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-royal/10 text-royal flex items-center justify-center shrink-0">
+                  <i data-lucide="database-zap" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h3 class="font-black text-base text-ink">مدیریت داده‌های نمونه و نمایشی (Demo Data)</h3>
+                  <p class="text-xs text-[#5A6E99]">بارگذاری یا پاکسازی داده‌های تستی برای بررسی نحوه کارکرد تمام بخش‌های سامانه</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button 
+                  type="button"
+                  @click="handleLoadDemoData" 
+                  :disabled="demoDataLoading"
+                  class="btn btn-royal text-xs font-black shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <i data-lucide="sparkles" class="w-4 h-4"></i>
+                  <span>{{ demoDataLoading ? 'در حال بارگذاری...' : 'بارگذاری داده‌های نمونه' }}</span>
+                </button>
+                <button 
+                  type="button"
+                  @click="handleClearDemoData" 
+                  :disabled="demoDataLoading"
+                  class="btn !bg-red-500 hover:!bg-red-600 text-white text-xs font-black shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  <span>حذف داده‌های نمونه</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+              <div class="p-3 rounded-xl bg-white border border-line shadow-xs">
+                <span class="text-[#5A6E99] block font-bold text-[10px]">پنل دبیران</span>
+                <p class="font-extrabold text-ink mt-0.5">حضور و غیاب ۳ کلاس، تکالیف و کارنامه‌ها</p>
+              </div>
+              <div class="p-3 rounded-xl bg-white border border-line shadow-xs">
+                <span class="text-[#5A6E99] block font-bold text-[10px]">پنل دانش‌آموز (علی رضایی)</span>
+                <p class="font-extrabold text-ink mt-0.5">آزمون‌ها، ساعت مطالعه، رتبه و امتیاز</p>
+              </div>
+              <div class="p-3 rounded-xl bg-white border border-line shadow-xs">
+                <span class="text-[#5A6E99] block font-bold text-[10px]">پنل والدین (مهدی رضایی)</span>
+                <p class="font-extrabold text-ink mt-0.5">پیام به دبیر، وضعیت فرزند و واریز شهریه</p>
+              </div>
+              <div class="p-3 rounded-xl bg-white border border-line shadow-xs">
+                <span class="text-[#5A6E99] block font-bold text-[10px]">امور مالی و فیش‌ها</span>
+                <p class="font-extrabold text-ink mt-0.5">فیش‌های در انتظار، تأیید و رد شده</p>
+              </div>
             </div>
           </div>
         </section>
@@ -1651,6 +1729,68 @@ async function saveAllSettings() {
     alert(err.message);
   } finally {
     savingSettings.value = false;
+  }
+}
+
+const demoDataLoading = ref(false);
+
+async function handleLoadDemoData() {
+  if (!confirm('آیا از بارگذاری داده‌های نمونه برای تمام پنل‌ها (دانش‌آموز، دبیران، والدین و امور مالی) اطمینان دارید؟')) {
+    return;
+  }
+  demoDataLoading.value = true;
+  try {
+    const res = await fetch('/api/admin/demo-data/load', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'خطا در بارگذاری داده‌های نمونه');
+    toast(d.message || 'داده‌های نمونه جامع برای تمام پنل‌ها با موفقیت بارگذاری شد.');
+    await Promise.all([
+      loadStats(),
+      searchStudents(),
+      loadFees(),
+      loadSystemSettings(),
+      loadNoticeReports(),
+      loadAccounting(),
+      loadComprehensiveRankings()
+    ]);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    demoDataLoading.value = false;
+    nextTick(() => refreshIcons());
+  }
+}
+
+async function handleClearDemoData() {
+  if (!confirm('توجه: آیا از حذف تمام داده‌های نمونه و آماده‌سازی سامانه برای پذیرش دانش‌آموزان واقعی اطمینان دارید؟ (یک نسخه پشتیبان به صورت خودکار ذخیره می‌شود)')) {
+    return;
+  }
+  demoDataLoading.value = true;
+  try {
+    const res = await fetch('/api/admin/demo-data/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'خطا در حذف داده‌های نمونه');
+    toast(d.message || 'تمام داده‌های نمونه حذف شدند و سامانه آماده استفاده واقعی شد.');
+    await Promise.all([
+      loadStats(),
+      searchStudents(),
+      loadFees(),
+      loadSystemSettings(),
+      loadNoticeReports(),
+      loadAccounting(),
+      loadComprehensiveRankings()
+    ]);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    demoDataLoading.value = false;
+    nextTick(() => refreshIcons());
   }
 }
 
