@@ -239,6 +239,7 @@ const upload = multer({
 // Serve public uploads (images and videos) with public caching
 app.use('/uploads/images', express.static(path.join(uploadsDir, 'images'), { maxAge: '30d' }));
 app.use('/uploads/videos', express.static(path.join(uploadsDir, 'videos'), { maxAge: '30d' }));
+app.use('/extracted_pages', express.static(path.join(__dirname, 'public', 'extracted_pages'), { maxAge: '30d' }));
 
 // Protected uploads: Receipts require authentication AND strict ownership/role verification
 app.get('/uploads/receipts/:filename', requireAuth, (req, res) => {
