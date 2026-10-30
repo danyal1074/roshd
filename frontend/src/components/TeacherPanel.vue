@@ -136,31 +136,421 @@
         </div>
 
         <!-- Student Performance & AI Path View -->
-        <div v-if="clsSubTab === 'perf'" class="space-y-3">
-          <div class="card p-5 space-y-4">
-            <h3 class="font-extrabold text-[18px]">عملکرد دانش‌آموزان و تأیید هوش مصنوعی</h3>
-            <p class="text-xs text-[#5A6E99]">مسیرهای مطالعاتی پیشنهادی هوش مصنوعی برای هر دانش‌آموز را بررسی و در صورت تایید ثبت کنید.</p>
+        <div v-if="clsSubTab === 'perf'" class="space-y-4">
+          <!-- Class Overview KPI Banner -->
+          <div class="card p-4 sm:p-5 bg-gradient-to-br from-white via-mist/50 to-mist border border-line">
+            <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+              <div>
+                <h3 class="font-black text-lg sm:text-xl text-ink flex items-center gap-2">
+                  <span>عملکرد و تحلیل هوشمند یادگیری دانش‌آموزان</span>
+                  <span class="text-xs font-bold text-royal bg-royal/10 px-2.5 py-1 rounded-full">کلاس {{ selectedClass.label }}</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">تحلیل جامع فعالیت در سامانه بر اساس ساعت مطالعه، تکالیف، آزمون‌ها و حضور و غیاب</p>
+              </div>
+              <button @click="loadStudentsPerformance" class="btn btn-mist btn-sm text-xs font-bold flex items-center gap-1.5" :disabled="perfLoading">
+                <i data-lucide="refresh-cw" :class="['w-3.5 h-3.5', perfLoading ? 'animate-spin' : '']"></i>
+                <span>به‌روزرسانی داده‌ها</span>
+              </button>
+            </div>
 
-            <div class="space-y-3">
+            <!-- 4 KPI Stat Boxes -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <div 
-                v-for="st in attStudents.slice(0, 6)" 
-                :key="st.id"
-                class="p-4 rounded-2xl border border-line bg-mist/40 space-y-2.5"
+                @click="perfFilter = 'needs_attention'" 
+                class="cursor-pointer p-3 rounded-2xl border transition-all duration-200"
+                :class="perfFilter === 'needs_attention' ? 'bg-rose-100 border-rose-400 shadow-sm ring-2 ring-rose-400' : 'bg-rose-50/80 border-rose-200 hover:bg-rose-100/70'"
               >
-                <div class="flex justify-between items-center">
-                  <p class="font-bold text-base text-ink">{{ st.full_name }}</p>
-                  <span class="tag bg-white font-bold text-royal text-xs">رتبه {{ faNum(Math.floor(Math.random() * 20) + 1) }}</span>
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-bold text-rose-700">⚠️ نیازمند توجه فوری</span>
+                  <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
                 </div>
-                <div class="p-3 rounded-xl bg-white border border-line text-xs flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <i data-lucide="sparkles" class="w-4 h-4 text-sun"></i>
-                    <span>مسیر هوش مصنوعی: ۲۰ دقیقه مرور کسرها و توان</span>
+                <p class="text-xl sm:text-2xl font-black text-rose-800 mt-1">
+                  {{ faNum(perfSummary.needs_attention_count) }} <span class="text-xs font-normal">نفر</span>
+                </p>
+                <span class="text-[10px] text-rose-600 font-bold block mt-0.5">افت مطالعه، آزمون یا تکالیف</span>
+              </div>
+
+              <div 
+                @click="perfFilter = 'excelling'" 
+                class="cursor-pointer p-3 rounded-2xl border transition-all duration-200"
+                :class="perfFilter === 'excelling' ? 'bg-emerald-100 border-emerald-400 shadow-sm ring-2 ring-emerald-400' : 'bg-emerald-50/80 border-emerald-200 hover:bg-emerald-100/70'"
+              >
+                <span class="text-[11px] font-bold text-emerald-700">🌟 دانش‌آموزان ممتاز</span>
+                <p class="text-xl sm:text-2xl font-black text-emerald-800 mt-1">
+                  {{ faNum(perfSummary.excelling_count) }} <span class="text-xs font-normal">نفر</span>
+                </p>
+                <span class="text-[10px] text-emerald-600 font-bold block mt-0.5">نمرات عالی و تکالیف کامل</span>
+              </div>
+
+              <div class="p-3 rounded-2xl bg-white border border-slate-200">
+                <span class="text-[11px] font-bold text-slate-600">⏱️ میانگین مطالعه کلاسی</span>
+                <p class="text-xl sm:text-2xl font-black text-ink mt-1">
+                  {{ faNum(perfSummary.class_study_avg_hours) }} <span class="text-xs font-normal">ساعت</span>
+                </p>
+                <span class="text-[10px] text-slate-500 block mt-0.5">در هفته جاری</span>
+              </div>
+
+              <div class="p-3 rounded-2xl bg-white border border-slate-200">
+                <span class="text-[11px] font-bold text-slate-600">📝 نرخ تحویل تکالیف</span>
+                <p class="text-xl sm:text-2xl font-black text-royal mt-1">
+                  {{ faNum(perfSummary.class_hw_rate) }}٪
+                </p>
+                <span class="text-[10px] text-slate-500 block mt-0.5">مشارکت فعال در ارسال</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search, Filter Tabs & Sort Controls -->
+          <div class="card p-3 sm:p-4 space-y-3">
+            <!-- Filter Tabs -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <button 
+                @click="perfFilter = 'all'" 
+                :class="['px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap', perfFilter === 'all' ? 'bg-royal text-white shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200']"
+              >
+                همه دانش‌آموزان ({{ faNum(perfSummary.total_students) }})
+              </button>
+              <button 
+                @click="perfFilter = 'needs_attention'" 
+                :class="['px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-1', perfFilter === 'needs_attention' ? 'bg-rose-600 text-white shadow-sm' : 'bg-rose-50 text-rose-700 hover:bg-rose-100']"
+              >
+                <span>⚠️ نیازمند توجه فوری</span>
+                <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ faNum(perfSummary.needs_attention_count) }}</span>
+              </button>
+              <button 
+                @click="perfFilter = 'excelling'" 
+                :class="['px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-1', perfFilter === 'excelling' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100']"
+              >
+                <span>🌟 ممتاز و پرتلاش</span>
+                <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-white/20">{{ faNum(perfSummary.excelling_count) }}</span>
+              </button>
+              <button 
+                @click="perfFilter = 'good'" 
+                :class="['px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap', perfFilter === 'good' ? 'bg-sky-600 text-white shadow-sm' : 'bg-sky-50 text-sky-700 hover:bg-sky-100']"
+              >
+                <span>در مسیر پیشرفت ({{ faNum(perfSummary.good_count) }})</span>
+              </button>
+            </div>
+
+            <!-- Search & Sort Row -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div class="relative">
+                <input 
+                  v-model="perfSearch" 
+                  placeholder="جستجوی نام یا کد ملی دانش‌آموز..." 
+                  class="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-royal outline-none"
+                />
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5"></i>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <label class="text-[11px] font-bold text-slate-500 whitespace-nowrap">مرتب‌سازی:</label>
+                <select v-model="perfSort" class="w-full px-2.5 py-2 rounded-xl border border-slate-200 text-xs focus:border-royal outline-none bg-white font-bold">
+                  <option value="attention">⚠️ بالاترین نیاز به توجه و پیگیری</option>
+                  <option value="exam_high">📊 بالاترین نمره آزمون</option>
+                  <option value="study_high">⏱️ بیشترین ساعت مطالعه</option>
+                  <option value="hw_low">📝 کمترین درصد تحویل تکالیف</option>
+                  <option value="name">الفبایی (نام دانش‌آموز)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Students List -->
+          <div v-if="perfLoading" class="text-center py-12">
+            <div class="w-8 h-8 border-3 border-royal border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p class="text-xs font-bold text-slate-500">در حال دریافت و تحلیل شاخص‌های عملکرد...</p>
+          </div>
+
+          <div v-else-if="filteredPerfStudents.length === 0" class="card p-8 text-center space-y-2">
+            <i data-lucide="check-circle-2" class="w-10 h-10 text-emerald-500 mx-auto"></i>
+            <p class="font-extrabold text-sm text-ink">دانش‌آموزی با این فیلتر یافت نشد</p>
+            <p class="text-xs text-slate-500">تمامی دانش‌آموزان در وضعیت مطلوب قرار دارند یا عبارت جستجو نتیجه‌ای ندارد.</p>
+          </div>
+
+          <div v-else class="space-y-3">
+            <div 
+              v-for="st in filteredPerfStudents" 
+              :key="st.id"
+              class="rounded-3xl p-4 sm:p-5 transition-all duration-300"
+              :class="[
+                st.needs_attention 
+                  ? 'bg-gradient-to-b from-rose-50/90 via-white to-rose-50/30 border-2 border-rose-400 shadow-lg ring-1 ring-rose-200/80' 
+                  : st.status === 'excelling'
+                    ? 'bg-gradient-to-b from-emerald-50/40 via-white to-white border border-emerald-300 shadow-sm'
+                    : 'bg-white border border-slate-200 shadow-sm hover:border-slate-300'
+              ]"
+            >
+              <!-- Top Row: Student Name & Badges -->
+              <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+                <div class="flex items-center gap-3">
+                  <div 
+                    class="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-base shadow-sm"
+                    :class="st.needs_attention ? 'bg-rose-500 text-white' : st.status === 'excelling' ? 'bg-emerald-500 text-white' : 'bg-royal text-white'"
+                  >
+                    {{ st.full_name ? st.full_name.charAt(0) : 'د' }}
                   </div>
-                  <button @click="toast(`مسیر یادگیری برای ${st.full_name} تأیید شد`)" class="btn btn-ok btn-sm !min-h-[30px] !text-xs font-bold">
-                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                    <span>تأیید</span>
-                  </button>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h4 class="font-black text-base sm:text-lg text-ink">{{ st.full_name }}</h4>
+                      <span class="text-[11px] text-slate-500 font-bold">({{ selectedClass.label }})</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">ولی: {{ st.parent_name }} <span v-if="st.parent_phone" dir="ltr" class="text-[10px] font-mono text-slate-600">({{ st.parent_phone }})</span></p>
+                  </div>
                 </div>
+
+                <!-- Role / Status Pill -->
+                <div>
+                  <span 
+                    v-if="st.needs_attention" 
+                    class="px-3 py-1.5 rounded-full text-xs font-black bg-rose-500 text-white flex items-center gap-1.5 shadow-sm animate-pulse"
+                  >
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                    <span>نیازمند توجه فوری</span>
+                  </span>
+                  <span 
+                    v-else-if="st.status === 'excelling'" 
+                    class="px-3 py-1.5 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5"
+                  >
+                    <i data-lucide="award" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    <span>دانش‌آموز ممتاز</span>
+                  </span>
+                  <span 
+                    v-else 
+                    class="px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 flex items-center gap-1"
+                  >
+                    <i data-lucide="trending-up" class="w-3.5 h-3.5 text-royal"></i>
+                    <span>در مسیر پیشرفت</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Attention Reasons Banner (Only if needs_attention) -->
+              <div 
+                v-if="st.needs_attention && st.attention_reasons && st.attention_reasons.length > 0"
+                class="mb-3.5 p-3 rounded-2xl bg-rose-100/80 border border-rose-300/80 text-rose-900"
+              >
+                <div class="flex items-center gap-1.5 text-xs font-black mb-1.5 text-rose-800">
+                  <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600"></i>
+                  <span>دلایل نیاز به مداخله و توجه سیستم:</span>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <span 
+                    v-for="(reason, rIdx) in st.attention_reasons" 
+                    :key="rIdx"
+                    class="px-2.5 py-1 rounded-xl bg-white/90 border border-rose-300 text-rose-800 text-[11px] font-bold shadow-2xs flex items-center gap-1"
+                  >
+                    <i data-lucide="x-circle" class="w-3 h-3 text-rose-500"></i>
+                    <span>{{ reason }}</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- 4 Visual Activity Metric Bars / Cards -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3.5">
+                <!-- 1. Study Time -->
+                <div 
+                  class="p-2.5 rounded-2xl border text-right"
+                  :class="st.study_hours < 3 ? 'bg-rose-50/60 border-rose-200' : 'bg-mist/40 border-line'"
+                >
+                  <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-0.5">
+                    <span>⏱️ مطالعه در پنل</span>
+                    <span :class="st.study_hours < 3 ? 'text-rose-600 font-black' : 'text-emerald-600 font-bold'">
+                      {{ faNum(st.study_hours) }} ساعت
+                    </span>
+                  </div>
+                  <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1">
+                    <div 
+                      class="h-full rounded-full transition-all duration-500"
+                      :class="st.study_hours < 3 ? 'bg-rose-500' : 'bg-emerald-500'"
+                      :style="{ width: `${Math.min(100, (st.study_hours / 12) * 100)}%` }"
+                    ></div>
+                  </div>
+                  <span class="text-[10px] text-slate-400 block mt-1">{{ faNum(st.pomodoros_count) }} پومودورو</span>
+                </div>
+
+                <!-- 2. Exam Average -->
+                <div 
+                  class="p-2.5 rounded-2xl border text-right"
+                  :class="st.exam_avg_pct < 60 ? 'bg-rose-50/60 border-rose-200' : 'bg-mist/40 border-line'"
+                >
+                  <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-0.5">
+                    <span>📊 نمره آزمون‌ها</span>
+                    <span :class="st.exam_avg_pct < 60 ? 'text-rose-600 font-black' : 'text-royal font-black'">
+                      {{ faNum(st.exam_score_20) }} از ۲۰
+                    </span>
+                  </div>
+                  <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1">
+                    <div 
+                      class="h-full rounded-full transition-all duration-500"
+                      :class="st.exam_avg_pct < 60 ? 'bg-rose-500' : 'bg-royal'"
+                      :style="{ width: `${st.exam_avg_pct}%` }"
+                    ></div>
+                  </div>
+                  <span class="text-[10px] text-slate-400 block mt-1">{{ faNum(st.exams_taken) }} آزمون داده شده</span>
+                </div>
+
+                <!-- 3. Homework Completion -->
+                <div 
+                  class="p-2.5 rounded-2xl border text-right"
+                  :class="st.homework_missing_count >= 2 ? 'bg-rose-50/60 border-rose-200' : 'bg-mist/40 border-line'"
+                >
+                  <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-0.5">
+                    <span>📝 ارسال تکالیف</span>
+                    <span :class="st.homework_missing_count >= 2 ? 'text-rose-600 font-black' : 'text-emerald-600 font-bold'">
+                      {{ faNum(st.homework_completion_rate) }}٪
+                    </span>
+                  </div>
+                  <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1">
+                    <div 
+                      class="h-full rounded-full transition-all duration-500"
+                      :class="st.homework_missing_count >= 2 ? 'bg-rose-500' : 'bg-emerald-500'"
+                      :style="{ width: `${st.homework_completion_rate}%` }"
+                    ></div>
+                  </div>
+                  <span class="text-[10px] text-slate-400 block mt-1">{{ faNum(st.homeworks_submitted) }} از {{ faNum(st.homeworks_assigned) }} تکلیف</span>
+                </div>
+
+                <!-- 4. Attendance -->
+                <div 
+                  class="p-2.5 rounded-2xl border text-right"
+                  :class="st.absent_count >= 2 ? 'bg-rose-50/60 border-rose-200' : 'bg-mist/40 border-line'"
+                >
+                  <div class="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-0.5">
+                    <span>📅 حضور در کلاس</span>
+                    <span :class="st.absent_count >= 2 ? 'text-rose-600 font-black' : 'text-slate-700 font-bold'">
+                      {{ faNum(st.attendance_rate) }}٪
+                    </span>
+                  </div>
+                  <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1">
+                    <div 
+                      class="h-full rounded-full transition-all duration-500"
+                      :class="st.absent_count >= 2 ? 'bg-rose-500' : 'bg-slate-700'"
+                      :style="{ width: `${st.attendance_rate}%` }"
+                    ></div>
+                  </div>
+                  <span class="text-[10px] text-slate-400 block mt-1">{{ faNum(st.absent_count) }} جلسه غیبت</span>
+                </div>
+              </div>
+
+              <!-- AI Path & Diagnosis Suggestion Box -->
+              <div class="p-3 rounded-2xl bg-white border border-slate-200 text-xs flex items-center justify-between gap-3 flex-wrap">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="sparkles" class="w-4 h-4 text-amber-500 shrink-0"></i>
+                  <span class="text-slate-700 font-bold leading-relaxed">{{ st.ai_recommendation }}</span>
+                </div>
+              </div>
+
+              <!-- Quick Action Buttons for Teacher -->
+              <div class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 flex-wrap">
+                <button 
+                  v-if="st.needs_attention"
+                  @click="openAlertModal(st)"
+                  class="btn btn-sm !bg-rose-600 hover:!bg-rose-700 !text-white text-xs font-black shadow-md flex items-center gap-1.5"
+                >
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                  <span>ارسال هشدار تحصیلی به اولیا</span>
+                </button>
+
+                <button 
+                  v-else-if="st.status === 'excelling'"
+                  @click="sendPraise(st)"
+                  class="btn btn-sm !bg-emerald-600 hover:!bg-emerald-700 !text-white text-xs font-black shadow-sm flex items-center gap-1.5"
+                >
+                  <i data-lucide="star" class="w-3.5 h-3.5"></i>
+                  <span>ارسال تقدیرنامه به اولیا</span>
+                </button>
+
+                <button 
+                  @click="openRemedialModal(st)"
+                  class="btn btn-mist btn-sm text-xs font-bold flex items-center gap-1.5"
+                >
+                  <i data-lucide="clipboard-pen-line" class="w-3.5 h-3.5 text-royal"></i>
+                  <span>تعیین تکلیف جبرانی / یادداشت آموزشی</span>
+                </button>
+
+                <button 
+                  @click="toast(`مسیر یادگیری هوش مصنوعی برای ${st.full_name} تأیید شد`)"
+                  class="btn btn-ok btn-sm text-xs font-bold mr-auto flex items-center gap-1.5"
+                >
+                  <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                  <span>تأیید مسیر هوش مصنوعی</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Parent Alert Modal -->
+          <div v-if="alertModalOpen" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl text-right space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2 text-rose-600">
+                  <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                  <h4 class="font-black text-base text-ink">ارسال هشدار وضعیت تحصیلی به اولیا</h4>
+                </div>
+                <button @click="alertModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1">
+                  <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+              </div>
+
+              <div v-if="selectedStudentForAlert" class="p-3 rounded-2xl bg-slate-50 text-xs space-y-1">
+                <p><b class="text-ink">دانش‌آموز:</b> {{ selectedStudentForAlert.full_name }} ({{ selectedClass.label }})</p>
+                <p><b class="text-ink">ولی گرامی:</b> {{ selectedStudentForAlert.parent_name }} <span dir="ltr" class="font-mono">({{ selectedStudentForAlert.parent_phone || 'شماره ثبت نشده' }})</span></p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">متن پیام هشدار (قابل ویرایش):</label>
+                <textarea 
+                  v-model="alertMessageText" 
+                  rows="4" 
+                  class="w-full p-3 rounded-2xl border border-slate-200 text-xs focus:border-royal outline-none leading-relaxed"
+                ></textarea>
+              </div>
+
+              <div class="flex items-center justify-end gap-2 pt-2">
+                <button @click="alertModalOpen = false" class="btn btn-mist btn-sm text-xs font-bold">انصراف</button>
+                <button 
+                  @click="sendParentAlert" 
+                  :disabled="sendingAlert"
+                  class="btn btn-sm !bg-rose-600 hover:!bg-rose-700 !text-white text-xs font-black shadow-md flex items-center gap-1.5"
+                >
+                  <span v-if="sendingAlert">در حال ارسال...</span>
+                  <span v-else>ارسال پیام به اولیا</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Remedial Modal -->
+          <div v-if="remedialModalOpen" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl text-right space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2 text-royal">
+                  <i data-lucide="clipboard-pen-line" class="w-5 h-5"></i>
+                  <h4 class="font-black text-base text-ink">تخصیص برنامه جبرانی یا یادداشت آموزشی</h4>
+                </div>
+                <button @click="remedialModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1">
+                  <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+              </div>
+
+              <div v-if="selectedStudentForPlan" class="p-3 rounded-2xl bg-slate-50 text-xs">
+                <p><b class="text-ink">دانش‌آموز:</b> {{ selectedStudentForPlan.full_name }}</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1.5">توضیحات تکلیف یا برنامه جبرانی:</label>
+                <textarea 
+                  v-model="planText" 
+                  rows="4" 
+                  placeholder="مثلاً: حل سوالات ۳ تا ۷ از کتاب کار و مطالعه مجدد فصل کسرها تا روز چهارشنبه..." 
+                  class="w-full p-3 rounded-2xl border border-slate-200 text-xs focus:border-royal outline-none leading-relaxed"
+                ></textarea>
+              </div>
+
+              <div class="flex items-center justify-end gap-2 pt-2">
+                <button @click="remedialModalOpen = false" class="btn btn-mist btn-sm text-xs font-bold">انصراف</button>
+                <button @click="assignRemedialPlan" class="btn btn-royal btn-sm text-xs font-black shadow-md">ثبت و ارسال به دانش‌آموز</button>
               </div>
             </div>
           </div>
@@ -1733,8 +2123,191 @@ async function saveOnlineExamFromHoosh() {
   }
 }
 
+// ----------------- STUDENT PERFORMANCE & SMART ATTENTION DETECTION -----------------
+const perfStudents = ref([]);
+const perfSummary = ref({
+  total_students: 0,
+  needs_attention_count: 0,
+  excelling_count: 0,
+  good_count: 0,
+  class_study_avg_hours: 0,
+  class_exam_avg_pct: 0,
+  class_exam_avg_20: 0,
+  class_hw_rate: 0
+});
+const perfFilter = ref('all');
+const perfSort = ref('attention');
+const perfSearch = ref('');
+const perfLoading = ref(false);
+
+const alertModalOpen = ref(false);
+const selectedStudentForAlert = ref(null);
+const alertMessageText = ref('');
+const sendingAlert = ref(false);
+
+const remedialModalOpen = ref(false);
+const selectedStudentForPlan = ref(null);
+const planText = ref('');
+
+const filteredPerfStudents = computed(() => {
+  let list = [...perfStudents.value];
+
+  if (perfFilter.value === 'needs_attention') {
+    list = list.filter(s => s.needs_attention);
+  } else if (perfFilter.value === 'excelling') {
+    list = list.filter(s => s.status === 'excelling');
+  } else if (perfFilter.value === 'good') {
+    list = list.filter(s => s.status === 'good');
+  }
+
+  if (perfSearch.value.trim()) {
+    const q = perfSearch.value.trim().toLowerCase();
+    list = list.filter(s => 
+      (s.full_name && s.full_name.toLowerCase().includes(q)) ||
+      (s.phone && s.phone.includes(q))
+    );
+  }
+
+  if (perfSort.value === 'attention') {
+    list.sort((a, b) => {
+      if (a.needs_attention && !b.needs_attention) return -1;
+      if (!a.needs_attention && b.needs_attention) return 1;
+      return (b.attention_reasons?.length || 0) - (a.attention_reasons?.length || 0);
+    });
+  } else if (perfSort.value === 'exam_high') {
+    list.sort((a, b) => (b.exam_avg_pct || 0) - (a.exam_avg_pct || 0));
+  } else if (perfSort.value === 'study_high') {
+    list.sort((a, b) => (b.study_hours || 0) - (a.study_hours || 0));
+  } else if (perfSort.value === 'hw_low') {
+    list.sort((a, b) => (a.homework_completion_rate || 0) - (b.homework_completion_rate || 0));
+  } else if (perfSort.value === 'name') {
+    list.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'fa'));
+  }
+
+  return list;
+});
+
+async function loadStudentsPerformance() {
+  perfLoading.value = true;
+  try {
+    const grade = selectedClass.value?.grade || 'هفتم';
+    const className = selectedClass.value?.class_name || 'الف';
+    const res = await fetch(`/api/teacher/students-performance?grade=${encodeURIComponent(grade)}&class_name=${encodeURIComponent(className)}`);
+    if (res.ok) {
+      const data = await res.json();
+      perfStudents.value = data.students || [];
+      if (data.summary) {
+        perfSummary.value = data.summary;
+      }
+    }
+  } catch (err) {
+    console.error('Error loading performance:', err);
+  } finally {
+    perfLoading.value = false;
+    nextTick(() => refreshIcons());
+  }
+}
+
+function openAlertModal(st) {
+  selectedStudentForAlert.value = st;
+  const reasonsText = st.attention_reasons && st.attention_reasons.length > 0 
+    ? st.attention_reasons.join('، ') 
+    : 'نیاز به افزایش ساعت مطالعه و پیگیری تکالیف';
+  alertMessageText.value = `با سلام و احترام؛ اولیای گرامی دانش‌آموز ${st.full_name}، وضعیت تحصیلی نامبرده در پلتفرم رشد بررسی شد. موارد نیازمند توجه: ${reasonsText}. لطفاً پیگیری و نظارت لازم جهت بهبود روند در منزل را مبذول فرمایید.`;
+  alertModalOpen.value = true;
+  nextTick(() => refreshIcons());
+}
+
+async function sendParentAlert() {
+  if (!selectedStudentForAlert.value || !alertMessageText.value.trim()) return;
+  sendingAlert.value = true;
+  try {
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        receiver_id: selectedStudentForAlert.value.id,
+        text: alertMessageText.value.trim()
+      })
+    });
+    if (res.ok) {
+      toast(`پیام هشدار تحصیلی به صورت سیستمی به اولیای ${selectedStudentForAlert.value.full_name} ارسال گردید.`);
+      alertModalOpen.value = false;
+      alertMessageText.value = '';
+    } else {
+      const d = await res.json();
+      toast(d.error || 'خطا در ارسال پیام هشدار');
+    }
+  } catch (e) {
+    toast('خطا در برقراری ارتباط با سرور');
+  } finally {
+    sendingAlert.value = false;
+    nextTick(() => refreshIcons());
+  }
+}
+
+async function sendPraise(st) {
+  try {
+    const text = `با سلام و درود؛ اولیای گرامی دانش‌آموز ممتاز ${st.full_name}، بدین‌وسیله مراتب تقدیر از پشتکار عالی، نمرات درخشان و حل کامل تکالیف فرزندتان در پلتفرم رشد تقدیم می‌گردد. با آرزوی تداوم موفقیت‌ها.`;
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        receiver_id: st.id,
+        text
+      })
+    });
+    if (res.ok) {
+      toast(`تقدیرنامه با موفقیت برای اولیای ${st.full_name} ارسال شد.`);
+    }
+  } catch (e) {
+    toast('خطا در ارسال پیام');
+  }
+}
+
+function openRemedialModal(st) {
+  selectedStudentForPlan.value = st;
+  planText.value = `برنامه مطالعاتی جبرانی برای ${st.full_name}: حل آزمون فصل گذشته و ارسال مجدد تکالیف تا پایان هفته.`;
+  remedialModalOpen.value = true;
+  nextTick(() => refreshIcons());
+}
+
+async function assignRemedialPlan() {
+  if (!selectedStudentForPlan.value || !planText.value.trim()) return;
+  try {
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        receiver_id: selectedStudentForPlan.value.id,
+        text: `[برنامه آموزشی جبرانی]\n${planText.value.trim()}`
+      })
+    });
+    if (res.ok) {
+      toast(`برنامه جبرانی برای ${selectedStudentForPlan.value.full_name} ثبت و ابلاغ شد.`);
+      remedialModalOpen.value = false;
+      planText.value = '';
+    }
+  } catch (e) {
+    toast('خطا در ثبت برنامه');
+  }
+}
+
+watch(clsSubTab, (val) => {
+  if (val === 'perf') {
+    loadStudentsPerformance();
+  }
+  nextTick(() => refreshIcons());
+});
+
+watch(selectedClass, () => {
+  loadAttendance();
+  loadStudentsPerformance();
+});
+
 onMounted(() => {
   loadAttendance();
+  loadStudentsPerformance();
   loadHwReports();
   loadMessages();
   refreshIcons();

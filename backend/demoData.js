@@ -255,31 +255,35 @@ function loadDemoData(db) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    insertSub.run(
-      hw1Id, aliId, '۴ آبان ۱۴۰۵، ساعت ۱۶:۳۰',
-      '/assets/levels_roadmap_modal_live.png',
-      'استاد گرامی، تمام تمرین‌ها طبق جزوه حل و در دو صفحه پیوست گردید.',
-      0, 'checked', 19, 'آفرین علی جان! استدلال شما در سؤال ۳ بسیار دقیق و هوشمندانه بود.'
-    );
-
-    insertSub.run(
-      hw2Id, aliId, '۴ آبان ۱۴۰۵، ساعت ۱۸:۰۰',
-      null,
-      'سلام خانم احمدی، محاسبات جدول آونگ انجام شد و فایل نمودار ضمیمه است.',
-      0, 'submitted', null, null
-    );
-
-    // Submissions from other students in class
-    const other7A = studentIdsByClass['هفتم-الف'].slice(1, 6);
-    if (other7A[0]) {
-      insertSub.run(hw1Id, other7A[0], '۳ آبان ۱۴۰۵', null, 'ارسال تکالیف هوش کلامی', 0, 'checked', 18, 'خوب بود، به نکات نگارشی هم دقت کن.');
-    }
-    if (other7A[1]) {
-      insertSub.run(hw1Id, other7A[1], '۴ آبان ۱۴۰۵', null, 'حل تمرینات کسرها', 0, 'submitted', null, null);
-    }
-    if (other7A[2]) {
-      insertSub.run(hw2Id, other7A[2], '۴ آبان ۱۴۰۵', null, 'گزارش آزمایشگاه علوم', 0, 'submitted', null, null);
-    }
+    // Submissions from students in class 7-A
+    const class7A = studentIdsByClass['هفتم-الف'];
+    class7A.forEach((sid, idx) => {
+      if (idx === 0) {
+        // Ali Rezaei: top submissions
+        insertSub.run(hw1Id, sid, '۴ آبان ۱۴۰۵، ساعت ۱۶:۳۰', '/assets/levels_roadmap_modal_live.png', 'استاد گرامی، تمرین‌ها حل و پیوست گردید.', 0, 'checked', 19, 'استدلال شما در سؤال ۳ بسیار دقیق بود.');
+        insertSub.run(hw2Id, sid, '۴ آبان ۱۴۰۵، ساعت ۱۸:۰۰', null, 'محاسبات جدول آونگ انجام شد.', 0, 'submitted', null, null);
+        insertSub.run(hw3Id, sid, '۴ آبان ۱۴۰۵، ساعت ۱۹:۳۰', null, 'پاسخ مسائل کسرها پیوست شد.', 0, 'checked', 20, 'عالی و بی‌نقص.');
+      } else if (idx >= 1 && idx <= 5) {
+        // Excelling group: submitted all 3
+        insertSub.run(hw1Id, sid, '۳ آبان ۱۴۰۵', null, 'حل کامل تمرین‌ها', 0, 'checked', 18 + (idx % 3), 'آفرین، بسیار خوب انجام شد.');
+        insertSub.run(hw2Id, sid, '۴ آبان ۱۴۰۵', null, 'ارسال گزارش آزمایشگاه', 0, 'checked', 19, 'نمودار با دقت رسم شده است.');
+        insertSub.run(hw3Id, sid, '۴ آبان ۱۴۰۵', null, 'پاسخ کسرها', 0, 'submitted', null, null);
+      } else if (idx >= 6 && idx <= 15) {
+        // Normal group: submitted 2 out of 3
+        insertSub.run(hw1Id, sid, '۴ آبان ۱۴۰۵', null, 'حل تمرین', 0, 'checked', 14 + (idx % 4), 'خوب بود.');
+        insertSub.run(hw2Id, sid, '۴ آبان ۱۴۰۵', null, 'گزارش علوم', 0, 'submitted', null, null);
+      } else if (idx >= 16 && idx <= 20) {
+        // Needs Attention group (missing 2+ homeworks or failing grades)
+        if (idx === 16) {
+          // Submitted 1 late homework with low score
+          insertSub.run(hw1Id, sid, '۴ آبان ۱۴۰۵، با تاخیر', null, 'تکلیف ناقص', 1, 'checked', 8, 'تکلیف ناقص است و نیمی از سؤالات حل نشده.');
+        } else if (idx === 19) {
+          // Submitted 1 homework
+          insertSub.run(hw2Id, sid, '۴ آبان ۱۴۰۵', null, 'بخشی از گزارش', 0, 'checked', 9, 'نیاز به بازبینی و اصلاح دارد.');
+        }
+        // idx 17 and 18 submitted ZERO homeworks!
+      }
+    });
 
     // 9. Exams & Results
     const insertExam = db.prepare(`
@@ -323,12 +327,35 @@ function loadDemoData(db) {
     insertResult.run(exam1Id, aliId, 16, 5, 4, 1, 0, 80.0, 2, '۲ آبان ۱۴۰۵');
     db.prepare('INSERT OR REPLACE INTO exam_attempts (exam_id, student_id, started_at) VALUES (?, ?, ?)').run(exam1Id, aliId, Date.now() - 86400000 * 2);
 
-    // Add exam results for top students in 7-A
-    studentIdsByClass['هفتم-الف'].slice(1, 8).forEach((sid, i) => {
-      const correct = 3 + (i % 3);
-      const wrong = 5 - correct;
-      const pct = (correct / 5) * 100;
-      insertResult.run(exam1Id, sid, correct * 4, 5, correct, wrong, 0, pct, i + 3, '۲ آبان ۱۴۰۵');
+    // Add exam results for students in 7-A (excelling, good, and needs attention)
+    class7A.forEach((sid, idx) => {
+      if (idx === 0) return; // already added Ali
+      if (idx >= 1 && idx <= 5) {
+        // Excelling: 4 or 5 correct (80% - 100%)
+        const correct = idx % 2 === 0 ? 5 : 4;
+        const wrong = 5 - correct;
+        const pct = (correct / 5) * 100;
+        insertResult.run(exam1Id, sid, correct * 4, 5, correct, wrong, 0, pct, idx + 1, '۲ آبان ۱۴۰۵');
+      } else if (idx >= 6 && idx <= 15) {
+        // Good: 3 or 4 correct (60% - 80%)
+        const correct = 3 + (idx % 2);
+        const wrong = 5 - correct;
+        const pct = (correct / 5) * 100;
+        insertResult.run(exam1Id, sid, correct * 4, 5, correct, wrong, 0, pct, idx + 2, '۲ آبان ۱۴۰۵');
+      } else if (idx >= 16 && idx <= 20) {
+        // Needs Attention: low scores or missed
+        if (idx === 16) {
+          // 1 correct out of 5 (20%) -> 4 out of 20
+          insertResult.run(exam1Id, sid, 4, 5, 1, 4, 0, 20.0, 24, '۲ آبان ۱۴۰۵');
+        } else if (idx === 17) {
+          // 2 correct out of 5 (40%) -> 8 out of 20
+          insertResult.run(exam1Id, sid, 8, 5, 2, 3, 0, 40.0, 23, '۲ آبان ۱۴۰۵');
+        } else if (idx === 19) {
+          // 2 correct out of 5 (40%)
+          insertResult.run(exam1Id, sid, 8, 5, 2, 2, 1, 40.0, 22, '۲ آبان ۱۴۰۵');
+        }
+        // idx 18 did not take exam1 (missed exam)
+      }
     });
 
     // 10. Fee Receipts (Pending, Approved, Rejected)
@@ -429,16 +456,44 @@ function loadDemoData(db) {
       320000, 'ORD-991824', 'علی رضایی', '09129876543', 'تهران، خیابان ملاصدرا', 'completed'
     );
 
-    // 13. Study Sessions (Study hours planner for Ali Rezaei)
+    // 13. Study Sessions (Study hours planner for students in 7-A)
     const insertStudy = db.prepare(`
       INSERT INTO study_sessions (student_id, date_fa, pomodoros_count, total_minutes, last_session_at)
       VALUES (?, ?, ?, ?, ?)
     `);
 
+    // Ali Rezaei: 10.5 hours of dedicated study
     insertStudy.run(aliId, '۱۴۰۵/۰۸/۰۱', 4, 120, Date.now() - 86400000 * 3);
     insertStudy.run(aliId, '۱۴۰۵/۰۸/۰۲', 6, 180, Date.now() - 86400000 * 2);
     insertStudy.run(aliId, '۱۴۰۵/۰۸/۰۳', 5, 150, Date.now() - 86400000);
     insertStudy.run(aliId, '۱۴۰۵/۰۸/۰۴', 6, 180, Date.now());
+
+    // Other students in class 7-A
+    class7A.forEach((sid, idx) => {
+      if (idx === 0) return; // already added Ali
+      if (idx >= 1 && idx <= 5) {
+        // Excelling: 8 to 12 hours
+        insertStudy.run(sid, '۱۴۰۵/۰۸/۰۱', 4, 120, Date.now() - 86400000 * 3);
+        insertStudy.run(sid, '۱۴۰۵/۰۸/۰۲', 5, 150, Date.now() - 86400000 * 2);
+        insertStudy.run(sid, '۱۴۰۵/۰۸/۰۳', 6, 180, Date.now() - 86400000);
+        insertStudy.run(sid, '۱۴۰۵/۰۸/۰۴', 5 + (idx % 2), 150, Date.now());
+      } else if (idx >= 6 && idx <= 15) {
+        // Good: 4 to 6 hours
+        insertStudy.run(sid, '۱۴۰۵/۰۸/۰۲', 3, 90, Date.now() - 86400000 * 2);
+        insertStudy.run(sid, '۱۴۰۵/۰۸/۰۳', 4, 120, Date.now() - 86400000);
+        insertStudy.run(sid, '۱۴۰۵/۰۸/۰۴', 3, 90, Date.now());
+      } else if (idx >= 16 && idx <= 20) {
+        // Needs Attention: low or zero study time (< 2 hours)
+        if (idx === 16) {
+          insertStudy.run(sid, '۱۴۰۵/۰۸/۰۱', 2, 60, Date.now() - 86400000 * 3);
+        } else if (idx === 17) {
+          insertStudy.run(sid, '۱۴۰۵/۰۸/۰۲', 3, 90, Date.now() - 86400000 * 2);
+        } else if (idx === 19) {
+          insertStudy.run(sid, '۱۴۰۵/۰۸/۰۳', 2, 50, Date.now() - 86400000);
+        }
+        // idx 18 has 0 study sessions logged
+      }
+    });
 
     // 14. Points Log for Student
     const insertPt = db.prepare(`

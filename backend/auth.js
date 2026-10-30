@@ -60,12 +60,13 @@ async function verifyPassword(inputPassword, storedHash) {
 }
 
 // Token generation with 12h lifetime and token_version
-function generateToken(user) {
+function generateToken(user, extraClaims = {}) {
   return jwt.sign(
     {
       id: user.id,
       national_id: user.national_id,
-      token_version: user.token_version || 1
+      token_version: user.token_version || 1,
+      ...extraClaims
     },
     JWT_SECRET,
     { expiresIn: '12h' }
@@ -173,6 +174,12 @@ function createAuthMiddleware(db) {
         must_change_password: dbUser.must_change_password,
         token_version: dbUser.token_version
       };
+
+      if (decoded.admin_id) {
+        req.admin_id = Number(decoded.admin_id);
+        req.user.admin_id = Number(decoded.admin_id);
+        req.user.is_impersonated = true;
+      }
     } catch (err) {
       req.user = null;
     }

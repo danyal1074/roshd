@@ -490,7 +490,105 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 app.get('/api/auth/me', requireAuth, (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: 'کاربر یافت نشد.' });
-  res.json({ user: sanitizeUser(user) });
+  const sanitized = sanitizeUser(user);
+  if (req.admin_id) {
+    sanitized.is_impersonated = true;
+    sanitized.admin_id = req.admin_id;
+  }
+  res.json({ user: sanitized });
+});
+
+// Admin Panel Switcher & Role Impersonation for Development & Auditing
+app.get('/api/admin/switch-role/targets', requireAuth, (req, res) => {
+  const adminId = req.user.role === 'admin' ? req.user.id : req.admin_id;
+  if (!adminId) {
+    return res.status(403).json({ error: 'تنها مدیر سیستم به این بخش دسترسی دارد.' });
+  }
+
+  const admin = db.prepare("SELECT id, role, full_name, phone FROM users WHERE role = 'admin' LIMIT 1").get();
+  const teacher = db.prepare("SELECT id, role, full_name, phone FROM users WHERE role = 'teacher' AND is_active = 1 LIMIT 1").get();
+  const student = db.prepare("SELECT id, role, full_name, phone, grade, class_name FROM users WHERE role = 'student' AND is_active = 1 LIMIT 1").get();
+  const parent = db.prepare("SELECT id, role, full_name, phone FROM users WHERE role = 'parent' AND is_active = 1 LIMIT 1").get();
+
+  res.json({
+    admin,
+    teacher,
+    student,
+    parent,
+    active_role: req.user.role,
+    active_id: req.user.id,
+    is_impersonated: !!req.admin_id,
+    original_admin_id: adminId
+  });
+});
+
+app.post('/api/admin/switch-role', requireAuth, async (req, res) => {
+  const adminId = req.user.role === 'admin' ? req.user.id : req.admin_id;
+  if (!adminId) {
+    return res.status(403).json({ error: 'تنها مدیر سیستم مجاز به تغییر نقش و شبیه‌سازی است.' });
+  }
+
+  const { target_role, user_id } = req.body;
+  let targetUser = null;
+
+  if (target_role === 'admin') {
+    targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(adminId);
+    if (!targetUser) {
+      targetUser = db.prepare("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
+    }
+  } else if (user_id) {
+    targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(user_id));
+  } else if (target_role) {
+    targetUser = db.prepare('SELECT * FROM users WHERE role = ? AND is_active = 1 ORDER BY id ASC LIMIT 1').get(target_role);
+  }
+
+  if (!targetUser) {
+    return res.status(404).json({ error: `کاربری با نقش ${target_role || user_id} یافت نشد.` });
+  }
+
+  const isSwitchingBackToAdmin = targetUser.role === 'admin' && targetUser.id === adminId;
+  const extraClaims = isSwitchingBackToAdmin ? {} : { admin_id: adminId };
+  const token = generateToken(targetUser, extraClaims);
+  setAuthCookie(res, token);
+
+  const sanitized = sanitizeUser(targetUser);
+  sanitized.is_impersonated = !isSwitchingBackToAdmin;
+  sanitized.admin_id = isSwitchingBackToAdmin ? null : adminId;
+
+  recordAudit(adminId, 'IMPERSONATE_SWITCH', 'user', targetUser.id, `Admin switched view to ${targetUser.role}: ${targetUser.full_name}`, req.ip);
+
+  res.json({
+    success: true,
+    user: sanitized,
+    message: `نقش فعال به ${targetUser.full_name} (${targetUser.role}) تغییر یافت.`
+  });
+});
+
+app.post('/api/admin/switch-back', requireAuth, async (req, res) => {
+  const adminId = req.admin_id || (req.user.role === 'admin' ? req.user.id : null);
+  if (!adminId) {
+    return res.status(400).json({ error: 'شناسه مدیر اصلی یافت نشد.' });
+  }
+
+  const adminUser = db.prepare('SELECT * FROM users WHERE id = ?').get(adminId);
+  if (!adminUser) {
+    return res.status(404).json({ error: 'کاربر مدیر یافت نشد.' });
+  }
+
+  const token = generateToken(adminUser, {});
+  setAuthCookie(res, token);
+
+  const sanitized = sanitizeUser(adminUser);
+  sanitized.is_impersonated = false;
+  sanitized.admin_id = null;
+
+  recordAudit(adminId, 'IMPERSONATE_RESTORE', 'user', adminUser.id, 'Admin restored original session', req.ip);
+
+  res.json({
+    success: true,
+    user: sanitized,
+    message: 'با موفقیت به پنل مدیریت بازگشتید.'
+  });
 });
 
 app.post('/api/auth/logout', requireAuth, (req, res) => {
@@ -692,6 +790,263 @@ app.get('/api/students', requireAuth, requireRole('admin', 'teacher'), (req, res
       total_pages: Math.ceil(totalCount / limitNum)
     }
   });
+});
+
+// ----------------- TEACHER: COMPREHENSIVE STUDENT PERFORMANCE & SMART ATTENTION DETECTION -----------------
+app.get('/api/teacher/students-performance', requireAuth, requireRole('teacher', 'admin'), (req, res) => {
+  try {
+    const { grade = 'هفتم', class_name = 'الف', search = '', status_filter = 'all', sort_by = 'attention' } = req.query;
+
+    let studentsQuery = `
+      SELECT id, role, national_id, phone, full_name, first_name, last_name, 
+             grade, class_name, total_points, parent_phone, parent_name
+      FROM users 
+      WHERE role = 'student' AND is_active = 1
+    `;
+    const params = [];
+
+    if (grade && grade !== 'all') {
+      studentsQuery += ' AND grade = ?';
+      params.push(grade);
+    }
+    if (class_name && class_name !== 'all' && class_name !== 'همه کلاس‌ها') {
+      studentsQuery += ' AND class_name = ?';
+      params.push(class_name);
+    }
+    if (search) {
+      studentsQuery += ' AND (full_name LIKE ? OR national_id LIKE ? OR phone LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
+
+    studentsQuery += ' ORDER BY id ASC';
+    const rawStudents = db.prepare(studentsQuery).all(...params);
+
+    // Total homeworks assigned to this class
+    const totalHwRow = db.prepare(`
+      SELECT COUNT(*) as count FROM homeworks
+      WHERE (? = 'all' OR grade = ? OR grade = 'all')
+        AND (? = 'all' OR class_name = ? OR class_name = 'all' OR class_name = 'همه کلاس‌ها')
+    `).get(grade, grade, class_name, class_name);
+    const totalHomeworksAssigned = totalHwRow ? totalHwRow.count : 0;
+
+    // Total exams published for this class
+    const totalExamsRow = db.prepare(`
+      SELECT COUNT(*) as count FROM exams
+      WHERE (? = 'all' OR grade = ? OR grade = 'all')
+        AND (? = 'all' OR class_name = ? OR class_name = 'all' OR class_name = 'همه کلاس‌ها')
+    `).get(grade, grade, class_name, class_name);
+    const totalExamsPublished = totalExamsRow ? totalExamsRow.count : 0;
+
+    // Prepared statements for fast per-student aggregated metrics
+    const studyStmt = db.prepare(`
+      SELECT 
+        COALESCE(SUM(total_minutes), 0) as total_minutes,
+        COALESCE(SUM(pomodoros_count), 0) as total_pomodoros,
+        COUNT(DISTINCT date_fa) as study_days
+      FROM study_sessions
+      WHERE student_id = ?
+    `);
+
+    const examStmt = db.prepare(`
+      SELECT 
+        COUNT(*) as exams_taken,
+        COALESCE(AVG(percentage), 0) as exam_avg,
+        COALESCE(MAX(percentage), 0) as exam_max,
+        COALESCE(MIN(percentage), 0) as exam_min
+      FROM exam_results
+      WHERE student_id = ?
+    `);
+
+    const hwStmt = db.prepare(`
+      SELECT 
+        COUNT(*) as submitted_count,
+        COALESCE(AVG(grade_score), 0) as avg_grade,
+        SUM(CASE WHEN is_late = 1 THEN 1 ELSE 0 END) as late_count
+      FROM homework_submissions
+      WHERE student_id = ?
+    `);
+
+    const attStmt = db.prepare(`
+      SELECT 
+        COUNT(*) as total_days,
+        SUM(CASE WHEN status = 'p' THEN 1 ELSE 0 END) as present_count,
+        SUM(CASE WHEN status = 'a' THEN 1 ELSE 0 END) as absent_count,
+        SUM(CASE WHEN status = 'e' THEN 1 ELSE 0 END) as excused_count
+      FROM attendance
+      WHERE student_id = ?
+    `);
+
+    let totalClassStudyMins = 0;
+    let totalClassExamPct = 0;
+    let studentsWithExams = 0;
+    let totalClassHwSubmitted = 0;
+    let totalPossibleHws = 0;
+
+    const studentList = rawStudents.map(st => {
+      const study = studyStmt.get(st.id) || { total_minutes: 0, total_pomodoros: 0, study_days: 0 };
+      const exam = examStmt.get(st.id) || { exams_taken: 0, exam_avg: 0, exam_max: 0, exam_min: 0 };
+      const hw = hwStmt.get(st.id) || { submitted_count: 0, avg_grade: 0, late_count: 0 };
+      const att = attStmt.get(st.id) || { total_days: 0, present_count: 0, absent_count: 0, excused_count: 0 };
+
+      const studyHours = Math.round((study.total_minutes / 60) * 10) / 10;
+      const hwCompletionRate = totalHomeworksAssigned > 0 
+        ? Math.min(100, Math.round((hw.submitted_count / totalHomeworksAssigned) * 100))
+        : 100;
+      const hwMissingCount = Math.max(0, totalHomeworksAssigned - hw.submitted_count);
+      const examAvgPct = Math.round(exam.exam_avg * 10) / 10;
+      const examScore20 = Math.round((examAvgPct / 5) * 10) / 10; // convert 100% to standard Iranian /20 score
+      const attendanceRate = att.total_days > 0 
+        ? Math.round((att.present_count / att.total_days) * 100)
+        : 100;
+
+      totalClassStudyMins += study.total_minutes;
+      if (exam.exams_taken > 0) {
+        totalClassExamPct += examAvgPct;
+        studentsWithExams++;
+      }
+      totalClassHwSubmitted += hw.submitted_count;
+      totalPossibleHws += totalHomeworksAssigned;
+
+      // Smart Need Attention Algorithm: Evaluate academic, engagement, homework and attendance deficits
+      const reasons = [];
+      if (exam.exams_taken > 0 && examAvgPct < 60) {
+        reasons.push(`افت نمره در آزمون‌ها (میانگین ${examScore20} از ۲۰)`);
+      }
+      if (totalExamsPublished >= 2 && exam.exams_taken === 0) {
+        reasons.push(`عدم شرکت در آزمون‌های برگزارشده (${totalExamsPublished} آزمون)`);
+      }
+      if (hwMissingCount >= 2) {
+        reasons.push(`${hwMissingCount} تکلیف تحویل داده نشده`);
+      }
+      if (studyHours < 3.0) {
+        reasons.push(`ساعت مطالعه پایین در سامانه (${studyHours} ساعت)`);
+      }
+      if (att.absent_count >= 2) {
+        reasons.push(`${att.absent_count} جلسه غیبت غیرموجه`);
+      } else if (att.total_days >= 3 && attendanceRate < 75) {
+        reasons.push(`نرخ حضور پایین در کلاس (${attendanceRate}٪)`);
+      }
+
+      let status = 'good';
+      let needsAttention = false;
+      let severity = 'normal';
+      let aiRecommendation = '';
+
+      if (reasons.length > 0) {
+        needsAttention = true;
+        status = 'needs_attention';
+        severity = reasons.length >= 2 ? 'critical' : 'warning';
+        aiRecommendation = `پیشنهاد هوش مصنوعی: ارسال هشدار به ولی دانش‌آموز، بررسی علت ${reasons[0]} و تعیین تکلیف جبرانی کوتاه.`;
+      } else if (examAvgPct >= 80 && hwCompletionRate >= 80 && studyHours >= 7) {
+        status = 'excelling';
+        aiRecommendation = 'پیشنهاد هوش مصنوعی: مسیر هوش پیشرفته، شرکت در المپیادهای مرحله دوم و تست‌های شبیه‌ساز تیزهوشان.';
+      } else {
+        status = 'good';
+        aiRecommendation = 'پیشنهاد هوش مصنوعی: ادامه روند منظم، پیگیری پومودوروهای روزانه و آمادگی برای آزمون بعدی.';
+      }
+
+      return {
+        id: st.id,
+        full_name: st.full_name,
+        grade: st.grade,
+        class_name: st.class_name,
+        phone: st.phone,
+        parent_name: st.parent_name || 'ولی محترم',
+        parent_phone: st.parent_phone,
+        total_points: st.total_points || 0,
+        // Study Metrics
+        study_hours: studyHours,
+        study_minutes: study.total_minutes,
+        pomodoros_count: study.total_pomodoros,
+        study_days: study.study_days,
+        // Exam Metrics
+        exams_taken: exam.exams_taken,
+        total_exams_published: totalExamsPublished,
+        exam_avg_pct: examAvgPct,
+        exam_score_20: examScore20,
+        exam_max_pct: Math.round(exam.exam_max),
+        // Homework Metrics
+        homeworks_submitted: hw.submitted_count,
+        homeworks_assigned: totalHomeworksAssigned,
+        homework_completion_rate: hwCompletionRate,
+        homework_missing_count: hwMissingCount,
+        homework_avg_grade: Math.round(hw.avg_grade * 10) / 10,
+        late_submissions: hw.late_count,
+        // Attendance Metrics
+        attendance_total: att.total_days,
+        present_count: att.present_count,
+        absent_count: att.absent_count,
+        excused_count: att.excused_count,
+        attendance_rate: attendanceRate,
+        // Smart Status
+        needs_attention: needsAttention,
+        status,
+        severity,
+        attention_reasons: reasons,
+        ai_recommendation: aiRecommendation
+      };
+    });
+
+    // Summary calculations
+    const totalStudents = studentList.length;
+    const needsAttentionCount = studentList.filter(s => s.needs_attention).length;
+    const excellingCount = studentList.filter(s => s.status === 'excelling').length;
+    const goodCount = studentList.filter(s => s.status === 'good').length;
+
+    const classStudyAvgHours = totalStudents > 0 
+      ? Math.round((totalClassStudyMins / 60 / totalStudents) * 10) / 10 
+      : 0;
+    const classExamAvgPct = studentsWithExams > 0 
+      ? Math.round((totalClassExamPct / studentsWithExams) * 10) / 10 
+      : 0;
+    const classHwRate = totalPossibleHws > 0 
+      ? Math.round((totalClassHwSubmitted / totalPossibleHws) * 100) 
+      : 0;
+
+    // Filter
+    let filteredList = studentList;
+    if (status_filter === 'needs_attention') {
+      filteredList = studentList.filter(s => s.needs_attention);
+    } else if (status_filter === 'excelling') {
+      filteredList = studentList.filter(s => s.status === 'excelling');
+    } else if (status_filter === 'good') {
+      filteredList = studentList.filter(s => s.status === 'good');
+    }
+
+    // Sort
+    if (sort_by === 'attention') {
+      filteredList.sort((a, b) => {
+        if (a.needs_attention && !b.needs_attention) return -1;
+        if (!a.needs_attention && b.needs_attention) return 1;
+        return b.attention_reasons.length - a.attention_reasons.length;
+      });
+    } else if (sort_by === 'exam_high') {
+      filteredList.sort((a, b) => b.exam_avg_pct - a.exam_avg_pct);
+    } else if (sort_by === 'study_high') {
+      filteredList.sort((a, b) => b.study_hours - a.study_hours);
+    } else if (sort_by === 'hw_low') {
+      filteredList.sort((a, b) => a.homework_completion_rate - b.homework_completion_rate);
+    } else if (sort_by === 'name') {
+      filteredList.sort((a, b) => a.full_name.localeCompare(b.full_name, 'fa'));
+    }
+
+    res.json({
+      summary: {
+        total_students: totalStudents,
+        needs_attention_count: needsAttentionCount,
+        excelling_count: excellingCount,
+        good_count: goodCount,
+        class_study_avg_hours: classStudyAvgHours,
+        class_exam_avg_pct: classExamAvgPct,
+        class_exam_avg_20: Math.round((classExamAvgPct / 5) * 10) / 10,
+        class_hw_rate: classHwRate
+      },
+      students: filteredList
+    });
+  } catch (err) {
+    console.error('Error in /api/teacher/students-performance:', err);
+    res.status(500).json({ error: 'خطا در محاسبه شاخص‌های عملکرد دانش‌آموزان' });
+  }
 });
 
 app.post('/api/students', requireAuth, requireRole('admin'), (req, res) => {

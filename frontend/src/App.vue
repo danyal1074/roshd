@@ -1,5 +1,109 @@
 <template>
   <div class="min-h-screen bg-mist text-ink selection:bg-royal selection:text-white flex flex-col">
+    <!-- Admin Dev / Role Switcher Bar -->
+    <div 
+      v-if="isAdminOrImpersonated" 
+      class="sticky top-0 z-40 transition-all duration-300"
+    >
+      <!-- Collapsed floating trigger -->
+      <div v-if="switcherCollapsed" class="fixed top-3 left-3 z-50">
+        <button 
+          @click="switcherCollapsed = false" 
+          class="flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-900/90 text-white shadow-2xl border border-white/20 backdrop-blur-md text-xs font-bold hover:bg-slate-800"
+          title="باز کردن نوار شبیه‌ساز نقش‌ها"
+        >
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>شبیه‌ساز مدیر ({{ roleTitle(currentUser?.role) }})</span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <!-- Expanded Top Dev Switcher Bar -->
+      <div v-else class="bg-slate-950/95 backdrop-blur-md border-b border-white/10 shadow-2xl text-white px-3 sm:px-6 py-2.5">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-2 flex-wrap">
+          <!-- Left Label & Current Identity -->
+          <div class="flex items-center gap-2.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-amber-400">⚡ شبیه‌ساز نقش‌ها (ویژه توسعه مدیر)</span>
+                <span v-if="currentUser?.is_impersonated" class="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full font-bold">
+                  حالت شبیه‌سازی فعال
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-300">
+                کاربر فعال: <b class="text-white">{{ currentUser?.full_name }}</b> ({{ roleTitle(currentUser?.role) }})
+              </p>
+            </div>
+          </div>
+
+          <!-- Switcher Buttons -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button 
+              @click="switchRole('admin')"
+              :disabled="switcherLoading"
+              class="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all"
+              :class="currentUser?.role === 'admin' && currentView === 'admin' ? 'bg-amber-400 text-slate-950 shadow-md font-black' : 'bg-white/10 hover:bg-white/20 text-slate-200'"
+            >
+              <span>🛡️ پنل مدیر</span>
+            </button>
+
+            <button 
+              @click="switchRole('teacher')"
+              :disabled="switcherLoading"
+              class="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all"
+              :class="currentUser?.role === 'teacher' && currentView === 'teacher' ? 'bg-emerald-400 text-slate-950 shadow-md font-black' : 'bg-white/10 hover:bg-white/20 text-slate-200'"
+            >
+              <span>👩‍🏫 پنل معلم</span>
+            </button>
+
+            <button 
+              @click="switchRole('student')"
+              :disabled="switcherLoading"
+              class="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all"
+              :class="currentUser?.role === 'student' && currentView === 'student' ? 'bg-sky-400 text-slate-950 shadow-md font-black' : 'bg-white/10 hover:bg-white/20 text-slate-200'"
+            >
+              <span>🎓 پنل دانش‌آموز</span>
+            </button>
+
+            <button 
+              @click="switchRole('parent')"
+              :disabled="switcherLoading"
+              class="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all"
+              :class="currentUser?.role === 'parent' && currentView === 'parent' ? 'bg-purple-400 text-slate-950 shadow-md font-black' : 'bg-white/10 hover:bg-white/20 text-slate-200'"
+            >
+              <span>👨‍👩‍👧 پنل اولیا</span>
+            </button>
+
+            <button 
+              @click="currentView = 'store'"
+              class="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all"
+              :class="currentView === 'store' ? 'bg-pink-400 text-slate-950 shadow-md font-black' : 'bg-white/10 hover:bg-white/20 text-slate-200'"
+            >
+              <span>🛍️ فروشگاه</span>
+            </button>
+
+            <button 
+              v-if="currentUser?.is_impersonated"
+              @click="switchBackToAdmin"
+              :disabled="switcherLoading"
+              class="px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-500 text-white shadow-md flex items-center gap-1"
+            >
+              <span>🔙 بازگشت به مدیر</span>
+            </button>
+
+            <button 
+              @click="switcherCollapsed = true" 
+              class="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 ml-1"
+              title="کوچک‌سازی نوار"
+            >
+              <i data-lucide="chevron-up" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Unseen Notices Full-Screen Modal -->
     <NoticeModal 
       v-if="currentUser && unseenNotices.length > 0 && showNoticeModal"
@@ -120,7 +224,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch, defineAsyncComponent } from 'vue';
+import { ref, computed, onMounted, nextTick, watch, defineAsyncComponent } from 'vue';
 import { refreshIcons } from './utils';
 import { playTap, playSwitch, toggleSound, isSoundEnabled } from './soundEffects';
 import LoginView from './components/LoginView.vue';
@@ -138,6 +242,68 @@ const currentUser = ref(null);
 const unseenNotices = ref([]);
 const showNoticeModal = ref(false);
 const soundActive = ref(true);
+
+const switcherCollapsed = ref(false);
+const switcherLoading = ref(false);
+
+const isAdminOrImpersonated = computed(() => {
+  return (currentUser.value && (currentUser.value.role === 'admin' || currentUser.value.is_impersonated));
+});
+
+function roleTitle(role) {
+  if (role === 'admin') return 'مدیر سیستم';
+  if (role === 'teacher') return 'معلم';
+  if (role === 'student') return 'دانش‌آموز';
+  if (role === 'parent') return 'اولیا';
+  return role || '';
+}
+
+async function switchRole(targetRole) {
+  if (currentUser.value?.role === targetRole && currentView.value === targetRole) return;
+  switcherLoading.value = true;
+  playSwitch();
+  try {
+    const res = await fetch('/api/admin/switch-role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_role: targetRole })
+    });
+    const data = await res.json();
+    if (res.ok && data.user) {
+      currentUser.value = data.user;
+      currentView.value = targetRole;
+      if (data.user.role === 'student' || data.user.role === 'parent') {
+        checkUnseenNotices(data.user.id, data.user.grade);
+      }
+    }
+  } catch (err) {
+    console.error('Error switching role:', err);
+  } finally {
+    switcherLoading.value = false;
+    nextTick(() => refreshIcons());
+  }
+}
+
+async function switchBackToAdmin() {
+  switcherLoading.value = true;
+  playSwitch();
+  try {
+    const res = await fetch('/api/admin/switch-back', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    if (res.ok && data.user) {
+      currentUser.value = data.user;
+      currentView.value = 'admin';
+    }
+  } catch (err) {
+    console.error('Error switching back:', err);
+  } finally {
+    switcherLoading.value = false;
+    nextTick(() => refreshIcons());
+  }
+}
 
 function handleToggleSound() {
   soundActive.value = toggleSound();
