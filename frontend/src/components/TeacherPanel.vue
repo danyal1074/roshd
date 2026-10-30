@@ -1277,7 +1277,7 @@ const attStats = computed(() => {
   return { present: p, absent: a, excused: e };
 });
 
-watch([activeTab, clsSubTab, hwSubTab, cameraOpen, examSubTab, selectedSectionId, selectedChapterId, selectedTopicId], () => {
+watch([activeTab, clsSubTab, hwSubTab, cameraOpen], () => {
   nextTick(() => refreshIcons());
 });
 
@@ -1486,19 +1486,6 @@ const availableChapters = computed(() => {
   return Array.from(chaptersMap.values());
 });
 
-watch(selectedSectionId, () => {
-  selectedChapterId.value = 'all';
-  if (filteredTopics.value.length > 0) {
-    selectedTopicId.value = filteredTopics.value[0].id;
-  }
-});
-
-watch(selectedChapterId, () => {
-  if (filteredTopics.value.length > 0) {
-    selectedTopicId.value = filteredTopics.value[0].id;
-  }
-});
-
 const filteredTopics = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   return hooshTopicsData.filter(t => {
@@ -1517,6 +1504,23 @@ const filteredTopics = computed(() => {
     }
     return true;
   });
+});
+
+watch(selectedSectionId, () => {
+  selectedChapterId.value = 'all';
+  if (filteredTopics.value.length > 0) {
+    selectedTopicId.value = filteredTopics.value[0].id;
+  }
+});
+
+watch(selectedChapterId, () => {
+  if (filteredTopics.value.length > 0) {
+    selectedTopicId.value = filteredTopics.value[0].id;
+  }
+});
+
+watch([examSubTab, selectedSectionId, selectedChapterId, selectedTopicId], () => {
+  nextTick(() => refreshIcons());
 });
 
 const currentTopic = computed(() => {
