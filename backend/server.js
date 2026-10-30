@@ -171,7 +171,7 @@ const uploadsDir = process.env.UPLOADS_PATH
   ? path.resolve(process.env.UPLOADS_PATH) 
   : path.join(__dirname, 'uploads');
 
-const dirs = ['images', 'videos', 'homeworks', 'receipts'].map(d => path.join(uploadsDir, d));
+const dirs = ['images', 'videos', 'homeworks', 'receipts', 'books'].map(d => path.join(uploadsDir, d));
 [uploadsDir, ...dirs].forEach(d => {
   if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
 });
@@ -208,6 +208,7 @@ const storage = multer.diskStorage({
     const cat = req.body.category || req.query.category || '';
     if (cat === 'receipt') sub = 'receipts';
     else if (cat === 'homework') sub = 'homeworks';
+    else if (cat === 'book') sub = 'books';
     else if (mime.startsWith('video/')) sub = 'videos';
     else if (mime.startsWith('image/')) sub = 'images';
     else sub = 'homeworks';
@@ -234,12 +235,13 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 150 * 1024 * 1024 } // 150MB max
+  limits: { fileSize: 500 * 1024 * 1024 } // 500MB max for textbooks
 });
 
 // Serve public uploads (images and videos) with public caching
 app.use('/uploads/images', express.static(path.join(uploadsDir, 'images'), { maxAge: '30d' }));
 app.use('/uploads/videos', express.static(path.join(uploadsDir, 'videos'), { maxAge: '30d' }));
+app.use('/uploads/books', express.static(path.join(uploadsDir, 'books'), { maxAge: '30d' }));
 app.use('/extracted_pages', express.static(path.join(__dirname, 'public', 'extracted_pages'), { maxAge: '30d' }));
 
 // Protected uploads: Receipts require authentication AND strict ownership/role verification
@@ -528,7 +530,8 @@ app.post('/api/admin/switch-role', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'تنها مدیر سیستم مجاز به تغییر نقش و شبیه‌سازی است.' });
   }
 
-  const { target_role, user_id } = req.body;
+  const target_role = req.body.target_role || req.body.targetRole;
+  const user_id = req.body.user_id || req.body.userId;
   let targetUser = null;
 
   if (target_role === 'admin') {
@@ -1449,12 +1452,151 @@ app.post('/api/admin/students/import', requireAuth, requireRole('admin'), async 
   }
 });
 
+// UPDATE / EDIT STUDENT
+app.put('/api/students/:id', requireAuth, requireRole('admin'), async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.id);
+    const existing = db.prepare("SELECT * FROM users WHERE id = ? AND role = 'student'").get(studentId);
+    if (!existing) {
+      return res.status(404).json({ error: 'دانش‌آموز یافت نشد.' });
+    }
+
+    const {
+      first_name,
+      last_name,
+      national_id,
+      phone,
+      parent_phone,
+      grade,
+      class_name,
+      school_name,
+      fee_status,
+      total_points,
+      password,
+      is_active
+    } = req.body;
+
+    const newFirstName = first_name !== undefined ? String(first_name).trim() : existing.first_name;
+    const newLastName = last_name !== undefined ? String(last_name).trim() : existing.last_name;
+    const newFullName = `${newFirstName} ${newLastName}`.trim();
+    const newNationalId = national_id !== undefined ? String(national_id).trim() : existing.national_id;
+    const newPhone = phone !== undefined ? String(phone).trim() : existing.phone;
+    const newParentPhone = parent_phone !== undefined ? String(parent_phone).trim() : existing.parent_phone;
+    const newGrade = grade !== undefined ? String(grade).trim() : existing.grade;
+    const newClassName = class_name !== undefined ? String(class_name).trim() : existing.class_name;
+    const newSchoolName = school_name !== undefined ? String(school_name).trim() : existing.school_name;
+    const newFeeStatus = fee_status !== undefined ? String(fee_status).trim() : existing.fee_status;
+    const newTotalPoints = total_points !== undefined ? parseInt(total_points) : existing.total_points;
+    const newIsActive = is_active !== undefined ? (is_active ? 1 : 0) : existing.is_active;
+
+    let newPasswordHash = existing.password;
+    if (password && String(password).trim().length >= 4) {
+      newPasswordHash = await hashPassword(String(password).trim());
+    }
+
+    if (newNationalId !== existing.national_id) {
+      const conflict = db.prepare("SELECT id FROM users WHERE (national_id = ? OR username = ?) AND id != ?").get(newNationalId, newNationalId, studentId);
+      if (conflict) {
+        return res.status(409).json({ error: 'کد ملی یا نام کاربری وارد شده برای کاربر دیگری ثبت شده است.' });
+      }
+    }
+
+    db.prepare(`
+      UPDATE users SET
+        first_name = ?,
+        last_name = ?,
+        full_name = ?,
+        national_id = ?,
+        username = ?,
+        phone = ?,
+        parent_phone = ?,
+        grade = ?,
+        class_name = ?,
+        school_name = ?,
+        fee_status = ?,
+        total_points = ?,
+        password = ?,
+        is_active = ?,
+        token_version = token_version + 1
+      WHERE id = ?
+    `).run(
+      newFirstName,
+      newLastName,
+      newFullName,
+      newNationalId,
+      newNationalId,
+      newPhone,
+      newParentPhone,
+      newGrade,
+      newClassName,
+      newSchoolName,
+      newFeeStatus,
+      newTotalPoints,
+      newPasswordHash,
+      newIsActive,
+      studentId
+    );
+
+    try {
+      db.prepare(`
+        UPDATE comprehensive_exam_reports SET
+          student_name = ?,
+          candidate_code = ?,
+          school_name = ?,
+          grade = ?
+        WHERE student_id = ?
+      `).run(newFullName, newNationalId, newSchoolName, newGrade, studentId);
+    } catch (err) {}
+
+    invalidateUserCache(studentId);
+    recordAudit(req.user.id, 'UPDATE_STUDENT', 'users', studentId, `Admin updated student: ${newFullName}`, req.ip);
+
+    const updatedUser = db.prepare("SELECT * FROM users WHERE id = ?").get(studentId);
+    res.json({
+      success: true,
+      message: `اطلاعات دانش‌آموز «${newFullName}» با موفقیت ویرایش شد.`,
+      student: sanitizeUser(updatedUser)
+    });
+  } catch (err) {
+    console.error('Error updating student:', err);
+    res.status(500).json({ error: 'خطا در ویرایش اطلاعات دانش‌آموز: ' + err.message });
+  }
+});
+
+// DELETE STUDENT (Soft or Permanent)
 app.delete('/api/students/:id', requireAuth, requireRole('admin'), (req, res) => {
   const studentId = parseInt(req.params.id);
-  db.prepare("UPDATE users SET is_active = 0, token_version = token_version + 1 WHERE id = ? AND role = 'student'").run(studentId);
-  invalidateUserCache(studentId);
-  recordAudit(req.user.id, 'DEACTIVATE_USER', 'users', studentId, 'Admin deactivated student', req.ip);
-  res.json({ success: true, message: 'دانش‌آموز با موفقیت غیرفعال شد.' });
+  const permanent = req.query.permanent === 'true' || req.body?.permanent === true;
+  
+  const student = db.prepare("SELECT id, full_name, role FROM users WHERE id = ? AND role = 'student'").get(studentId);
+  if (!student) {
+    return res.status(404).json({ error: 'دانش‌آموز یافت نشد.' });
+  }
+
+  if (permanent) {
+    db.prepare("DELETE FROM comprehensive_exam_reports WHERE student_id = ?").run(studentId);
+    db.prepare("DELETE FROM exam_results WHERE student_id = ?").run(studentId);
+    db.prepare("DELETE FROM exam_attempts WHERE student_id = ?").run(studentId);
+    db.prepare("DELETE FROM attendance WHERE student_id = ?").run(studentId);
+    db.prepare("DELETE FROM homework_submissions WHERE student_id = ?").run(studentId);
+    db.prepare("DELETE FROM study_sessions WHERE student_id = ?").run(studentId);
+    db.prepare("DELETE FROM points_log WHERE student_id = ?").run(studentId);
+    db.prepare("DELETE FROM fee_receipts WHERE student_id = ?").run(studentId);
+    db.prepare("DELETE FROM parent_students WHERE student_id = ?").run(studentId);
+    db.prepare("DELETE FROM teacher_notes WHERE student_id = ?").run(studentId);
+    db.prepare("DELETE FROM notice_views WHERE user_id = ?").run(studentId);
+    db.prepare("DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?").run(studentId, studentId);
+    db.prepare("DELETE FROM users WHERE id = ?").run(studentId);
+
+    invalidateUserCache(studentId);
+    recordAudit(req.user.id, 'PERMANENT_DELETE_USER', 'users', studentId, `Admin permanently deleted student: ${student.full_name}`, req.ip);
+    return res.json({ success: true, message: `حساب کاربری و تمام اطلاعات دانش‌آموز «${student.full_name}» به طور کامل پاک شد.` });
+  } else {
+    db.prepare("UPDATE users SET is_active = 0, token_version = token_version + 1 WHERE id = ?").run(studentId);
+    invalidateUserCache(studentId);
+    recordAudit(req.user.id, 'DEACTIVATE_USER', 'users', studentId, `Admin deactivated student: ${student.full_name}`, req.ip);
+    return res.json({ success: true, message: `پرونده دانش‌آموز «${student.full_name}» غیرفعال شد.` });
+  }
 });
 
 // ----------------- ATTENDANCE -----------------
@@ -1824,6 +1966,311 @@ app.get('/api/exams/comprehensive/rankings', requireAuth, (req, res) => {
   res.json(rankings);
 });
 
+// ----------------- BARPA / COMPREHENSIVE EXAM REPORTS API -----------------
+const { execFile } = require('child_process');
+
+function sanitizeReport(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    subjects: JSON.parse(row.subjects_json || '[]'),
+    categories: JSON.parse(row.categories_json || '[]'),
+    answers: JSON.parse(row.answers_json || '[]')
+  };
+}
+
+// Get Barpa reports: for student returns student's reports; for admin/teacher returns all reports
+app.get('/api/barpa-exams/reports', requireAuth, (req, res) => {
+  try {
+    if (req.user.role === 'student') {
+      const rows = db.prepare(`
+        SELECT * FROM comprehensive_exam_reports 
+        WHERE student_id = ? 
+        ORDER BY id DESC
+      `).all(req.user.id);
+      return res.json(rows.map(sanitizeReport));
+    }
+
+    const rows = db.prepare(`
+      SELECT r.*, u.phone, u.grade as user_grade, u.school_name as user_school, u.total_points
+      FROM comprehensive_exam_reports r
+      JOIN users u ON r.student_id = u.id
+      ORDER BY r.overall_traz DESC
+    `).all();
+    res.json(rows.map(sanitizeReport));
+  } catch (err) {
+    console.error('Error fetching barpa reports:', err);
+    res.status(500).json({ error: 'خطا در بارگذاری کارنامه‌ها' });
+  }
+});
+
+// Get a single report
+app.get('/api/barpa-exams/reports/:id', requireAuth, (req, res) => {
+  try {
+    const row = db.prepare('SELECT * FROM comprehensive_exam_reports WHERE id = ?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'کارنامه یافت نشد.' });
+    if (req.user.role === 'student' && row.student_id !== req.user.id) {
+      return res.status(403).json({ error: 'دسترسی غیرمجاز به کارنامه.' });
+    }
+    res.json(sanitizeReport(row));
+  } catch (err) {
+    res.status(500).json({ error: 'خطا در دریافت جزئیات کارنامه' });
+  }
+});
+
+// Import Barpa parsed records helper
+async function importBarpaRecords(records) {
+  const defaultPasswordHash = await hashPassword('12345678');
+  const examId = 'barpa_grade9_stage1';
+  const imported = [];
+
+  for (const item of records) {
+    const candidateCode = item.candidate_code || `STU9_${item.page}`;
+    const fullName = item.full_name;
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0] || 'دانش‌آموز';
+    const lastName = nameParts.slice(1).join(' ') || fullName;
+    const phone = '0912' + candidateCode.slice(-7).padStart(7, '0');
+    const schoolName = item.school_name || 'شهید کاظمی آشتیانی';
+    const total = item.total_summary || {};
+
+    let user = db.prepare('SELECT * FROM users WHERE national_id = ? OR username = ?').get(candidateCode, candidateCode);
+    if (!user) {
+      const res = db.prepare(`
+        INSERT INTO users (
+          role, national_id, username, phone, password, first_name, last_name, full_name,
+          grade, class_name, school_name, total_points, rank, fee_status, platform_fee_status,
+          must_change_password, is_active
+        ) VALUES (
+          'student', ?, ?, ?, ?, ?, ?, ?,
+          'نهم', 'الف', ?, ?, ?, 'paid', 'paid', 0, 1
+        )
+      `).run(
+        candidateCode,
+        candidateCode,
+        phone,
+        defaultPasswordHash,
+        firstName,
+        lastName,
+        fullName,
+        schoolName,
+        150 + Math.round((total.traz || 5000) / 40),
+        total.rank_center || 1
+      );
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(res.lastInsertRowid);
+    } else {
+      db.prepare(`
+        UPDATE users 
+        SET full_name = ?, first_name = ?, last_name = ?, grade = 'نهم', school_name = ?, is_active = 1
+        WHERE id = ?
+      `).run(fullName, firstName, lastName, schoolName, user.id);
+    }
+
+    db.prepare(`
+      INSERT INTO comprehensive_exam_reports (
+        exam_id, exam_title, grade, student_id, candidate_code, student_name, school_name,
+        total_attendees, overall_traz, overall_rank_all, overall_rank_center, overall_percentage,
+        overall_correct, overall_wrong, overall_unanswered, total_questions,
+        subjects_json, categories_json, answers_json
+      ) VALUES (
+        ?, ?, 'نهم', ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
+        ?, ?, ?, 120,
+        ?, ?, ?
+      )
+      ON CONFLICT(exam_id, student_id) DO UPDATE SET
+        student_name = excluded.student_name,
+        candidate_code = excluded.candidate_code,
+        school_name = excluded.school_name,
+        total_attendees = excluded.total_attendees,
+        overall_traz = excluded.overall_traz,
+        overall_rank_all = excluded.overall_rank_all,
+        overall_rank_center = excluded.overall_rank_center,
+        overall_percentage = excluded.overall_percentage,
+        overall_correct = excluded.overall_correct,
+        overall_wrong = excluded.overall_wrong,
+        overall_unanswered = excluded.overall_unanswered,
+        subjects_json = excluded.subjects_json,
+        categories_json = excluded.categories_json,
+        answers_json = excluded.answers_json
+    `).run(
+      examId,
+      item.exam_title || 'مرحله اول برپا | پایه‌ی نهم',
+      user.id,
+      candidateCode,
+      fullName,
+      schoolName,
+      item.total_attendees || 1924,
+      total.traz || 5000,
+      total.rank_all || 1,
+      total.rank_center || 1,
+      total.percentage || 0,
+      total.correct || 0,
+      total.wrong || 0,
+      total.unanswered || 0,
+      JSON.stringify(item.subjects || []),
+      JSON.stringify(item.categories || []),
+      JSON.stringify(item.answers || [])
+    );
+
+    imported.push({
+      student_id: user.id,
+      full_name: fullName,
+      candidate_code: candidateCode,
+      traz: total.traz,
+      rank: total.rank_all
+    });
+  }
+
+  return imported;
+}
+
+// Upload & parse Barpa PDF
+app.post('/api/barpa-exams/upload', requireAuth, requireRole('admin'), upload.single('file'), async (req, res) => {
+  try {
+    let pdfPath = req.file ? req.file.path : null;
+    if (!pdfPath) {
+      const defaultPdf = path.join(__dirname, 'uploads', 'barpa_sample.pdf');
+      const dlPdf = 'C:\\Users\\danyal\\Downloads\\مرحله اول برپا نهم 1 (1).pdf';
+      if (fs.existsSync(defaultPdf)) {
+        pdfPath = defaultPdf;
+      } else if (fs.existsSync(dlPdf)) {
+        pdfPath = dlPdf;
+      } else {
+        return res.status(400).json({ error: 'فایل آزمون برپا ارسال نشده است.' });
+      }
+    }
+
+    const scriptPath = path.join(__dirname, '..', 'scripts', 'parse_barpa_pdf.py');
+    execFile('python', [scriptPath, pdfPath, '--json-stdout'], { maxBuffer: 15 * 1024 * 1024 }, async (err, stdout, stderr) => {
+      if (err) {
+        console.error('Barpa PDF Python error:', err, stderr);
+        return res.status(500).json({ error: 'خطا در تحلیل و جداسازی کارنامه‌های فایل برپا.' });
+      }
+
+      const match = stdout.match(/___JSON_START___([\s\S]*?)___JSON_END___/);
+      if (!match) {
+        return res.status(500).json({ error: 'فرمت داده‌های استخراج شده معتبر نیست.' });
+      }
+
+      const records = JSON.parse(match[1]);
+      const imported = await importBarpaRecords(records);
+
+      recordAudit(req.user.id, 'BARPA_PDF_UPLOAD', 'comprehensive_exam', 'barpa_grade9_stage1', `Uploaded & processed ${imported.length} student report cards`, req.ip);
+
+      res.json({
+        success: true,
+        message: `تعداد ${imported.length} کارنامه با موفقیت تفکیک و به پنل اختصاصی دانش‌آموزان نهم ارسال شد.`,
+        count: imported.length,
+        students: imported
+      });
+    });
+  } catch (err) {
+    console.error('Barpa upload handler error:', err);
+    res.status(500).json({ error: 'خطای سیستمی در پردازش آزمون' });
+  }
+});
+
+// ----------------- EXAM BOOKS API -----------------
+app.get('/api/exam-books', requireAuth, (req, res) => {
+  try {
+    const books = db.prepare('SELECT * FROM exam_books ORDER BY is_custom ASC, id ASC').all();
+    res.json(books);
+  } catch (err) {
+    res.status(500).json({ error: 'خطا در دریافت لیست کتاب‌ها' });
+  }
+});
+
+app.get('/api/exam-books/:id/topics', requireAuth, (req, res) => {
+  try {
+    const { id } = req.params;
+    if (id === 'hoosh_6') {
+      const p = path.join(__dirname, '..', 'frontend', 'src', 'data', 'hoosh_topics.json');
+      if (fs.existsSync(p)) {
+        return res.json(JSON.parse(fs.readFileSync(p, 'utf-8')));
+      }
+    } else if (id === 'hoosh_8_9') {
+      const p = path.join(__dirname, '..', 'frontend', 'src', 'data', 'hoosh_topics_8_9.json');
+      if (fs.existsSync(p)) {
+        return res.json(JSON.parse(fs.readFileSync(p, 'utf-8')));
+      }
+    }
+    const book = db.prepare('SELECT * FROM exam_books WHERE id = ?').get(id);
+    if (!book) return res.status(404).json({ error: 'کتاب یافت نشد.' });
+    if (book.topics_json) {
+      return res.json(JSON.parse(book.topics_json));
+    }
+    // Fallback default sample topics for uploaded book
+    const sampleTopics = [];
+    const count = book.topics_count || 10;
+    for (let i = 1; i <= count; i++) {
+      sampleTopics.push({
+        id: i,
+        title: `مبحث ${i}: فصل آزمون انتخابی`,
+        sectionId: 1,
+        sectionTitle: 'سؤالات استخراج‌شده',
+        chapterId: 1,
+        chapterTitle: 'بخش تمرینات',
+        bookStartPage: i * 2,
+        bookEndPage: i * 2 + 1,
+        pdfStartPage: i * 2,
+        pdfEndPage: i * 2 + 1,
+        pageCount: 2
+      });
+    }
+    res.json(sampleTopics);
+  } catch (err) {
+    res.status(500).json({ error: 'خطا در دریافت مباحث کتاب' });
+  }
+});
+
+app.post('/api/exam-books/upload', requireAuth, requireRole('teacher', 'admin'), upload.single('file'), (req, res) => {
+  try {
+    const { title, grade, description, topics_count } = req.body;
+    if (!title || !req.file) {
+      return res.status(400).json({ error: 'عنوان کتاب و فایل PDF الزامی است.' });
+    }
+    const bookId = 'book_' + Date.now();
+    const fileUrl = `/uploads/books/${req.file.filename}`;
+    const tCount = parseInt(topics_count) || 20;
+    
+    // Create extracted pages directory for this custom book
+    const bookImgDir = path.join(__dirname, 'public', 'extracted_pages', bookId);
+    fs.mkdirSync(bookImgDir, { recursive: true });
+
+    db.prepare(`
+      INSERT INTO exam_books (id, title, grade, topics_count, pages_count, description, file_url, image_folder, is_custom)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+    `).run(
+      bookId,
+      title,
+      grade || 'همه مقاطع',
+      tCount,
+      tCount * 2,
+      description || `کتاب بارگذاری شده توسط ${req.user.full_name}`,
+      fileUrl,
+      `/extracted_pages/${bookId}`
+    );
+
+    res.json({ success: true, message: 'کتاب با موفقیت بارگذاری و افزوده شد.', id: bookId });
+  } catch (err) {
+    res.status(500).json({ error: 'خطا در بارگذاری کتاب: ' + err.message });
+  }
+});
+
+app.delete('/api/exam-books/:id', requireAuth, requireRole('admin', 'teacher'), (req, res) => {
+  try {
+    const { id } = req.params;
+    if (id === 'hoosh_6' || id === 'hoosh_8_9') {
+      return res.status(400).json({ error: 'کتاب‌های پیش‌فرض سامانه قابل حذف نیستند.' });
+    }
+    db.prepare('DELETE FROM exam_books WHERE id = ?').run(id);
+    res.json({ success: true, message: 'کتاب با موفقیت حذف شد.' });
+  } catch (err) {
+    res.status(500).json({ error: 'خطا در حذف کتاب' });
+  }
+});
+
 // ----------------- POMODORO & STUDY STATS -----------------
 app.get('/api/study/stats/:student_id', requireAuth, (req, res) => {
   const targetId = parseInt(req.params.student_id);
@@ -1940,15 +2387,26 @@ app.get('/api/fees/defs', requireAuth, (req, res) => {
 });
 
 app.put('/api/fees/defs', requireAuth, requireRole('admin'), (req, res) => {
-  const { grade, amount, deadline_fa, lock_date_fa } = req.body;
+  const { grade, amount, deadline_fa, lock_date_fa, is_locked } = req.body;
+  const lockVal = (is_locked === 1 || is_locked === true) ? 1 : 0;
+  
   db.prepare(`
-    INSERT INTO fee_defs (grade, amount, deadline_fa, lock_date_fa)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO fee_defs (grade, amount, deadline_fa, lock_date_fa, is_locked)
+    VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(grade) DO UPDATE SET
       amount = excluded.amount,
       deadline_fa = excluded.deadline_fa,
-      lock_date_fa = excluded.lock_date_fa
-  `).run(grade, amount, deadline_fa, lock_date_fa);
+      lock_date_fa = excluded.lock_date_fa,
+      is_locked = excluded.is_locked
+  `).run(grade, amount, deadline_fa, lock_date_fa, lockVal);
+
+  // Synchronize lock state to students of this grade based on fee status
+  if (lockVal === 1) {
+    db.prepare("UPDATE users SET is_locked = 1 WHERE role = 'student' AND grade = ? AND (fee_status = 'unpaid' OR fee_status = 'rejected')").run(grade);
+  } else {
+    db.prepare("UPDATE users SET is_locked = 0 WHERE role = 'student' AND grade = ?").run(grade);
+  }
+
   invalidateRouteCache('fees');
   invalidateRouteCache('settings');
   res.json({ success: true });
@@ -1960,7 +2418,17 @@ app.get('/api/fees/receipts', requireAuth, (req, res) => {
 
   if (isAdmin) {
     const receipts = db.prepare(`
-      SELECT fr.*, u.full_name, u.grade, u.class_name, u.parent_phone
+      SELECT fr.*, 
+             u.full_name AS student_name, 
+             u.national_id, 
+             u.phone AS student_phone, 
+             u.grade, 
+             u.class_name, 
+             u.school_name,
+             u.parent_name, 
+             u.parent_phone, 
+             u.fee_status,
+             u.is_locked
       FROM fee_receipts fr
       JOIN users u ON fr.student_id = u.id
       ORDER BY fr.id DESC
@@ -1976,7 +2444,7 @@ app.get('/api/fees/receipts', requireAuth, (req, res) => {
 app.post('/api/fees/receipts', requireAuth, upload.single('receipt_image'), (req, res) => {
   const studentId = req.user.id;
   const { amount, card_number, tracking_code } = req.body;
-  const fileUrl = req.file ? `/uploads/receipts/${req.file.filename}` : '';
+  const fileUrl = req.file ? `/uploads/receipts/${req.file.filename}` : (req.body.receipt_image || '');
   const currentDate = getJalaliDate();
 
   db.prepare(`
@@ -1992,7 +2460,12 @@ app.put('/api/fees/receipts/:id', requireAuth, requireRole('admin'), (req, res) 
   const receiptId = parseInt(req.params.id);
   const { status, reject_reason } = req.body;
 
-  const receipt = db.prepare('SELECT * FROM fee_receipts WHERE id = ?').get(receiptId);
+  const receipt = db.prepare(`
+    SELECT fr.*, u.full_name AS student_name 
+    FROM fee_receipts fr
+    JOIN users u ON fr.student_id = u.id
+    WHERE fr.id = ?
+  `).get(receiptId);
   if (!receipt) return res.status(404).json({ error: 'رسید یافت نشد.' });
 
   // Prevent double approval
@@ -2003,13 +2476,17 @@ app.put('/api/fees/receipts/:id', requireAuth, requireRole('admin'), (req, res) 
   db.exec('BEGIN IMMEDIATE;');
   try {
     db.prepare('UPDATE fee_receipts SET status = ?, reject_reason = ? WHERE id = ?').run(status, reject_reason || '', receiptId);
-    db.prepare('UPDATE users SET fee_status = ? WHERE id = ?').run(status === 'approved' ? 'paid' : 'rejected', receipt.student_id);
-
+    
     if (status === 'approved') {
+      db.prepare("UPDATE users SET fee_status = 'paid', is_locked = 0 WHERE id = ?").run(receipt.student_id);
       db.prepare(`
         INSERT INTO accounting (type, title, amount, date_fa, category)
         VALUES ('income', ?, ?, ?, 'شهریه')
-      `).run(`شهریه دانش‌آموز (کد رهگیری: ${receipt.tracking_code})`, receipt.amount, receipt.date_fa);
+      `).run(`شهریه دانش‌آموز ${receipt.student_name} (کد رهگیری: ${receipt.tracking_code || '---'})`, receipt.amount, receipt.date_fa);
+    } else if (status === 'rejected') {
+      db.prepare("UPDATE users SET fee_status = 'rejected' WHERE id = ?").run(receipt.student_id);
+    } else {
+      db.prepare("UPDATE users SET fee_status = 'pending' WHERE id = ?").run(receipt.student_id);
     }
 
     db.exec('COMMIT;');
@@ -2030,16 +2507,22 @@ app.post('/api/fees/pay-online', requireAuth, requireRole('student'), (req, res)
 });
 
 app.get('/api/fees/report', requireAuth, requireRole('admin'), (req, res) => {
-  const totalStudents = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student'").get().c;
-  const paidStudents = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student' AND fee_status = 'paid'").get().c;
-  const pendingStudents = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student' AND fee_status = 'pending'").get().c;
+  const grades = ['هفتم', 'هشتم', 'نهم'];
+  const gradeReports = [];
 
-  res.json({
-    total_students: totalStudents,
-    paid_count: paidStudents,
-    pending_count: pendingStudents,
-    unpaid_count: totalStudents - paidStudents - pendingStudents
-  });
+  for (const grade of grades) {
+    const paid = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student' AND grade = ? AND fee_status = 'paid'").get(grade).c;
+    const pending = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student' AND grade = ? AND fee_status = 'pending'").get(grade).c;
+    const unpaid = db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'student' AND grade = ? AND (fee_status = 'unpaid' OR fee_status = 'rejected' OR fee_status IS NULL)").get(grade).c;
+    gradeReports.push({
+      grade,
+      paid,
+      pending,
+      unpaid
+    });
+  }
+
+  res.json(gradeReports);
 });
 
 // ----------------- SYSTEM & PAYMENT SETTINGS (ADMIN MANAGED) -----------------

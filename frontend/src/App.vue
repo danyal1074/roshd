@@ -191,6 +191,7 @@
         @logout="logout"
         @update-user="updateUserData"
         @open-store="currentView = 'store'"
+        @switch-back="switchBackToAdmin"
       />
 
       <!-- 3. Teacher Panel -->
@@ -205,6 +206,7 @@
         v-else-if="currentView === 'admin' && currentUser"
         :user="currentUser"
         @logout="logout"
+        @switch-role="switchRole"
       />
 
       <!-- 5. Parent Panel -->
@@ -258,20 +260,22 @@ function roleTitle(role) {
   return role || '';
 }
 
-async function switchRole(targetRole) {
-  if (currentUser.value?.role === targetRole && currentView.value === targetRole) return;
+async function switchRole(targetRole, userId = null) {
+  if (!userId && currentUser.value?.role === targetRole && currentView.value === targetRole) return;
   switcherLoading.value = true;
   playSwitch();
   try {
+    const payload = { target_role: targetRole };
+    if (userId) payload.user_id = userId;
     const res = await fetch('/api/admin/switch-role', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target_role: targetRole })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (res.ok && data.user) {
       currentUser.value = data.user;
-      currentView.value = targetRole;
+      currentView.value = data.user.role;
       if (data.user.role === 'student' || data.user.role === 'parent') {
         checkUnseenNotices(data.user.id, data.user.grade);
       }

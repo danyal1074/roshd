@@ -2,9 +2,14 @@ const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
 
-const dbPath = process.env.DB_PATH 
-  ? path.resolve(process.env.DB_PATH) 
-  : path.join(__dirname, 'rosh.db');
+let dbPath;
+if (process.env.DB_PATH) {
+  dbPath = path.isAbsolute(process.env.DB_PATH)
+    ? process.env.DB_PATH
+    : path.resolve(path.join(__dirname, '..'), process.env.DB_PATH);
+} else {
+  dbPath = path.join(__dirname, 'rosh.db');
+}
 
 // Ensure database directory exists
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -297,6 +302,46 @@ function initDb() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS exam_books (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      grade TEXT NOT NULL,
+      topics_count INTEGER DEFAULT 0,
+      pages_count INTEGER DEFAULT 0,
+      description TEXT,
+      file_url TEXT,
+      cover_url TEXT,
+      topics_json TEXT,
+      image_folder TEXT,
+      is_custom INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS comprehensive_exam_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      exam_id TEXT NOT NULL, -- e.g. barpa_grade9_stage1
+      exam_title TEXT NOT NULL,
+      grade TEXT NOT NULL,
+      student_id INTEGER NOT NULL,
+      candidate_code TEXT,
+      student_name TEXT NOT NULL,
+      school_name TEXT,
+      total_attendees INTEGER DEFAULT 1924,
+      overall_traz INTEGER,
+      overall_rank_all INTEGER,
+      overall_rank_center INTEGER,
+      overall_percentage REAL,
+      overall_correct INTEGER,
+      overall_wrong INTEGER,
+      overall_unanswered INTEGER,
+      total_questions INTEGER DEFAULT 120,
+      subjects_json TEXT NOT NULL,
+      categories_json TEXT NOT NULL,
+      answers_json TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(exam_id, student_id)
+    );
+
     -- Performance & Security Indexes
     CREATE INDEX IF NOT EXISTS idx_users_role_grade ON users (role, grade);
     CREATE INDEX IF NOT EXISTS idx_users_phone ON users (phone);
@@ -317,6 +362,9 @@ function initDb() {
     CREATE INDEX IF NOT EXISTS idx_parent_students ON parent_students (parent_id, student_id);
     CREATE INDEX IF NOT EXISTS idx_teacher_classes ON teacher_classes (teacher_id);
     CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log (user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_comp_reports_student ON comprehensive_exam_reports (student_id);
+    CREATE INDEX IF NOT EXISTS idx_comp_reports_exam ON comprehensive_exam_reports (exam_id);
+    CREATE INDEX IF NOT EXISTS idx_comp_reports_candidate ON comprehensive_exam_reports (candidate_code);
   `);
 
   // Safe migrations for existing databases
@@ -332,6 +380,49 @@ function initDb() {
   try {
     db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users (username) WHERE username IS NOT NULL;');
   } catch (e) {}
+
+  seedDefaultExamBooks();
+}
+
+function seedDefaultExamBooks() {
+  try {
+    const existing = db.prepare('SELECT id FROM exam_books WHERE id IN (?, ?)').all('hoosh_6', 'hoosh_8_9');
+    const existingIds = new Set(existing.map(b => b.id));
+
+    if (!existingIds.has('hoosh_6')) {
+      db.prepare(`
+        INSERT INTO exam_books (id, title, grade, topics_count, pages_count, description, file_url, image_folder, is_custom)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+      `).run(
+        'hoosh_6',
+        'هوش کمپلکس پنجم و ششم (تیزهوشان ششم)',
+        'ششم',
+        201,
+        537,
+        'مرجع اصلی سؤالات استعداد تحلیلی و هوش ورودی پایه هفتم مدارس استعدادهای درخشان (سمپاد)',
+        '/uploads/books/hoosh_complex_6.pdf',
+        '/extracted_pages'
+      );
+    }
+
+    if (!existingIds.has('hoosh_8_9')) {
+      db.prepare(`
+        INSERT INTO exam_books (id, title, grade, topics_count, pages_count, description, file_url, image_folder, is_custom)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+      `).run(
+        'hoosh_8_9',
+        'هوش کمپلکس هشتم و نهم (تیزهوشان نهم)',
+        'هشتم و نهم',
+        201,
+        539,
+        'کتاب جامع استعداد تحلیلی و هوش ورودی پایه دهم مدارس تیزهوشان و نمونه دولتی (۲۰۱ مبحث)',
+        '/uploads/books/hoosh_complex_8_9.pdf',
+        '/extracted_pages/hoosh_8_9'
+      );
+    }
+  } catch (err) {
+    console.error('seedDefaultExamBooks error:', err.message);
+  }
 }
 
 initDb();

@@ -14,7 +14,16 @@
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: { sans: ['Vazirmatn', 'sans-serif'] },
+          fontFamily: { 
+            sans: ['Vazirmatn', 'BYekan', 'sans-serif'],
+            titr: ['BTitr', 'Vazirmatn', 'sans-serif'],
+            nastaliq: ['IranNastaliq', 'Vazirmatn', 'serif'],
+            yekan: ['BYekan', 'Vazirmatn', 'sans-serif'],
+            nazanin: ['BNazanin', 'Vazirmatn', 'serif'],
+            mitra: ['BMitra', 'Vazirmatn', 'serif'],
+            homa: ['BHoma', 'Vazirmatn', 'sans-serif'],
+            koodak: ['BKoodak', 'Vazirmatn', 'sans-serif']
+          },
           colors: {
             royal: '#0A4BD6',
             ink: '#0B1F4D',
@@ -30,6 +39,79 @@
     }
   </script>
   <style>
+    /* ================= LOCAL HIGH-FIDELITY PERSIAN FONTS ================= */
+    @font-face {
+      font-family: 'BTitr';
+      src: url('/fonts/BTitrBd.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'IranNastaliq';
+      src: url('/fonts/IranNastaliq.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'BYekan';
+      src: url('/fonts/BYekan.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'BNazanin';
+      src: url('/fonts/BNazanin.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'BMitra';
+      src: url('/fonts/BMitra.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'BMitra';
+      src: url('/fonts/BMitraBd.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'BHoma';
+      src: url('/fonts/BHoma.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'BKoodak';
+      src: url('/fonts/BKoodakO.ttf') format('truetype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Vazirmatn';
+      src: url('/fonts/Vazirmatn-Bold.ttf') format('truetype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    .font-titr { font-family: 'BTitr', 'Vazirmatn', sans-serif !important; }
+    .font-nastaliq { font-family: 'IranNastaliq', 'Vazirmatn', serif !important; }
+    .font-yekan { font-family: 'BYekan', 'Vazirmatn', sans-serif !important; }
+    .font-nazanin { font-family: 'BNazanin', 'Vazirmatn', serif !important; }
+    .font-mitra { font-family: 'BMitra', 'Vazirmatn', serif !important; }
+    .font-homa { font-family: 'BHoma', 'Vazirmatn', sans-serif !important; }
+    .font-koodak { font-family: 'BKoodak', 'Vazirmatn', sans-serif !important; }
+
     :root {
       --royal: #0A4BD6;
       --royal-dark: #0838A3;

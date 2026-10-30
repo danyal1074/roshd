@@ -1,5 +1,25 @@
 <template>
   <div class="min-h-screen pb-28">
+    <!-- Admin Impersonation Sticky Banner -->
+    <div 
+      v-if="user.is_impersonated" 
+      class="sticky top-0 z-50 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white px-4 py-2.5 shadow-xl flex items-center justify-between gap-3 text-xs sm:text-sm font-bold border-b border-amber-300/30"
+    >
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="w-3 h-3 rounded-full bg-white animate-ping shrink-0"></span>
+        <span class="truncate">
+          حالت نظارت مدیر: شما هم‌اکنون در پنل دانش‌آموز <b>{{ user.full_name }}</b> هستید.
+        </span>
+      </div>
+      <button 
+        @click="$emit('switch-back')" 
+        class="btn btn-white !min-h-[34px] !py-1 text-ink text-xs font-black shadow-md hover:bg-amber-50 shrink-0 flex items-center gap-1.5"
+      >
+        <i data-lucide="log-out" class="w-4 h-4 text-amber-600"></i>
+        <span>بازگشت به پنل مدیریت</span>
+      </button>
+    </div>
+
     <!-- Header (Identical to Claude rosh-step2-student.html) -->
     <header class="brand-bg relative text-white">
       <div class="dots absolute inset-0 opacity-50"></div>
@@ -9,8 +29,8 @@
             <i data-lucide="graduation-cap" class="w-6 h-6 text-sun"></i>
           </div>
           <div class="leading-tight">
-            <p class="font-extrabold truncate">کانون نخبه‌پروری شهید کاظم آشتیانی</p>
-            <p class="text-white/70 text-xs">پلتفرم رشد | پنل دانش‌آموز</p>
+            <p class="font-extrabold truncate font-titr">کانون نخبه‌پروری شهید کاظم آشتیانی</p>
+            <p class="text-white/70 text-xs font-nastaliq text-sm">پلتفرم رشد | پنل دانش‌آموز</p>
           </div>
         </div>
 
@@ -83,8 +103,8 @@
       <!-- ================= 1. خانه (HOME) ================= -->
       <section v-if="activeTab === 'home'" class="space-y-4">
         <div class="text-white px-1">
-          <p class="text-white/80 text-sm">دوشنبه ۴ آبان ۱۴۰۵</p>
-          <h2 class="text-[26px] font-extrabold leading-snug">سلام {{ user.first_name }}، آماده‌ای؟</h2>
+          <p class="text-white/80 text-sm font-yekan">دوشنبه ۴ آبان ۱۴۰۵</p>
+          <h2 class="text-[26px] font-extrabold leading-snug font-titr">سلام {{ user.first_name }}، آماده‌ای؟</h2>
         </div>
 
         <!-- Level & Score Card (Interactive Gamification Hub) -->
@@ -104,7 +124,7 @@
               :style="{ background: `conic-gradient(#1E90FF ${levelProgressPercent}%, #E3ECFF 0)` }"
             >
               <div class="w-full h-full rounded-full bg-white flex flex-col items-center justify-center leading-tight shadow-inner">
-                <span class="text-[19px] sm:text-[22px] font-black text-royal">{{ faNum(user.total_points) }}</span>
+                <span class="text-[19px] sm:text-[22px] font-black text-royal font-yekan">{{ faNum(user.total_points) }}</span>
                 <span class="text-[10px] sm:text-[11px] text-[#5A6E99] font-bold">امتیاز</span>
               </div>
             </div>
@@ -112,15 +132,15 @@
             <!-- Title, Level, and Next Target -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <p class="font-black text-[17px] sm:text-[20px] text-ink group-hover:text-royal transition-colors">
+                <p class="font-black text-[17px] sm:text-[20px] text-ink group-hover:text-royal transition-colors font-homa">
                   سطح {{ faNum(user.level) }}، {{ user.level_title }}
                 </p>
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-royal/10 text-royal">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-royal/10 text-royal font-yekan">
                   <i data-lucide="sparkles" class="w-3 h-3 text-sun"></i>
                   <span>فعال</span>
                 </span>
               </div>
-              <p class="text-xs sm:text-sm text-[#5A6E99] mt-0.5 font-medium">
+              <p class="text-xs sm:text-sm text-[#5A6E99] mt-0.5 font-medium font-yekan">
                 {{ nextLevelData.nextTitle ? `${faNum(nextLevelData.pointsNeeded)} امتیاز تا سطح بعد (${nextLevelData.nextTitle})` : 'بالاترین قله افتخار کانون 👑' }}
               </p>
               
@@ -137,10 +157,44 @@
           <div class="text-center rounded-2xl px-4 py-3 bg-sun/25 border border-sun/40 shrink-0 self-stretch sm:self-center flex sm:flex-col items-center justify-between sm:justify-center gap-2 group-hover:bg-sun/35 transition-all">
             <div class="flex items-center sm:block gap-2">
               <i data-lucide="trophy" class="w-6 h-6 mx-auto text-[#B07A00]"></i>
-              <p class="font-black text-sm mt-0.5 text-ink">رتبه {{ faNum(user.rank) }}</p>
+              <p class="font-black text-sm mt-0.5 text-ink font-yekan">رتبه {{ faNum(user.rank) }}</p>
             </div>
-            <p class="text-xs text-[#5A6E99] font-bold">از ۳۸ نفر</p>
+            <p class="text-xs text-[#5A6E99] font-bold font-yekan">از ۳۸ نفر</p>
           </div>
+        </div>
+
+        <!-- Barpa Comprehensive Exam Hero Card (Instant Access) -->
+        <div 
+          v-if="barpaReports.length > 0"
+          @click="openBarpaReport(barpaReports[0])"
+          class="card p-4 sm:p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all relative overflow-hidden group shadow-lg border-2 border-sun/40"
+          style="background: linear-gradient(135deg, #0A4BD6 0%, #1E60E6 60%, #0B256B 100%);"
+        >
+          <div class="dots absolute inset-0 opacity-20"></div>
+          <div class="flex items-center gap-3.5 relative z-10">
+            <div class="w-12 h-12 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform">
+              <i data-lucide="award" class="w-6 h-6 text-sun"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="tag bg-sun text-ink font-black text-[10px] shadow-sm">کارنامه رسمی منتشر شد</span>
+                <span class="text-xs text-white/80 font-bold">{{ barpaReports[0].exam_title }}</span>
+              </div>
+              <h3 class="text-base sm:text-lg font-black text-white mt-1 flex items-center gap-2">
+                <span>تراز کل: {{ faNum(barpaReports[0].overall_traz) }}</span>
+                <span class="text-sun">•</span>
+                <span>رتبه کل: {{ faNum(barpaReports[0].overall_rank_all) }}</span>
+              </h3>
+              <p class="text-xs text-white/85 mt-0.5">
+                {{ faNum(barpaReports[0].overall_correct) }} درست • {{ faNum(barpaReports[0].overall_wrong) }} غلط • {{ faNum(barpaReports[0].overall_unanswered) }} نزده
+              </p>
+            </div>
+          </div>
+
+          <button class="btn btn-sun text-ink font-black text-xs shrink-0 !min-h-[42px] px-4 shadow-lg relative z-10 group-hover:bg-amber-300 flex items-center gap-1.5 self-stretch sm:self-auto justify-center">
+            <span>مشاهده کارنامه و پاسخ‌برگ</span>
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
         </div>
 
         <!-- Quick Access: Counselor & Study Timer (Naghsh Yar Style) -->
@@ -457,6 +511,38 @@
 
       <!-- ================= 3. آزمون‌ها (EXAMS - NAGHSH YAR FULL SYSTEM) ================= -->
       <section v-if="activeTab === 'exam'" class="space-y-4">
+        <!-- Barpa Comprehensive Exam Hero Card -->
+        <div 
+          v-if="barpaReports.length > 0"
+          @click="openBarpaReport(barpaReports[0])"
+          class="card p-4 sm:p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all relative overflow-hidden group shadow-lg border-2 border-sun/40"
+          style="background: linear-gradient(135deg, #0A4BD6 0%, #1E60E6 60%, #0B256B 100%);"
+        >
+          <div class="dots absolute inset-0 opacity-20"></div>
+          <div class="flex items-center gap-3.5 relative z-10">
+            <div class="w-12 h-12 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform">
+              <i data-lucide="award" class="w-6 h-6 text-sun"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="tag bg-sun text-ink font-black text-[10px]">کارنامه آزمون برپا</span>
+                <span class="text-xs text-white/80 font-bold">{{ barpaReports[0].exam_title }}</span>
+              </div>
+              <h3 class="text-base sm:text-lg font-black text-white mt-1">
+                تراز آزمون: {{ faNum(barpaReports[0].overall_traz) }} (رتبه {{ faNum(barpaReports[0].overall_rank_all) }} کشوری)
+              </h3>
+              <p class="text-xs text-white/80 mt-0.5">
+                {{ faNum(barpaReports[0].overall_correct) }} درست • {{ faNum(barpaReports[0].overall_wrong) }} غلط • تراز رتبه {{ faNum(barpaReports[0].overall_rank_center) }} مرکز
+              </p>
+            </div>
+          </div>
+
+          <button class="btn btn-sun text-ink font-black text-xs shrink-0 !min-h-[40px] px-4 shadow-md relative z-10 flex items-center gap-1.5 self-stretch sm:self-auto justify-center">
+            <span>مشاهده کارنامه جامع و پاسخ‌برگ</span>
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+        </div>
+
         <ExamModuleNaghshYar 
           :user="user" 
           :freshExams="exams" 
@@ -597,9 +683,62 @@
 
         <div class="seg-ctl">
           <button @click="meSubTab = 'pts'" :aria-pressed="meSubTab === 'pts'">امتیاز</button>
+          <button @click="meSubTab = 'barpa'" :aria-pressed="meSubTab === 'barpa'">کارنامه برپا</button>
           <button @click="meSubTab = 'cal'" :aria-pressed="meSubTab === 'cal'">تقویم</button>
           <button @click="meSubTab = 'res'" :aria-pressed="meSubTab === 'res'">منابع</button>
           <button @click="meSubTab = 'pay'" :aria-pressed="meSubTab === 'pay'">پرداخت</button>
+        </div>
+
+        <!-- Barpa Report Cards List in Me Tab -->
+        <div v-if="meSubTab === 'barpa'" class="space-y-3">
+          <div v-if="barpaReports.length === 0" class="card p-8 text-center text-[#5A6E99] space-y-2">
+            <i data-lucide="file-question" class="w-10 h-10 mx-auto text-slate-400"></i>
+            <p class="font-bold text-sm">هنوز کارنامه آزمون جامعی برای شما ثبت نشده است.</p>
+          </div>
+
+          <div 
+            v-for="rep in barpaReports" 
+            :key="rep.id"
+            class="card p-5 bg-white border border-line shadow-sm hover:shadow-md transition-all space-y-4"
+          >
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="tag bg-royal text-white font-black text-xs">آزمون جامع</span>
+                  <span class="text-xs font-bold text-[#5A6E99]">{{ rep.exam_title }}</span>
+                </div>
+                <h3 class="text-lg font-black text-ink mt-1">{{ rep.student_name }}</h3>
+                <p class="text-xs text-[#5A6E99] mt-0.5">کد داوطلبی: {{ rep.candidate_code }} | مرکز: {{ rep.school_name }}</p>
+              </div>
+
+              <button 
+                @click="openBarpaReport(rep)" 
+                class="btn btn-sun text-ink font-black text-xs !min-h-[40px] px-5 shadow-sm self-start sm:self-auto flex items-center gap-1.5"
+              >
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                <span>مشاهده کارنامه تحلیلی کامل</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div class="bg-blue-50/70 p-3 rounded-2xl text-center">
+                <span class="text-[11px] text-[#5A6E99] block font-bold">تراز کل</span>
+                <span class="text-lg font-black text-royal">{{ faNum(rep.overall_traz) }}</span>
+              </div>
+              <div class="bg-slate-50 p-3 rounded-2xl text-center">
+                <span class="text-[11px] text-[#5A6E99] block font-bold">رتبه کشوری</span>
+                <span class="text-lg font-black text-ink">{{ faNum(rep.overall_rank_all) }}</span>
+              </div>
+              <div class="bg-emerald-50/70 p-3 rounded-2xl text-center">
+                <span class="text-[11px] text-[#5A6E99] block font-bold">رتبه در مرکز</span>
+                <span class="text-lg font-black text-ok">{{ faNum(rep.overall_rank_center) }}</span>
+              </div>
+              <div class="bg-amber-50/70 p-3 rounded-2xl text-center">
+                <span class="text-[11px] text-[#5A6E99] block font-bold">درصد کل</span>
+                <span class="text-lg font-black text-[#7A5600]">{{ faNum(rep.overall_percentage) }}٪</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Points Breakdown (Identical to Claude mock) -->
@@ -1034,31 +1173,67 @@
     <!-- Upload Fee Receipt Modal -->
     <div v-if="openReceiptModal" class="fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm flex items-center justify-center p-4">
       <div class="card p-6 max-w-md w-full rise space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="font-extrabold text-lg">بارگذاری رسید حق عضویت</h3>
-          <button @click="openReceiptModal = false" class="w-9 h-9 rounded-xl bg-mist flex items-center justify-center">
-            <i data-lucide="x" class="w-5 h-5"></i>
+        <div class="flex items-center justify-between border-b border-line pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-9 h-9 rounded-xl bg-royal text-white flex items-center justify-center font-bold">
+              <i data-lucide="receipt" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-extrabold text-base sm:text-lg text-ink font-titr">بارگذاری رسید واریز شهریه</h3>
+          </div>
+          <button @click="openReceiptModal = false" class="w-8 h-8 rounded-xl bg-mist hover:bg-slate-200 flex items-center justify-center transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
-        <p class="text-xs text-[#5A6E99]">
-          مبلغ شهریه را به شماره کارت کانون ({{ publicSettings.card_number }} - {{ publicSettings.bank_name }}) واریز کرده و شماره پیگیری را وارد کنید.
-        </p>
+        <div class="p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-xs space-y-1 text-ink">
+          <p class="font-bold text-royal flex items-center gap-1">
+            <i data-lucide="credit-card" class="w-3.5 h-3.5"></i>
+            <span>شماره کارت کانون: {{ publicSettings.card_number || '۶۰۳۷-۹۹۷۰-۲۴۱۱-۵۸۲۹' }}</span>
+          </p>
+          <p class="text-[11px] text-[#5A6E99]">
+            بانک: {{ publicSettings.bank_name || 'بانک ملی' }} | به نام: {{ publicSettings.card_holder || 'کانون نخبه‌پروری شهید کاظمی آشتیانی' }}
+          </p>
+        </div>
 
         <div>
-          <label class="block text-sm font-bold mb-1">کد پیگیری واریز:</label>
-          <input v-model="receiptTrackCode" class="input" placeholder="مثلاً ۹۴۸۲۷۱" />
+          <label class="lbl font-bold mb-1 block">مبلغ واریزی (تومان):</label>
+          <input type="number" v-model.number="receiptAmount" class="input font-black font-yekan text-base" placeholder="1500000" required />
         </div>
 
-        <div class="p-4 border-2 border-dashed border-line rounded-2xl text-center bg-mist cursor-pointer">
-          <i data-lucide="image" class="w-8 h-8 mx-auto text-royal"></i>
-          <p class="text-xs font-bold text-[#5A6E99] mt-2">تصویر فیش بانکی کارت‌به‌کارت</p>
-          <span class="tag bg-white text-royal mt-2 text-xs">رسید بانکی انتخاب شد</span>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="lbl font-bold mb-1 block">کد پیگیری واریز:</label>
+            <input v-model="receiptTrackCode" class="input font-mono font-bold text-left text-xs" dir="ltr" placeholder="مثلاً ۹۴۸۲۷۱" required />
+          </div>
+          <div>
+            <label class="lbl font-bold mb-1 block">شماره کارت یا ۴ رقم آخر:</label>
+            <input v-model="receiptCardNumber" class="input font-mono text-left text-xs" dir="ltr" placeholder="مثلاً ۹۸۴۱" />
+          </div>
         </div>
 
-        <button @click="submitReceipt" class="btn btn-royal w-full">
-          <i data-lucide="upload" class="w-5 h-5"></i>
-          <span>ثبت فیش و ارسال به مدیریت</span>
+        <div>
+          <label class="lbl font-bold mb-1 block">تصویر فیش بانکی (اسکرین‌شات یا عکس فیش):</label>
+          <div class="p-4 border-2 border-dashed border-line hover:border-royal/50 rounded-2xl text-center bg-mist hover:bg-blue-50/40 transition-colors cursor-pointer relative">
+            <input type="file" accept="image/*" @change="handleReceiptFileSelect" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+            <template v-if="receiptPreviewUrl">
+              <img :src="receiptPreviewUrl" class="max-h-36 mx-auto rounded-lg shadow-sm mb-2 object-contain" />
+              <span class="tag bg-ok text-white text-xs font-bold">تصویر رسید انتخاب شد (کلیک برای تغییر)</span>
+            </template>
+            <template v-else>
+              <i data-lucide="image-up" class="w-8 h-8 mx-auto text-royal mb-1"></i>
+              <p class="text-xs font-bold text-ink">برای انتخاب تصویر فیش کلیک کنید</p>
+              <span class="text-[10px] text-[#5A6E99] block mt-0.5">فرمت مجاز: JPG یا PNG</span>
+            </template>
+          </div>
+        </div>
+
+        <button 
+          @click="submitReceipt" 
+          :disabled="uploadingReceipt"
+          class="btn btn-royal w-full font-black text-sm flex items-center justify-center gap-2 !py-3 shadow-md"
+        >
+          <i data-lucide="upload-cloud" :class="['w-4 h-4', uploadingReceipt ? 'animate-spin' : '']"></i>
+          <span>{{ uploadingReceipt ? 'در حال ارسال و ثبت رسید...' : 'ثبت فیش و ارسال به مدیریت' }}</span>
         </button>
       </div>
     </div>
@@ -1189,6 +1364,13 @@
       @close="openLevelsRoadmap = false"
     />
 
+    <!-- Barpa Comprehensive Exam Interactive Report Modal -->
+    <BarpaReportCardModal 
+      v-if="showBarpaModal && activeBarpaReport"
+      :report="activeBarpaReport"
+      @close="showBarpaModal = false"
+    />
+
     <!-- Toast Notification -->
     <div 
       v-if="toastMsg" 
@@ -1208,12 +1390,34 @@ import MathGameSection from './MathGameSection.vue';
 import LevelsRoadmapModal from './LevelsRoadmapModal.vue';
 import ExamModuleNaghshYar from './ExamModuleNaghshYar.vue';
 import CounselorChatSection from './CounselorChatSection.vue';
+import BarpaReportCardModal from './BarpaReportCardModal.vue';
 
 const props = defineProps({
   user: { type: Object, required: true }
 });
 
-const emit = defineEmits(['logout', 'update-user']);
+const emit = defineEmits(['logout', 'update-user', 'open-store', 'switch-back']);
+
+const barpaReports = ref([]);
+const activeBarpaReport = ref(null);
+const showBarpaModal = ref(false);
+
+function openBarpaReport(rep) {
+  activeBarpaReport.value = rep;
+  showBarpaModal.value = true;
+  nextTick(() => refreshIcons());
+}
+
+async function loadBarpaReports() {
+  try {
+    const res = await fetch('/api/barpa-exams/reports');
+    if (res.ok) {
+      barpaReports.value = await res.json();
+    }
+  } catch (err) {
+    console.error('Error loading barpa reports:', err);
+  }
+}
 
 const activeTab = ref('home');
 const studyTab = ref('today');
@@ -1297,7 +1501,20 @@ const submittingHomework = ref(null);
 const hwNote = ref('');
 
 const openReceiptModal = ref(false);
-const receiptTrackCode = ref('۸۹۴۷۱۲');
+const receiptTrackCode = ref('');
+const receiptAmount = ref(1500000);
+const receiptCardNumber = ref('');
+const receiptFile = ref(null);
+const receiptPreviewUrl = ref('');
+const uploadingReceipt = ref(false);
+
+function handleReceiptFileSelect(e) {
+  const file = e.target.files && e.target.files[0];
+  if (file) {
+    receiptFile.value = file;
+    receiptPreviewUrl.value = URL.createObjectURL(file);
+  }
+}
 
 // Direct Online Gateway State
 const openOnlineGatewayModal = ref(false);
@@ -1620,22 +1837,35 @@ async function executeOnlinePayment() {
 }
 
 async function submitReceipt() {
+  if (!receiptTrackCode.value.trim()) {
+    toast('لطفاً کد پیگیری واریز را وارد فرمایید.');
+    return;
+  }
+  uploadingReceipt.value = true;
   try {
+    const formData = new FormData();
+    formData.append('amount', receiptAmount.value || 1500000);
+    formData.append('tracking_code', receiptTrackCode.value);
+    formData.append('card_number', receiptCardNumber.value || '');
+    if (receiptFile.value) {
+      formData.append('receipt_image', receiptFile.value);
+    }
     const res = await fetch('/api/fees/receipts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        student_id: props.user.id,
-        amount: 1500000,
-        tracking_code: receiptTrackCode.value
-      })
+      body: formData
     });
     const d = await res.json();
-    toast(d.message || 'رسید با موفقیت ثبت شد');
+    if (!res.ok) throw new Error(d.error || 'خطا در ثبت رسید');
+    toast(d.message || 'رسید با موفقیت ثبت شد و به مدیریت ارسال گردید.');
     openReceiptModal.value = false;
-    emit('update-user', { fee_status: 'pending', is_locked: 0 });
+    receiptFile.value = null;
+    receiptPreviewUrl.value = '';
+    emit('update-user', { fee_status: 'pending' });
   } catch (e) {
+    toast(e.message || 'خطا در ثبت فیش واریز');
     console.error(e);
+  } finally {
+    uploadingReceipt.value = false;
   }
 }
 
@@ -1643,6 +1873,7 @@ onMounted(() => {
   loadPublicSettings();
   loadHomeworks();
   loadExams();
+  loadBarpaReports();
   loadStudy();
   loadPoints();
   refreshIcons();

@@ -9,8 +9,8 @@
           <i data-lucide="graduation-cap" class="w-7 h-7 text-sun"></i>
         </div>
         <div class="leading-tight">
-          <p class="font-extrabold text-base">کانون نخبه‌پروری</p>
-          <p class="text-xs text-white/75">شهید کاظم آشتیانی</p>
+          <p class="font-extrabold text-base font-titr">کانون نخبه‌پروری</p>
+          <p class="text-xs text-white/85 font-nastaliq text-sm">دانشمند شهید دکتر سعید کاظمی آشتیانی</p>
         </div>
       </div>
 
@@ -303,10 +303,29 @@
                 <span class="tag bg-mist text-royal font-black text-xs">
                   {{ faNum(st.total_points) }} امتیاز
                 </span>
+                <button 
+                  @click="loginAsStudent(st)" 
+                  class="btn btn-soft !bg-blue-50 hover:!bg-blue-100 text-royal text-xs font-black flex items-center gap-1.5 !min-h-[34px] !py-1 !px-3 rounded-xl shadow-xs" 
+                  title="ورود به پنل این دانش‌آموز"
+                >
+                  <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+                  <span>ورود به پنل</span>
+                </button>
+                <button 
+                  @click="openEditModal(st)" 
+                  class="text-royal hover:bg-blue-50 p-2 rounded-xl text-sm" 
+                  title="ویرایش کامل پرونده دانش‌آموز"
+                >
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
                 <button @click="resetStudentPassword(st)" class="text-royal hover:bg-blue-50 p-2 rounded-xl text-sm" title="بازنشانی رمز عبور">
                   <i data-lucide="key-round" class="w-4 h-4"></i>
                 </button>
-                <button @click="deleteStudent(st.id)" class="text-late hover:bg-red-50 p-2 rounded-xl text-sm" title="غیرفعال‌سازی پرونده">
+                <button 
+                  @click="promptDeleteStudent(st)" 
+                  class="text-late hover:bg-red-50 p-2 rounded-xl text-sm" 
+                  title="حذف یا غیرفعال‌سازی پرونده"
+                >
                   <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
               </div>
@@ -340,106 +359,394 @@
 
         <!-- ================= 3. حق عضویت (FEES & RECEIPTS) ================= -->
         <section v-if="activeTab === 'fee'" class="space-y-4">
-          <div class="min-h-[48px]">
-            <h2 class="text-[26px] font-extrabold text-white lg:text-ink">حق عضویت</h2>
-            <p class="text-sm text-white/80 lg:text-[#5A6E99]">مبلغ، رسیدها و گزارش کلاس‌ها</p>
-          </div>
-
-          <div class="seg-ctl">
-            <button @click="feeSubTab = 'def'" :aria-pressed="feeSubTab === 'def'">تعریف مبلغ</button>
-            <button @click="feeSubTab = 'rec'" :aria-pressed="feeSubTab === 'rec'">
-              رسیدها <span class="tag bg-sun text-ink !py-0 mr-1 text-xs">{{ faNum(pendingReceiptsCount) }}</span>
-            </button>
-            <button @click="feeSubTab = 'rep'" :aria-pressed="feeSubTab === 'rep'">گزارش کلاس</button>
-          </div>
-
-          <!-- Define Fees -->
-          <div v-if="feeSubTab === 'def'" class="space-y-3">
-            <div class="grid lg:grid-cols-3 gap-3">
-              <div v-for="f in feeDefs" :key="f.grade" class="card p-5 space-y-3">
-                <span class="tag bg-mist text-royal font-bold text-xs">پایه {{ f.grade }}</span>
-                <div>
-                  <label class="lbl">مبلغ شهریه (تومان)</label>
-                  <input type="number" v-model.number="f.amount" class="input font-black" />
-                </div>
-                <div>
-                  <label class="lbl">مهلت پرداخت</label>
-                  <input v-model="f.deadline_fa" class="input text-xs" />
-                </div>
-                <div>
-                  <label class="lbl">تاریخ قفل پنل</label>
-                  <input v-model="f.lock_date_fa" class="input text-xs" />
-                </div>
-              </div>
+          <div class="min-h-[48px] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-[26px] font-extrabold text-white lg:text-ink font-titr">حق عضویت و بررسی رسیدها</h2>
+              <p class="text-sm text-white/80 lg:text-[#5A6E99]">بررسی دقیق فیش‌های واریزی دانش‌آموزان، احراز هویت پرداخت‌کننده و گزارش تسویه</p>
             </div>
-
-            <button @click="saveFeeDefs" class="btn btn-royal">
-              <i data-lucide="save" class="w-5 h-5"></i>
-              <span>ذخیره تنظیمات</span>
+            
+            <!-- Quick Link to Settings for Fee Definition -->
+            <button 
+              @click="activeTab = 'settings'" 
+              class="btn btn-sun text-xs font-black !py-2.5 !px-4 shrink-0 shadow-sm flex items-center gap-2 hover:scale-105 transition-transform"
+            >
+              <i data-lucide="settings-2" class="w-4 h-4 text-ink"></i>
+              <span>تعریف مبالغ و شماره کارت در تنظیمات</span>
             </button>
           </div>
 
-          <!-- Receipts Queue -->
-          <div v-if="feeSubTab === 'rec'" class="space-y-3">
-            <div 
-              v-for="rec in receiptsList" 
-              :key="rec.id" 
-              class="card p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-            >
-              <div>
-                <div class="flex items-center gap-2">
-                  <h4 class="font-extrabold text-base text-ink">{{ rec.student_name }}</h4>
-                  <span class="tag bg-mist text-royal text-xs">{{ rec.grade }} {{ rec.class_name }}</span>
-                </div>
-                <div class="flex flex-wrap gap-2 text-xs text-[#5A6E99] mt-1.5">
-                  <span>مبلغ: <b class="text-royal font-bold">{{ money(rec.amount) }} تومان</b></span>
-                  <span>|</span>
-                  <span>کد پیگیری: <b dir="ltr">{{ rec.tracking_code }}</b></span>
-                  <span>|</span>
-                  <span>تاریخ: {{ rec.date_fa }}</span>
-                </div>
-                <p v-if="rec.reject_reason" class="text-xs text-late font-bold mt-1.5">
-                  علت رد: {{ rec.reject_reason }}
+          <!-- Top Banner: Single Source of Truth for Tuition Configuration -->
+          <div class="card p-4 sm:p-5 bg-gradient-to-r from-blue-900 via-royal to-indigo-900 text-white rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center shrink-0 border border-white/20">
+                <i data-lucide="info" class="w-6 h-6 text-sun"></i>
+              </div>
+              <div class="space-y-0.5">
+                <h4 class="font-bold text-sm sm:text-base font-titr">سامانه هوشمند نظارت بر واریز شهریه</h4>
+                <p class="text-xs text-white/85 leading-relaxed font-yekan">
+                  مبالغ مصوب شهریه پایه‌ها، شماره حساب و ضوابط قفل خودکار در بخش <b>«تنظیمات و پرداخت»</b> تعیین می‌گردد. در این بخش می‌توانید کلیه فیش‌های ارسالی را همراه با تصویر و اطلاعات پرداخت‌کننده به دقت بررسی و با یک کلیک تأیید یا رد فرمایید.
                 </p>
               </div>
+            </div>
+            <button 
+              @click="activeTab = 'settings'" 
+              class="btn btn-soft !bg-white/20 hover:!bg-white/30 text-white text-xs font-bold !py-2 !px-4 shrink-0 backdrop-blur whitespace-nowrap"
+            >
+              تنظیم مبالغ پایه‌ها ←
+            </button>
+          </div>
 
-              <div class="flex gap-2 shrink-0">
-                <span v-if="rec.status === 'approved'" class="tag bg-[#E6F7EE] text-ok font-bold">
-                  تأیید شده
-                </span>
-                <span v-else-if="rec.status === 'rejected'" class="tag bg-[#FDECEC] text-late font-bold">
-                  رد شده
-                </span>
-                <template v-else>
-                  <button @click="approveReceipt(rec.id)" class="btn btn-ok btn-sm font-bold">
-                    <i data-lucide="check" class="w-4 h-4"></i>
-                    <span>تأیید</span>
+          <!-- Segment Control (No duplicate def tab) -->
+          <div class="seg-ctl">
+            <button @click="feeSubTab = 'rec'" :aria-pressed="feeSubTab === 'rec'">
+              رسیدهای واریزی
+              <span v-if="receiptsCounts.pending > 0" class="tag bg-sun text-ink !py-0 mr-1 text-xs font-yekan font-bold">
+                {{ faNum(receiptsCounts.pending) }} در انتظار
+              </span>
+            </button>
+            <button @click="feeSubTab = 'rep'" :aria-pressed="feeSubTab === 'rep'">
+              گزارش تسویه کلاس‌ها
+            </button>
+          </div>
+
+          <!-- ================= SUB-TAB 1: ENHANCED RECEIPTS AUDIT ================= -->
+          <div v-if="feeSubTab === 'rec'" class="space-y-4">
+            <!-- Filter & Search Toolbar -->
+            <div class="card p-4 space-y-3 bg-white border border-line shadow-xs">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <!-- Search Input -->
+                <div class="relative flex-1">
+                  <i data-lucide="search" class="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-[#5A6E99]"></i>
+                  <input 
+                    v-model="receiptSearchQuery" 
+                    type="text" 
+                    placeholder="جستجو با نام دانش‌آموز، کد ملی، شماره پیگیری یا شماره تماس..." 
+                    class="input !pr-10 !h-11 text-xs font-bold w-full"
+                  />
+                  <button 
+                    v-if="receiptSearchQuery" 
+                    @click="receiptSearchQuery = ''" 
+                    class="absolute left-3 top-1/2 -translate-y-1/2 text-[#5A6E99] hover:text-ink text-xs p-1"
+                  >
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
                   </button>
-                  <button @click="startReject(rec)" class="btn btn-bad btn-sm font-bold">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                    <span>رد فیش</span>
-                  </button>
-                </template>
+                </div>
+
+                <!-- Grade Filter Dropdown -->
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-xs text-[#5A6E99] font-bold">پایه:</span>
+                  <select v-model="receiptGradeFilter" class="input !h-11 text-xs font-bold !py-1 !px-3 w-32">
+                    <option value="all">همه پایه‌ها</option>
+                    <option value="هفتم">پایه هفتم</option>
+                    <option value="هشتم">پایه هشتم</option>
+                    <option value="نهم">پایه نهم</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Status Filter Pills -->
+              <div class="flex items-center gap-1.5 flex-wrap pt-2 border-t border-line text-xs font-yekan">
+                <button 
+                  @click="receiptStatusFilter = 'all'" 
+                  class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5"
+                  :class="receiptStatusFilter === 'all' ? 'bg-royal text-white shadow-sm' : 'bg-mist text-[#5A6E99] hover:bg-slate-200'"
+                >
+                  <span>همه رسیدها</span>
+                  <span class="tag bg-white/20 text-current text-[11px] !py-0">{{ faNum(receiptsCounts.all) }}</span>
+                </button>
+                
+                <button 
+                  @click="receiptStatusFilter = 'pending'" 
+                  class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5"
+                  :class="receiptStatusFilter === 'pending' ? 'bg-amber-500 text-white shadow-sm' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'"
+                >
+                  <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                  <span>در انتظار بررسی</span>
+                  <span class="tag bg-white/20 text-current text-[11px] !py-0">{{ faNum(receiptsCounts.pending) }}</span>
+                </button>
+
+                <button 
+                  @click="receiptStatusFilter = 'approved'" 
+                  class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5"
+                  :class="receiptStatusFilter === 'approved' ? 'bg-ok text-white shadow-sm' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'"
+                >
+                  <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                  <span>تأیید شده</span>
+                  <span class="tag bg-white/20 text-current text-[11px] !py-0">{{ faNum(receiptsCounts.approved) }}</span>
+                </button>
+
+                <button 
+                  @click="receiptStatusFilter = 'rejected'" 
+                  class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5"
+                  :class="receiptStatusFilter === 'rejected' ? 'bg-late text-white shadow-sm' : 'bg-red-50 text-red-800 hover:bg-red-100'"
+                >
+                  <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                  <span>رد شده</span>
+                  <span class="tag bg-white/20 text-current text-[11px] !py-0">{{ faNum(receiptsCounts.rejected) }}</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div v-if="filteredReceiptsList.length === 0" class="card p-10 text-center space-y-3 bg-white border border-line">
+              <div class="w-14 h-14 rounded-2xl bg-mist text-[#5A6E99] flex items-center justify-center mx-auto">
+                <i data-lucide="receipt" class="w-7 h-7"></i>
+              </div>
+              <h4 class="font-extrabold text-base text-ink font-titr">رسیدی مطابق فیلتر یافت نشد</h4>
+              <p class="text-xs text-[#5A6E99]">رسیدهای واریزی جدید بلافاصله پس از ارسال دانش‌آموز در این قسمت نمایش داده می‌شوند.</p>
+            </div>
+
+            <!-- Receipts Detailed Cards List -->
+            <div v-else class="space-y-3">
+              <div 
+                v-for="rec in filteredReceiptsList" 
+                :key="rec.id" 
+                class="card p-4 sm:p-5 bg-white border transition-all hover:shadow-md space-y-4"
+                :class="[
+                  rec.status === 'pending' ? 'border-amber-300 ring-2 ring-amber-100/70' : 
+                  (rec.status === 'approved' ? 'border-emerald-200' : 'border-red-200')
+                ]"
+              >
+                <!-- Card Header: Student Name + Status Badge -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
+                  <div class="flex items-center gap-3">
+                    <div 
+                      class="w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 shadow-xs"
+                      :class="[
+                        rec.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : 
+                        (rec.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800')
+                      ]"
+                    >
+                      <i :data-lucide="rec.status === 'approved' ? 'check' : (rec.status === 'rejected' ? 'x' : 'receipt')" class="w-5 h-5"></i>
+                    </div>
+
+                    <div>
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <h4 class="font-black text-base text-ink font-titr">{{ rec.student_name }}</h4>
+                        <span class="tag bg-mist text-royal text-xs font-bold font-yekan">پایه {{ rec.grade }} - کلاس {{ rec.class_name }}</span>
+                        <span v-if="rec.national_id" class="tag bg-slate-100 text-slate-700 text-xs font-mono font-bold" dir="ltr">
+                          کد ملی: {{ rec.national_id }}
+                        </span>
+                      </div>
+                      <p class="text-xs text-[#5A6E99] mt-0.5">
+                        مرکز / مدرسه: <b>{{ rec.school_name || 'شهید کاظمی آشتیانی' }}</b>
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Status Tag -->
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span 
+                      v-if="rec.status === 'approved'" 
+                      class="tag bg-emerald-100 text-emerald-800 font-extrabold text-xs flex items-center gap-1.5 px-3 py-1"
+                    >
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5 text-ok"></i>
+                      <span>تأیید شده (ثبت در حسابداری)</span>
+                    </span>
+                    <span 
+                      v-else-if="rec.status === 'rejected'" 
+                      class="tag bg-red-100 text-red-800 font-extrabold text-xs flex items-center gap-1.5 px-3 py-1"
+                    >
+                      <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-late"></i>
+                      <span>رد شده</span>
+                    </span>
+                    <span 
+                      v-else 
+                      class="tag bg-amber-100 text-amber-800 font-extrabold text-xs flex items-center gap-1.5 px-3 py-1 animate-pulse"
+                    >
+                      <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-600"></i>
+                      <span>در انتظار بررسی مدیریت</span>
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Card Body: 3 Structured Columns -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <!-- Col 1: Student & Parent Contact Info -->
+                  <div class="p-3 rounded-xl bg-slate-50/80 border border-slate-200/60 space-y-2">
+                    <span class="text-[11px] font-black text-[#5A6E99] block border-b border-slate-200 pb-1">
+                      اطلاعات واریزکننده:
+                    </span>
+                    <div class="space-y-1.5 text-slate-700">
+                      <div class="flex items-center justify-between">
+                        <span class="text-[#5A6E99]">موبایل دانش‌آموز:</span>
+                        <a :href="`tel:${rec.student_phone}`" class="font-mono font-bold text-royal hover:underline" dir="ltr">
+                          {{ rec.student_phone || '---' }}
+                        </a>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-[#5A6E99]">نام ولی / والد:</span>
+                        <b class="text-ink">{{ rec.parent_name || 'ثبت نشده' }}</b>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-[#5A6E99]">تلفن تماس ولی:</span>
+                        <a :href="`tel:${rec.parent_phone}`" class="font-mono font-bold text-royal hover:underline" dir="ltr">
+                          {{ rec.parent_phone || '---' }}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Col 2: Bank Transaction Details -->
+                  <div class="p-3 rounded-xl bg-slate-50/80 border border-slate-200/60 space-y-2">
+                    <span class="text-[11px] font-black text-[#5A6E99] block border-b border-slate-200 pb-1">
+                      مشخصات تراکنش بانکی:
+                    </span>
+                    <div class="space-y-1.5 text-slate-700">
+                      <div class="flex items-center justify-between">
+                        <span class="text-[#5A6E99]">مبلغ واریزی:</span>
+                        <b class="text-base text-ok font-black font-yekan">{{ money(rec.amount) }} تومان</b>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-[#5A6E99]">کد پیگیری / ارجاع:</span>
+                        <b class="font-mono text-ink text-xs select-all bg-white px-2 py-0.5 rounded border border-slate-200" dir="ltr">
+                          {{ rec.tracking_code || '---' }}
+                        </b>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-[#5A6E99]">کارت واریزکننده:</span>
+                        <span class="font-mono text-slate-600" dir="ltr">{{ rec.card_number || '---' }}</span>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="text-[#5A6E99]">تاریخ واریز:</span>
+                        <span class="font-bold text-slate-800">{{ rec.date_fa }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Col 3: Receipt Image Thumbnail & Preview -->
+                  <div class="p-3 rounded-xl bg-slate-50/80 border border-slate-200/60 flex flex-col justify-between space-y-2">
+                    <span class="text-[11px] font-black text-[#5A6E99] block border-b border-slate-200 pb-1">
+                      تصویر فیش بانکی:
+                    </span>
+                    
+                    <div 
+                      v-if="rec.receipt_image"
+                      @click="openInspectReceipt(rec)"
+                      class="relative group rounded-xl overflow-hidden border border-slate-300 bg-white cursor-pointer h-24 flex items-center justify-center shadow-xs"
+                      title="کلیک برای مشاهده بزرگ‌نمایی شده و بررسی دقیق فیش"
+                    >
+                      <img 
+                        :src="rec.receipt_image" 
+                        :alt="`فیش واریزی ${rec.student_name}`" 
+                        class="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform" 
+                      />
+                      <div class="absolute inset-0 bg-ink/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5 backdrop-blur-[2px]">
+                        <i data-lucide="zoom-in" class="w-4 h-4 text-sun"></i>
+                        <span>بزرگ‌نمایی فیش</span>
+                      </div>
+                    </div>
+                    <div v-else class="h-24 rounded-xl border border-dashed border-slate-300 flex flex-col items-center justify-center text-[#5A6E99] text-xs">
+                      <i data-lucide="image-off" class="w-6 h-6 mb-1 text-slate-400"></i>
+                      <span>تصویر فیش ضمیمه نشده</span>
+                    </div>
+
+                    <button 
+                      @click="openInspectReceipt(rec)" 
+                      class="btn btn-soft !py-1 text-[11px] font-bold w-full flex items-center justify-center gap-1"
+                    >
+                      <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                      <span>مشاهده کامل و زوم</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Rejection Reason Warning (if rejected) -->
+                <div v-if="rec.reject_reason" class="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-late font-bold flex items-center gap-2">
+                  <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+                  <span>علت رد فیش: {{ rec.reject_reason }}</span>
+                </div>
+
+                <!-- Card Actions Toolbar -->
+                <div class="pt-3 border-t border-line flex flex-wrap items-center justify-between gap-2">
+                  <div class="text-[11px] text-[#5A6E99] flex items-center gap-2">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-royal"></i>
+                    <span>تأیید فیش، پنل دانش‌آموز را فوراً فعال نموده و سند دریافت را در حسابداری ثبت می‌کند.</span>
+                  </div>
+
+                  <div class="flex items-center gap-2 shrink-0">
+                    <template v-if="rec.status === 'pending'">
+                      <button 
+                        @click="approveReceipt(rec.id)" 
+                        class="btn btn-ok text-xs font-black !py-2 !px-4 flex items-center gap-1.5 shadow-sm"
+                      >
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        <span>تأیید فیش و فعال‌سازی پنل</span>
+                      </button>
+                      <button 
+                        @click="startReject(rec)" 
+                        class="btn btn-bad text-xs font-bold !py-2 !px-3.5 flex items-center gap-1.5 shadow-sm"
+                      >
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                        <span>رد فیش</span>
+                      </button>
+                    </template>
+
+                    <template v-else-if="rec.status === 'approved'">
+                      <button 
+                        @click="startReject(rec)" 
+                        class="btn btn-soft text-xs text-late hover:bg-red-50 !py-1.5 !px-3 flex items-center gap-1"
+                        title="تغییر وضعیت یا لغو تأیید"
+                      >
+                        <i data-lucide="refresh-ccw" class="w-3.5 h-3.5"></i>
+                        <span>تغییر وضعیت به رد شده</span>
+                      </button>
+                    </template>
+
+                    <template v-else-if="rec.status === 'rejected'">
+                      <button 
+                        @click="approveReceipt(rec.id)" 
+                        class="btn btn-soft text-xs text-ok hover:bg-emerald-50 !py-1.5 !px-3 flex items-center gap-1"
+                        title="بررسی مجدد و تأیید"
+                      >
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        <span>تأیید مجدد فیش</span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Class Reports -->
-          <div v-if="feeSubTab === 'rep'" class="grid lg:grid-cols-2 gap-3">
-            <div v-for="g in feeReports" :key="g.grade" class="card p-5 space-y-3">
-              <h4 class="font-extrabold text-[18px]">گزارش پایه {{ g.grade }}</h4>
-              <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                <div class="p-3 bg-[#E6F7EE] rounded-2xl">
-                  <p class="text-[#5A6E99]">پرداخت‌شده</p>
-                  <p class="text-xl font-black text-ok">{{ faNum(g.paid) }}</p>
+          <!-- ================= SUB-TAB 2: CLASS SETTLEMENT REPORTS ================= -->
+          <div v-if="feeSubTab === 'rep'" class="grid lg:grid-cols-2 gap-4">
+            <div v-for="g in feeReports" :key="g.grade" class="card p-5 space-y-4 bg-white border border-line shadow-xs">
+              <div class="flex items-center justify-between border-b border-line pb-3">
+                <h4 class="font-extrabold text-[18px] text-ink font-titr">گزارش وضعیت تسویه پایه {{ g.grade }}</h4>
+                <span class="tag bg-royal/10 text-royal text-xs font-bold font-yekan">
+                  کل دانش‌آموزان: {{ faNum(g.paid + g.pending + g.unpaid) }} نفر
+                </span>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2.5 text-center text-xs">
+                <div class="p-3 bg-[#E6F7EE] rounded-2xl border border-emerald-200">
+                  <p class="text-[#5A6E99] font-bold">پرداخت‌شده (کامل)</p>
+                  <p class="text-2xl font-black text-ok font-yekan mt-1">{{ faNum(g.paid) }}</p>
                 </div>
-                <div class="p-3 bg-sun/20 rounded-2xl">
-                  <p class="text-[#5A6E99]">در انتظار</p>
-                  <p class="text-xl font-black text-[#7A5600]">{{ faNum(g.pending) }}</p>
+                <div class="p-3 bg-sun/20 rounded-2xl border border-amber-300">
+                  <p class="text-[#5A6E99] font-bold">در انتظار تأیید</p>
+                  <p class="text-2xl font-black text-[#7A5600] font-yekan mt-1">{{ faNum(g.pending) }}</p>
                 </div>
-                <div class="p-3 bg-[#FDECEC] rounded-2xl">
-                  <p class="text-[#5A6E99]">پرداخت‌نشده</p>
-                  <p class="text-xl font-black text-late">{{ faNum(g.unpaid) }}</p>
+                <div class="p-3 bg-[#FDECEC] rounded-2xl border border-red-200">
+                  <p class="text-[#5A6E99] font-bold">پرداخت‌نشده (بدهکار)</p>
+                  <p class="text-2xl font-black text-late font-yekan mt-1">{{ faNum(g.unpaid) }}</p>
+                </div>
+              </div>
+
+              <!-- Quick Progress Bar -->
+              <div class="space-y-1.5 pt-2">
+                <div class="flex items-center justify-between text-xs font-bold text-[#5A6E99] font-yekan">
+                  <span>درصد تسویه مالی پایه:</span>
+                  <span class="text-ok font-black">
+                    {{ faNum(Math.round((g.paid / (g.paid + g.pending + g.unpaid || 1)) * 100)) }}٪
+                  </span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden flex">
+                  <div 
+                    class="bg-ok h-full rounded-full transition-all"
+                    :style="{ width: `${(g.paid / (g.paid + g.pending + g.unpaid || 1)) * 100}%` }"
+                  ></div>
                 </div>
               </div>
             </div>
@@ -903,57 +1210,263 @@
           </div>
         </section>
 
-        <!-- ================= 6. آزمون جامع (COMPREHENSIVE EXAM & QR PRINT) ================= -->
+        <!-- ================= 6. آزمون جامع و برپا (COMPREHENSIVE EXAM & BARPA PARSER) ================= -->
         <section v-if="activeTab === 'exm'" class="space-y-4">
-          <div class="min-h-[48px] flex items-center justify-between">
+          <div class="min-h-[48px] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 class="text-[26px] font-extrabold text-white lg:text-ink">آزمون جامع</h2>
-              <p class="text-sm text-white/80 lg:text-[#5A6E99] flex items-center gap-2">
-                <span class="live"></span> نتایج لحظه‌ای تمام ۴۵۰ دانش‌آموز
+              <h2 class="text-[26px] font-extrabold text-white lg:text-ink flex items-center gap-2">
+                <span>آزمون‌های جامع و کارنامه‌ها</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black bg-sun text-ink">
+                  سامانه آزمون برپا
+                </span>
+              </h2>
+              <p class="text-sm text-white/80 lg:text-[#5A6E99]">
+                آپلود هوشمند فایل‌های PDF آزمون جامع، تفکیک خودکار کارنامه هر دانش‌آموز و ارسال مستقیم به پنل
               </p>
             </div>
-            <button @click="openQrModal = true" class="btn btn-sun font-black text-sm">
-              <i data-lucide="qr-code" class="w-5 h-5"></i>
-              <span>چاپ QR</span>
+
+            <div class="flex items-center gap-2">
+              <button @click="openQrModal = true" class="btn btn-soft text-xs font-bold !min-h-[40px]">
+                <i data-lucide="qr-code" class="w-4 h-4"></i>
+                <span>چاپ QR</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Sub Tabs -->
+          <div class="seg-ctl">
+            <button @click="exmSubTab = 'barpa'" :aria-pressed="exmSubTab === 'barpa'">
+              <span>کارنامه‌های آزمون جامع برپا</span>
+              <span v-if="barpaReports.length" class="mr-1.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-sun text-ink">
+                {{ faNum(barpaReports.length) }} کارنامه
+              </span>
+            </button>
+            <button @click="exmSubTab = 'online'" :aria-pressed="exmSubTab === 'online'">
+              <span>رتبه‌بندی آزمون‌های آنلاین کانون</span>
             </button>
           </div>
 
-          <!-- Leaderboard Table -->
-          <div class="card overflow-hidden">
-            <div class="divide-y divide-line max-h-[500px] overflow-y-auto">
-              <div 
-                v-for="st in comprehensiveRankings" 
-                :key="st.id" 
-                class="px-5 py-3.5 flex items-center justify-between gap-3 text-sm"
-              >
-                <div class="flex items-center gap-3">
-                  <div 
-                    :class="[
-                      'w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0',
-                      st.rank === 1 ? 'bg-sun text-ink' : (st.rank === 2 ? 'bg-gray-200 text-ink' : (st.rank === 3 ? 'bg-amber-100 text-[#7A5600]' : 'bg-mist text-[#5A6E99]'))
-                    ]"
-                  >
-                    {{ faNum(st.rank) }}
+          <!-- ================= TAB 1: BARPA COMPREHENSIVE EXAMS & UPLOAD ================= -->
+          <div v-if="exmSubTab === 'barpa'" class="space-y-4 rise">
+            
+            <!-- Upload Box (Smart PDF Separation) -->
+            <div class="card p-5 sm:p-6 border-2 border-dashed border-royal/30 bg-gradient-to-b from-blue-50/40 to-white shadow-sm space-y-4">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-start gap-3.5">
+                  <div class="w-12 h-12 rounded-2xl bg-royal text-white flex items-center justify-center shrink-0 shadow-md">
+                    <i data-lucide="file-up" class="w-6 h-6 text-sun"></i>
                   </div>
                   <div>
-                    <p class="font-bold text-ink">{{ st.full_name }}</p>
-                    <p class="text-xs text-[#5A6E99]">{{ st.grade }} {{ st.class_name }} - {{ st.school_name }}</p>
+                    <h3 class="font-black text-base sm:text-lg text-ink">بارگذاری فایل آزمون جامع برپا (PDF چند صفحه‌ای)</h3>
+                    <p class="text-xs text-[#5A6E99] mt-1 leading-relaxed max-w-2xl">
+                      با آپلود فایل PDF حاوی کارنامه‌های مرحله اول برپا، سیستم هوشمند ما خودکار اسامی دانش‌آموزان را تفکیک، دروس، درصدها، تراز، رتبه و پاسخ‌برگ ۱۲۰ تستی را استخراج نموده و مستقیماً در پنل هر دانش‌آموز قرار می‌دهد.
+                    </p>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-4">
-                  <div class="text-left">
-                    <p class="text-xs text-[#5A6E99]">نمره</p>
-                    <p class="font-black text-ok text-base">{{ faNum(st.score) }}٪</p>
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                  <input 
+                    ref="barpaFileInput" 
+                    type="file" 
+                    accept=".pdf" 
+                    class="hidden" 
+                    @change="handleBarpaFileUpload" 
+                  />
+                  <button 
+                    @click="barpaFileInput?.click()" 
+                    :disabled="barpaUploading"
+                    class="btn btn-royal text-xs sm:text-sm font-black !min-h-[44px] px-4 shadow-md flex items-center gap-2"
+                  >
+                    <i data-lucide="upload-cloud" class="w-4 h-4 text-sun"></i>
+                    <span>{{ barpaUploading ? 'در حال پردازش هوشمند PDF...' : 'انتخاب و آپلود فایل PDF آزمون' }}</span>
+                  </button>
+                  <button 
+                    @click="triggerSampleBarpaUpload" 
+                    :disabled="barpaUploading"
+                    class="btn btn-sun text-ink text-xs sm:text-sm font-black !min-h-[44px] px-4 shadow-md flex items-center gap-2"
+                    title="پردازش و تفکیک خودکار نمونه ۲۰ دانش‌آموز نهم"
+                  >
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    <span>بارگذاری مجدد نمونه آزمون نهم (۲۰ دانش‌آموز)</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Loading progress banner -->
+              <div v-if="barpaUploading" class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-center gap-3 animate-pulse">
+                <i data-lucide="loader-2" class="w-5 h-5 animate-spin text-amber-600"></i>
+                <span>موتور هوشمند در حال خوانش وکتورها، جدول دروس، درصدها، تراز و استخراج رنگ‌های سبز/قرمز پاسخ‌برگ است... لطفاً چند لحظه شکیبا باشید.</span>
+              </div>
+            </div>
+
+            <!-- Stats KPI Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="card p-4 bg-white border border-line">
+                <span class="text-xs text-[#5A6E99] font-bold block">کارنامه‌های صادرشده</span>
+                <span class="text-2xl font-black text-royal mt-1 block">{{ faNum(barpaReports.length) }} کارنامه</span>
+                <span class="text-[11px] text-ok font-bold mt-1 block">پایه نهم • شهید کاظمی آشتیانی</span>
+              </div>
+              <div class="card p-4 bg-white border border-line">
+                <span class="text-xs text-[#5A6E99] font-bold block">بالاترین تراز ثبت‌شده</span>
+                <span class="text-2xl font-black text-sun mt-1 block">{{ faNum(highestTraz) }}</span>
+                <span class="text-[11px] text-[#5A6E99] font-bold mt-1 block">{{ topStudentName }}</span>
+              </div>
+              <div class="card p-4 bg-white border border-line">
+                <span class="text-xs text-[#5A6E99] font-bold block">بهترین رتبه کشوری</span>
+                <span class="text-2xl font-black text-emerald-600 mt-1 block">رتبه {{ faNum(bestRankNationwide) }}</span>
+                <span class="text-[11px] text-ok font-bold mt-1 block">از بین ۱۹۲۴ شرکت‌کننده</span>
+              </div>
+              <div class="card p-4 bg-white border border-line">
+                <span class="text-xs text-[#5A6E99] font-bold block">میانگین تراز کل نهم</span>
+                <span class="text-2xl font-black text-ink mt-1 block">{{ faNum(averageTraz) }}</span>
+                <span class="text-[11px] text-[#5A6E99] font-bold mt-1 block">سطح کیفی: بسیار خوب</span>
+              </div>
+            </div>
+
+            <!-- Table of Students and Action Buttons -->
+            <div class="card overflow-hidden border border-line bg-white shadow-sm space-y-2">
+              <div class="p-4 border-b border-line flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h4 class="font-black text-base text-ink">لیست کارنامه‌های دانش‌آموزان آزمون برپا (پایه نهم)</h4>
+                  <p class="text-xs text-[#5A6E99]">مدیر می‌تواند مستقیماً وارد پنل هر دانش‌آموز شود یا کارنامه تحلیلی او را مشاهده نماید.</p>
+                </div>
+                <span class="tag bg-mist text-royal font-bold text-xs">
+                  {{ faNum(barpaReports.length) }} کارنامه فعال
+                </span>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-right text-xs">
+                  <thead>
+                    <tr class="bg-slate-50 text-[#5A6E99] font-extrabold border-b border-line text-[11px]">
+                      <th class="p-3 pr-4 text-center">رتبه کشوری</th>
+                      <th class="p-3">نام و نام خانوادگی</th>
+                      <th class="p-3 text-center">کد داوطلبی</th>
+                      <th class="p-3 text-center">تراز کل</th>
+                      <th class="p-3 text-center">رتبه مرکز</th>
+                      <th class="p-3 text-center">درصد کل</th>
+                      <th class="p-3 text-center">پاسخ‌ها (درست / غلط / نزده)</th>
+                      <th class="p-3 pl-4 text-center">عملیات مدیر</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-line/60">
+                    <tr 
+                      v-for="(rep, idx) in barpaReports" 
+                      :key="rep.id"
+                      class="hover:bg-blue-50/40 transition-colors font-medium text-ink"
+                    >
+                      <td class="p-3 pr-4 text-center">
+                        <span 
+                          class="w-7 h-7 rounded-xl font-black inline-flex items-center justify-center text-xs"
+                          :class="idx === 0 ? 'bg-sun text-ink shadow-sm' : (idx < 5 ? 'bg-blue-100 text-royal' : 'bg-slate-100 text-slate-700')"
+                        >
+                          {{ faNum(rep.overall_rank_all) }}
+                        </span>
+                      </td>
+                      <td class="p-3 font-black text-sm text-ink">
+                        <span>{{ rep.student_name }}</span>
+                        <span class="block text-[10px] text-[#5A6E99] font-normal">پایه {{ rep.grade }} • کلاس الف</span>
+                      </td>
+                      <td class="p-3 text-center font-mono font-bold text-slate-600" dir="ltr">
+                        {{ rep.candidate_code }}
+                      </td>
+                      <td class="p-3 text-center font-black text-sm" :class="rep.overall_traz >= 6000 ? 'text-ok' : (rep.overall_traz >= 5000 ? 'text-royal' : 'text-ink')">
+                        {{ faNum(rep.overall_traz) }}
+                      </td>
+                      <td class="p-3 text-center font-bold text-slate-700">
+                        {{ faNum(rep.overall_rank_center) }}
+                      </td>
+                      <td class="p-3 text-center font-black">
+                        {{ faNum(rep.overall_percentage) }}٪
+                      </td>
+                      <td class="p-3 text-center">
+                        <span class="text-ok font-bold">{{ faNum(rep.overall_correct) }} درست</span>
+                        <span class="text-slate-300 mx-1">/</span>
+                        <span class="text-late font-bold">{{ faNum(rep.overall_wrong) }} غلط</span>
+                        <span class="text-slate-300 mx-1">/</span>
+                        <span class="text-slate-400 font-bold">{{ faNum(rep.overall_unanswered) }} نزده</span>
+                      </td>
+                      <td class="p-3 pl-4 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                          <button 
+                            @click="openBarpaReport(rep)" 
+                            class="btn btn-soft !min-h-[32px] !py-1 text-xs font-bold text-royal flex items-center gap-1 hover:bg-blue-100"
+                            title="مشاهده کارنامه تحلیلی"
+                          >
+                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                            <span>کارنامه</span>
+                          </button>
+                          <button 
+                            @click="loginAsStudent(rep)" 
+                            class="btn btn-sun !min-h-[32px] !py-1 text-xs font-black text-ink shadow-sm flex items-center gap-1 hover:bg-amber-300"
+                            title="ورود به پنل این دانش‌آموز"
+                          >
+                            <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+                            <span>ورود به پنل</span>
+                          </button>
+                          <button 
+                            @click="openEditModal(rep)" 
+                            class="p-1.5 rounded-xl text-royal hover:bg-blue-50 transition-all" 
+                            title="ویرایش اطلاعات دانش‌آموز"
+                          >
+                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                          </button>
+                          <button 
+                            @click="promptDeleteStudent(rep)" 
+                            class="p-1.5 rounded-xl text-late hover:bg-red-50 transition-all" 
+                            title="حذف حساب کاربری"
+                          >
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ================= TAB 2: ONLINE EXAM LEADERBOARD ================= -->
+          <div v-else-if="exmSubTab === 'online'" class="space-y-4 rise">
+            <div class="card overflow-hidden">
+              <div class="divide-y divide-line max-h-[500px] overflow-y-auto">
+                <div 
+                  v-for="st in comprehensiveRankings" 
+                  :key="st.id" 
+                  class="px-5 py-3.5 flex items-center justify-between gap-3 text-sm"
+                >
+                  <div class="flex items-center gap-3">
+                    <div 
+                      :class="[
+                        'w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0',
+                        st.rank === 1 ? 'bg-sun text-ink' : (st.rank === 2 ? 'bg-gray-200 text-ink' : (st.rank === 3 ? 'bg-amber-100 text-[#7A5600]' : 'bg-mist text-[#5A6E99]'))
+                      ]"
+                    >
+                      {{ faNum(st.rank) }}
+                    </div>
+                    <div>
+                      <p class="font-bold text-ink">{{ st.full_name }}</p>
+                      <p class="text-xs text-[#5A6E99]">{{ st.grade }} {{ st.class_name }} - {{ st.school_name }}</p>
+                    </div>
                   </div>
-                  <div class="text-left">
-                    <p class="text-xs text-[#5A6E99]">امتیاز کل</p>
-                    <p class="font-black text-royal text-base">{{ faNum(st.total_points) }}</p>
+
+                  <div class="flex items-center gap-4">
+                    <div class="text-left">
+                      <p class="text-xs text-[#5A6E99]">نمره</p>
+                      <p class="font-black text-ok text-base">{{ faNum(st.score) }}٪</p>
+                    </div>
+                    <div class="text-left">
+                      <p class="text-xs text-[#5A6E99]">امتیاز کل</p>
+                      <p class="font-black text-royal text-base">{{ faNum(st.total_points) }}</p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
         </section>
       </main>
     </div>
@@ -1063,6 +1576,210 @@
           <i data-lucide="x-circle" class="w-5 h-5"></i>
           <span>رد رسید و اطلاع به دانش‌آموز</span>
         </button>
+      </div>
+    </div>
+
+    <!-- ================= FULL RECEIPT INSPECTION LIGHTBOX MODAL ================= -->
+    <div 
+      v-if="inspectingReceipt" 
+      class="fixed inset-0 z-[65] bg-ink/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+      @click.self="closeInspectReceipt"
+    >
+      <div class="card p-5 sm:p-6 max-w-4xl w-full bg-white rounded-3xl rise space-y-4 shadow-2xl border border-line my-auto">
+        <!-- Modal Top Bar -->
+        <div class="flex items-center justify-between border-b border-line pb-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-royal text-white flex items-center justify-center font-bold">
+              <i data-lucide="receipt" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="font-black text-base sm:text-lg text-ink font-titr">
+                بررسی فیش واریزی: {{ inspectingReceipt.student_name }}
+              </h3>
+              <p class="text-xs text-[#5A6E99] font-yekan">
+                پایه {{ inspectingReceipt.grade }} • کلاس {{ inspectingReceipt.class_name }} • کد پیگیری: {{ inspectingReceipt.tracking_code || 'ندارد' }}
+              </p>
+            </div>
+          </div>
+          <button @click="closeInspectReceipt" class="w-9 h-9 rounded-2xl bg-mist hover:bg-slate-200 flex items-center justify-center transition-colors">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <!-- Modal 2-Column Content -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+          <!-- Left: High-Res Receipt Image Viewer -->
+          <div class="space-y-2">
+            <div class="p-3 bg-slate-900 rounded-2xl flex items-center justify-center min-h-[340px] max-h-[500px] overflow-hidden border border-slate-700 relative group">
+              <img 
+                v-if="inspectingReceipt.receipt_image"
+                :src="inspectingReceipt.receipt_image" 
+                :alt="`فیش بانکی ${inspectingReceipt.student_name}`" 
+                class="max-w-full max-h-[460px] object-contain rounded-xl shadow-lg transition-transform" 
+              />
+              <div v-else class="text-center text-slate-400 p-6 space-y-2">
+                <i data-lucide="image-off" class="w-12 h-12 mx-auto text-slate-500"></i>
+                <p class="text-xs font-bold">تصویر فیش توسط دانش‌آموز ضمیمه نشده است.</p>
+              </div>
+            </div>
+
+            <div v-if="inspectingReceipt.receipt_image" class="flex items-center justify-between gap-2 text-xs">
+              <a 
+                :href="inspectingReceipt.receipt_image" 
+                target="_blank" 
+                class="btn btn-soft !py-1.5 !px-3 text-xs font-bold flex items-center gap-1.5"
+              >
+                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                <span>باز کردن تصویر در اندازه اصلی</span>
+              </a>
+              <span class="text-[11px] text-[#5A6E99]">فرمت JPG/PNG</span>
+            </div>
+          </div>
+
+          <!-- Right: Complete Audit Breakdown -->
+          <div class="space-y-3.5 text-xs">
+            <!-- Student Identity Card -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+              <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span class="font-black text-ink flex items-center gap-1.5 text-sm">
+                  <i data-lucide="user-check" class="w-4 h-4 text-royal"></i>
+                  <span>مشخصات کامل پرونده دانش‌آموز</span>
+                </span>
+                <span class="tag bg-mist text-royal text-xs font-bold font-yekan">
+                  {{ inspectingReceipt.grade }} {{ inspectingReceipt.class_name }}
+                </span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-slate-700">
+                <div>
+                  <span class="text-[#5A6E99] block text-[11px]">نام و نام خانوادگی:</span>
+                  <b class="text-ink text-sm">{{ inspectingReceipt.student_name }}</b>
+                </div>
+                <div>
+                  <span class="text-[#5A6E99] block text-[11px]">کد ملی دانش‌آموز:</span>
+                  <b class="font-mono text-ink text-sm select-all" dir="ltr">{{ inspectingReceipt.national_id || 'ثبت نشده' }}</b>
+                </div>
+                <div>
+                  <span class="text-[#5A6E99] block text-[11px]">شماره تماس دانش‌آموز:</span>
+                  <a :href="`tel:${inspectingReceipt.student_phone}`" class="font-mono font-bold text-royal hover:underline" dir="ltr">
+                    {{ inspectingReceipt.student_phone || '---' }}
+                  </a>
+                </div>
+                <div>
+                  <span class="text-[#5A6E99] block text-[11px]">مدرسه / مرکز:</span>
+                  <b class="text-ink">{{ inspectingReceipt.school_name || 'شهید کاظمی آشتیانی' }}</b>
+                </div>
+                <div>
+                  <span class="text-[#5A6E99] block text-[11px]">نام والد / ولی:</span>
+                  <b class="text-ink">{{ inspectingReceipt.parent_name || 'ثبت نشده' }}</b>
+                </div>
+                <div>
+                  <span class="text-[#5A6E99] block text-[11px]">تلفن تماس والدین:</span>
+                  <a :href="`tel:${inspectingReceipt.parent_phone}`" class="font-mono font-bold text-royal hover:underline" dir="ltr">
+                    {{ inspectingReceipt.parent_phone || '---' }}
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transaction Details Card -->
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+              <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span class="font-black text-ink flex items-center gap-1.5 text-sm">
+                  <i data-lucide="credit-card" class="w-4 h-4 text-ok"></i>
+                  <span>اطلاعات فیش بانکی ارسالی</span>
+                </span>
+                <span 
+                  class="tag text-xs font-bold"
+                  :class="[
+                    inspectingReceipt.status === 'approved' ? 'bg-emerald-100 text-emerald-800' :
+                    (inspectingReceipt.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800')
+                  ]"
+                >
+                  {{ inspectingReceipt.status === 'approved' ? 'تأیید شده' : (inspectingReceipt.status === 'rejected' ? 'رد شده' : 'در انتظار بررسی') }}
+                </span>
+              </div>
+
+              <div class="space-y-2 text-slate-700">
+                <div class="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200">
+                  <span class="text-[#5A6E99] font-bold">مبلغ واریز شده:</span>
+                  <span class="text-lg font-black text-ok font-yekan">{{ money(inspectingReceipt.amount) }} تومان</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[#5A6E99]">کد پیگیری / شماره ارجاع:</span>
+                  <b class="font-mono text-ink text-sm bg-white px-2 py-0.5 rounded border border-slate-200 select-all" dir="ltr">
+                    {{ inspectingReceipt.tracking_code || '---' }}
+                  </b>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[#5A6E99]">شماره کارت پرداخت‌کننده:</span>
+                  <span class="font-mono text-slate-700" dir="ltr">{{ inspectingReceipt.card_number || '---' }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[#5A6E99]">تاریخ و زمان ثبت فیش:</span>
+                  <span class="font-bold text-slate-800 font-yekan">{{ inspectingReceipt.date_fa }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rejection reason if any -->
+            <div v-if="inspectingReceipt.reject_reason" class="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-late font-bold">
+              علت رد قبلی: {{ inspectingReceipt.reject_reason }}
+            </div>
+
+            <!-- Action Buttons directly inside modal -->
+            <div class="pt-3 border-t border-line flex items-center justify-end gap-2.5">
+              <template v-if="inspectingReceipt.status === 'pending'">
+                <button 
+                  @click="approveReceipt(inspectingReceipt.id); closeInspectReceipt()" 
+                  class="btn btn-ok flex-1 font-black text-xs !py-3 flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <i data-lucide="check-circle" class="w-4 h-4"></i>
+                  <span>تأیید واریز و فعال‌سازی پنل</span>
+                </button>
+                <button 
+                  @click="startReject(inspectingReceipt); closeInspectReceipt()" 
+                  class="btn btn-bad font-bold text-xs !py-3 px-4 flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                  <span>رد فیش</span>
+                </button>
+              </template>
+
+              <template v-else-if="inspectingReceipt.status === 'approved'">
+                <button 
+                  @click="startReject(inspectingReceipt); closeInspectReceipt()" 
+                  class="btn btn-bad text-xs font-bold !py-2.5 px-4 flex items-center gap-1.5"
+                >
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                  <span>لغو تأیید و رد فیش</span>
+                </button>
+                <button 
+                  @click="closeInspectReceipt" 
+                  class="btn btn-soft text-xs font-bold !py-2.5 px-5"
+                >
+                  بستن
+                </button>
+              </template>
+
+              <template v-else-if="inspectingReceipt.status === 'rejected'">
+                <button 
+                  @click="approveReceipt(inspectingReceipt.id); closeInspectReceipt()" 
+                  class="btn btn-ok flex-1 font-black text-xs !py-3 flex items-center justify-center gap-2 shadow-sm"
+                >
+                  <i data-lucide="check-circle" class="w-4 h-4"></i>
+                  <span>تأیید مجدد فیش</span>
+                </button>
+                <button 
+                  @click="closeInspectReceipt" 
+                  class="btn btn-soft text-xs font-bold !py-2.5 px-5"
+                >
+                  بستن
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1275,6 +1992,166 @@
       </div>
     </div>
 
+    <!-- Barpa Report Card Modal -->
+    <BarpaReportCardModal 
+      v-if="showBarpaModal && activeBarpaReport"
+      :report="activeBarpaReport"
+      @close="showBarpaModal = false"
+    />
+
+    <!-- Edit Student Modal -->
+    <div v-if="editingStudent" class="fixed inset-0 z-50 bg-ink/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div class="card p-6 max-w-lg w-full rise space-y-4 my-8">
+        <div class="flex items-center justify-between border-b border-line pb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-10 h-10 rounded-2xl bg-royal/10 text-royal flex items-center justify-center font-bold">
+              <i data-lucide="user-cog" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-black text-ink">ویرایش پرونده دانش‌آموز</h3>
+              <p class="text-xs text-[#5A6E99]">مدیریت کامل اطلاعات، نام، کدملی، پایه و رمز عبور</p>
+            </div>
+          </div>
+          <button @click="editingStudent = null" class="w-9 h-9 rounded-2xl bg-mist hover:bg-slate-200 flex items-center justify-center">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <form @submit.prevent="saveStudentEdit" class="space-y-3.5 text-xs">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="lbl font-bold mb-1 block">نام کوچک:</label>
+              <input v-model="editForm.first_name" required class="input" />
+            </div>
+            <div>
+              <label class="lbl font-bold mb-1 block">نام خانوادگی:</label>
+              <input v-model="editForm.last_name" required class="input" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="lbl font-bold mb-1 block">کد ملی / کد داوطلبی:</label>
+              <input v-model="editForm.national_id" required class="input text-left font-mono" dir="ltr" />
+            </div>
+            <div>
+              <label class="lbl font-bold mb-1 block">شماره تماس دانش‌آموز:</label>
+              <input v-model="editForm.phone" class="input text-left font-mono" dir="ltr" placeholder="0912..." />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="lbl font-bold mb-1 block">شماره تماس اولیا:</label>
+              <input v-model="editForm.parent_phone" class="input text-left font-mono" dir="ltr" placeholder="0912..." />
+            </div>
+            <div>
+              <label class="lbl font-bold mb-1 block">نام مدرسه / مرکز:</label>
+              <input v-model="editForm.school_name" class="input" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="lbl font-bold mb-1 block">پایه تحصیلی:</label>
+              <select v-model="editForm.grade" class="input">
+                <option value="هفتم">هفتم</option>
+                <option value="هشتم">هشتم</option>
+                <option value="نهم">نهم</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl font-bold mb-1 block">کلاس:</label>
+              <input v-model="editForm.class_name" class="input" placeholder="الف" />
+            </div>
+            <div>
+              <label class="lbl font-bold mb-1 block">امتیاز کل:</label>
+              <input v-model.number="editForm.total_points" type="number" class="input" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="lbl font-bold mb-1 block">وضعیت پرداخت شهریه:</label>
+              <select v-model="editForm.fee_status" class="input font-bold">
+                <option value="paid">پرداخت‌شده (تأیید کامل)</option>
+                <option value="pending">در انتظار پرداخت</option>
+                <option value="unpaid">پرداخت‌نشده (بدهکار)</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl font-bold mb-1 block">وضعیت حساب کاربری:</label>
+              <select v-model="editForm.is_active" class="input font-bold">
+                <option :value="1">فعال (امکان ورود به پنل)</option>
+                <option :value="0">مسدود / غیرفعال</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-line">
+            <label class="lbl font-bold mb-1 block">تغییر مستقیم رمز عبور (اختیاری):</label>
+            <input v-model="editForm.password" type="text" class="input text-left font-mono" dir="ltr" placeholder="در صورت عدم تغییر، خالی بگذارید" />
+            <p class="text-[10px] text-[#5A6E99] mt-1">اگر می‌خواهید رمز جدید دستی برای دانش‌آموز ست کنید، اینجا وارد نمایید.</p>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-3 border-t border-line">
+            <button type="button" @click="editingStudent = null" class="btn btn-soft text-xs font-bold">انصراف</button>
+            <button type="submit" :disabled="editLoading" class="btn btn-sun text-ink font-black text-xs px-5 shadow-md">
+              <span v-if="editLoading">در حال ذخیره...</span>
+              <span v-else>ذخیره تغییرات پرونده</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Student Delete Modal -->
+    <div v-if="studentToDelete" class="fixed inset-0 z-50 bg-ink/75 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="card p-6 max-w-md w-full rise space-y-4 border-2 border-rose-300">
+        <div class="flex items-center gap-3 text-late">
+          <div class="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center shrink-0">
+            <i data-lucide="alert-triangle" class="w-6 h-6 text-late"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-black text-ink">حذف یا غیرفعال‌سازی پرونده</h3>
+            <p class="text-xs text-[#5A6E99]">مدیریت حذف حساب: <b>{{ studentToDelete.full_name || studentToDelete.student_name }}</b></p>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-700 leading-relaxed bg-rose-50 p-3.5 rounded-2xl border border-rose-200">
+          مدیر گرامی، شما می‌توانید حساب کاربری دانش‌آموز را موقتاً <b>غیرفعال</b> کنید، یا در صورت تمایل، کل اطلاعات، سوابق، نمرات و کارنامه‌های او را به صورت <b>دائم و غیرقابل‌بازگشت</b> پاکسازی نمایید.
+        </p>
+
+        <div class="space-y-2 pt-2">
+          <button 
+            @click="executeStudentDelete(true)" 
+            :disabled="deleteLoading"
+            class="btn btn-late w-full text-xs font-black shadow-md flex items-center justify-center gap-2 !min-h-[44px]"
+          >
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            <span>{{ deleteLoading ? 'در حال پاکسازی...' : 'حذف قطعی و دائمی حساب (پاک کردن کل داده‌ها)' }}</span>
+          </button>
+
+          <button 
+            @click="executeStudentDelete(false)" 
+            :disabled="deleteLoading"
+            class="btn btn-soft w-full text-xs font-bold flex items-center justify-center gap-2 !min-h-[40px] text-amber-700 border-amber-200"
+          >
+            <i data-lucide="user-x" class="w-4 h-4"></i>
+            <span>غیرفعال‌سازی موقت پرونده</span>
+          </button>
+
+          <button 
+            type="button" 
+            @click="studentToDelete = null" 
+            class="btn btn-soft w-full text-xs font-bold !min-h-[38px]"
+          >
+            انصراف و بازگشت
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Notification -->
     <div 
       v-if="toastMsg" 
@@ -1287,35 +2164,229 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { faNum, money, refreshIcons } from '../utils';
+import BarpaReportCardModal from './BarpaReportCardModal.vue';
 
 const props = defineProps({
   user: { type: Object, required: true }
 });
 
-defineEmits(['logout']);
+const emit = defineEmits(['logout', 'switch-role']);
 
 const activeTab = ref('dash');
-const feeSubTab = ref('def');
+const feeSubTab = ref('rec');
 const annSubTab = ref('new');
+const exmSubTab = ref('barpa');
 const toastMsg = ref('');
 const openRegModal = ref(false);
 const openImportModal = ref(false);
 const rejectingReceipt = ref(null);
+const inspectingReceipt = ref(null);
 const openQrModal = ref(false);
 
-const navItems = [
+const barpaReports = ref([]);
+const barpaUploading = ref(false);
+const barpaFileInput = ref(null);
+const activeBarpaReport = ref(null);
+const showBarpaModal = ref(false);
+
+const highestTraz = computed(() => {
+  if (!barpaReports.value.length) return 0;
+  return Math.max(...barpaReports.value.map(r => r.overall_traz || 0));
+});
+
+const bestRankNationwide = computed(() => {
+  if (!barpaReports.value.length) return 0;
+  return Math.min(...barpaReports.value.map(r => r.overall_rank_all || 9999));
+});
+
+const topStudentName = computed(() => {
+  if (!barpaReports.value.length) return '';
+  const top = [...barpaReports.value].sort((a, b) => (b.overall_traz || 0) - (a.overall_traz || 0))[0];
+  return top ? `${top.student_name}` : '';
+});
+
+const averageTraz = computed(() => {
+  if (!barpaReports.value.length) return 0;
+  const sum = barpaReports.value.reduce((acc, r) => acc + (r.overall_traz || 0), 0);
+  return Math.round(sum / barpaReports.value.length);
+});
+
+function openBarpaReport(rep) {
+  activeBarpaReport.value = rep;
+  showBarpaModal.value = true;
+  nextTick(() => refreshIcons());
+}
+
+function loginAsStudent(st) {
+  const targetId = st.student_id || st.id;
+  const name = st.student_name || st.full_name;
+  toast(`در حال ورود به پنل ${name}...`);
+  emit('switch-role', 'student', targetId);
+}
+
+const editingStudent = ref(null);
+const editForm = ref({});
+const editLoading = ref(false);
+
+const studentToDelete = ref(null);
+const deleteLoading = ref(false);
+
+function openEditModal(st) {
+  const sId = st.student_id || st.id;
+  const fullName = st.student_name || st.full_name || '';
+  const parts = fullName.split(' ');
+  const firstName = st.first_name || parts[0] || '';
+  const lastName = st.last_name || parts.slice(1).join(' ') || '';
+
+  editForm.value = {
+    id: sId,
+    first_name: firstName,
+    last_name: lastName,
+    national_id: st.candidate_code || st.national_id || '',
+    phone: st.phone || '',
+    parent_phone: st.parent_phone || '',
+    grade: st.grade || st.user_grade || 'نهم',
+    class_name: st.class_name || 'الف',
+    school_name: st.school_name || st.user_school || 'شهید کاظمی آشتیانی',
+    fee_status: st.fee_status || 'paid',
+    total_points: st.total_points || 150,
+    is_active: st.is_active !== undefined ? st.is_active : 1,
+    password: ''
+  };
+  editingStudent.value = st;
+  nextTick(() => refreshIcons());
+}
+
+async function saveStudentEdit() {
+  if (!editForm.value.id) return;
+  editLoading.value = true;
+  try {
+    const res = await fetch(`/api/students/${editForm.value.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm.value)
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      toast(data.message || 'اطلاعات با موفقیت ذخیره شد.');
+      editingStudent.value = null;
+      await Promise.all([searchStudents(), loadBarpaReports()]);
+    } else {
+      toast(data.error || 'خطا در ذخیره تغییرات');
+    }
+  } catch (err) {
+    toast('خطا در ارتباط با سرور');
+  } finally {
+    editLoading.value = false;
+    nextTick(() => refreshIcons());
+  }
+}
+
+function promptDeleteStudent(st) {
+  studentToDelete.value = st;
+  nextTick(() => refreshIcons());
+}
+
+async function executeStudentDelete(permanent = false) {
+  if (!studentToDelete.value) return;
+  const sId = studentToDelete.value.student_id || studentToDelete.value.id;
+  deleteLoading.value = true;
+  try {
+    const res = await fetch(`/api/students/${sId}?permanent=${permanent}`, {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      toast(data.message || 'دانش‌آموز با موفقیت حذف شد.');
+      studentToDelete.value = null;
+      await Promise.all([searchStudents(), loadBarpaReports(), loadStats()]);
+    } else {
+      toast(data.error || 'خطا در حذف دانش‌آموز');
+    }
+  } catch (err) {
+    toast('خطا در ارتباط با سرور');
+  } finally {
+    deleteLoading.value = false;
+    nextTick(() => refreshIcons());
+  }
+}
+
+async function loadBarpaReports() {
+  try {
+    const res = await fetch('/api/barpa-exams/reports');
+    if (res.ok) {
+      barpaReports.value = await res.json();
+    }
+  } catch (e) {
+    console.error('Error loading barpa reports:', e);
+  }
+}
+
+async function handleBarpaFileUpload(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  barpaUploading.value = true;
+  try {
+    const res = await fetch('/api/barpa-exams/upload', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      toast(data.message || `تعداد ${data.count} کارنامه تفکیک و به پنل دانش‌آموزان فرستاده شد.`);
+      await loadBarpaReports();
+      await searchStudents();
+    } else {
+      toast(data.error || 'خطا در تحلیل و بارگذاری کارنامه‌ها');
+    }
+  } catch (err) {
+    toast('خطا در ارتباط با سرور هنگام آپلود');
+  } finally {
+    barpaUploading.value = false;
+    if (e.target) e.target.value = '';
+    nextTick(() => refreshIcons());
+  }
+}
+
+async function triggerSampleBarpaUpload() {
+  barpaUploading.value = true;
+  try {
+    const res = await fetch('/api/barpa-exams/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ use_sample: true })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      toast(data.message || `تعداد ${data.count} کارنامه با موفقیت تفکیک و به پنل‌ها فرستاده شد.`);
+      await loadBarpaReports();
+      await searchStudents();
+    } else {
+      toast(data.error || 'خطا در بارگذاری کارنامه‌ها');
+    }
+  } catch (err) {
+    toast('خطا در ارتباط با سرور');
+  } finally {
+    barpaUploading.value = false;
+    nextTick(() => refreshIcons());
+  }
+}
+
+const navItems = computed(() => [
   { key: 'dash', label: 'داشبورد', icon: 'layout-dashboard' },
   { key: 'stu', label: 'دانش‌آموزان', icon: 'users' },
-  { key: 'fee', label: 'حق عضویت', icon: 'wallet', badge: 3 },
+  { key: 'fee', label: 'حق عضویت و فیش‌ها', icon: 'wallet', badge: pendingReceiptsCount.value },
   { key: 'settings', label: 'تنظیمات و پرداخت', icon: 'settings' },
   { key: 'ann', label: 'اطلاعیه', icon: 'megaphone' },
   { key: 'acc', label: 'حسابداری', icon: 'calculator' },
   { key: 'exm', label: 'آزمون جامع', icon: 'trophy' }
-];
+]);
 
-watch([activeTab, feeSubTab, annSubTab, openRegModal, openImportModal, rejectingReceipt, openQrModal], () => {
+watch([activeTab, feeSubTab, annSubTab, exmSubTab, showBarpaModal, editingStudent, studentToDelete, openRegModal, openImportModal, rejectingReceipt, inspectingReceipt, openQrModal], () => {
   nextTick(() => refreshIcons());
 });
 
@@ -1417,11 +2488,56 @@ async function deleteStudent(id) {
   }
 }
 
-// ----------------- FEES -----------------
+// ----------------- FEES & RECEIPTS AUDIT -----------------
 const feeDefs = ref([]);
 const receiptsList = ref([]);
 const feeReports = ref([]);
 const pendingReceiptsCount = ref(0);
+
+// Receipts Search & Filter State
+const receiptSearchQuery = ref('');
+const receiptStatusFilter = ref('all'); // 'all' | 'pending' | 'approved' | 'rejected'
+const receiptGradeFilter = ref('all'); // 'all' | 'هفتم' | 'هشتم' | 'نهم'
+
+const filteredReceiptsList = computed(() => {
+  return receiptsList.value.filter(r => {
+    if (receiptStatusFilter.value !== 'all' && r.status !== receiptStatusFilter.value) {
+      return false;
+    }
+    if (receiptGradeFilter.value !== 'all' && r.grade !== receiptGradeFilter.value) {
+      return false;
+    }
+    if (receiptSearchQuery.value && receiptSearchQuery.value.trim()) {
+      const q = receiptSearchQuery.value.trim().toLowerCase();
+      const matchName = (r.student_name || '').toLowerCase().includes(q);
+      const matchTrack = (r.tracking_code || '').toLowerCase().includes(q);
+      const matchNational = (r.national_id || '').includes(q);
+      const matchPhone = (r.student_phone || '').includes(q) || (r.parent_phone || '').includes(q);
+      if (!matchName && !matchTrack && !matchNational && !matchPhone) {
+        return false;
+      }
+    }
+    return true;
+  });
+});
+
+const receiptsCounts = computed(() => {
+  const all = receiptsList.value.length;
+  const pending = receiptsList.value.filter(r => r.status === 'pending').length;
+  const approved = receiptsList.value.filter(r => r.status === 'approved').length;
+  const rejected = receiptsList.value.filter(r => r.status === 'rejected').length;
+  return { all, pending, approved, rejected };
+});
+
+function openInspectReceipt(rec) {
+  inspectingReceipt.value = rec;
+  nextTick(() => refreshIcons());
+}
+
+function closeInspectReceipt() {
+  inspectingReceipt.value = null;
+  nextTick(() => refreshIcons());
+}
 
 async function loadFees() {
   try {
@@ -1802,6 +2918,7 @@ onMounted(() => {
   loadNoticeReports();
   loadAccounting();
   loadComprehensiveRankings();
+  loadBarpaReports();
   refreshIcons();
 });
 </script>

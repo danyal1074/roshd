@@ -10,14 +10,14 @@
           <i data-lucide="graduation-cap" class="w-6 h-6 sm:w-7 sm:h-7 text-sun"></i>
         </div>
         <div class="leading-tight">
-          <p class="font-extrabold text-base sm:text-lg">کانون نخبه‌پروری</p>
-          <p class="text-white/75 text-xs sm:text-sm">شهید کاظم آشتیانی</p>
+          <p class="font-extrabold text-base sm:text-lg font-titr">کانون نخبه‌پروری</p>
+          <p class="text-white/85 text-xs sm:text-sm font-nastaliq text-base">دانشمند شهید دکتر سعید کاظمی آشتیانی</p>
         </div>
       </div>
 
       <!-- Hero Message & Graphic -->
       <div class="relative my-4 sm:my-6 lg:my-8 max-w-md">
-        <h1 class="text-2xl sm:text-3xl lg:text-[46px] font-extrabold leading-[1.35]">
+        <h1 class="text-2xl sm:text-3xl lg:text-[46px] font-extrabold leading-[1.35] font-titr">
           هر روز، یک پله بالاتر.
         </h1>
         <p class="mt-2 text-white/80 text-xs sm:text-sm lg:text-[17px] max-w-sm">
@@ -49,12 +49,12 @@
     <main class="relative -mt-4 lg:mt-0 rounded-t-[28px] lg:rounded-none bg-mist flex-1 flex items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:p-14">
       <div class="w-full max-w-[440px] rise">
         <div class="text-right">
-          <h2 class="text-2xl sm:text-[28px] font-extrabold text-ink">ورود به پلتفرم رشد</h2>
+          <h2 class="text-2xl sm:text-[28px] font-extrabold text-ink font-titr">ورود به پلتفرم رشد</h2>
           <p class="text-[#5A6E99] mt-1 text-xs sm:text-sm">نقشت را انتخاب کن و وارد شو.</p>
         </div>
 
         <!-- Role Selector (Ultra responsive 4 buttons) -->
-        <div class="grid grid-cols-4 gap-1.5 sm:gap-2.5 mt-4 sm:mt-6" role="group" aria-label="نقش">
+        <div class="grid grid-cols-4 gap-1.5 sm:gap-2.5 mt-4 sm:mt-6 font-yekan" role="group" aria-label="نقش">
           <button 
             type="button"
             class="role !py-2 sm:!py-3" 

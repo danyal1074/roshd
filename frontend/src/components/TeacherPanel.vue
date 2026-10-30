@@ -693,66 +693,213 @@
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-royal/10 text-royal text-xs font-bold mb-2">
-                  <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
-                  <span>میز کار اختصاصی اساتید تیزهوشان کانون شهید کاظمی آشتیانی</span>
+                  <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                  <span>سامانه جامع طراحی آزمون چندکتابی کانون شهید کاظمی آشتیانی</span>
                 </div>
-                <h3 class="text-lg sm:text-2xl font-black text-ink leading-tight">
-                  طراح هوشمند آزمون از کتاب جامع <span class="text-royal">هوش کمپلکس</span>
+                <h3 class="text-lg sm:text-2xl font-black text-ink leading-tight font-titr">
+                  میز کار هوشمند طراحی آزمون چاپی و آنلاین
                 </h3>
                 <p class="text-xs sm:text-sm text-[#5A6E99] mt-1.5 leading-relaxed">
-                  استخراج لحظه‌ای سؤالات از بین ۲۰۱ مبحث استاندارد، انتخاب برگه‌های تست، تنظیم سربرگ رسمی و صدور دفترچه چاپی A4 به همراه پاسخ‌برگ ۴ گزینه‌ای.
+                  انتخاب کتاب بر اساس پایه تحصیلی، فیلتر لحظه‌ای مباحث، گزینش برگه‌های سؤال از منابع استاندارد، و صدور فوری دفترچه چاپی A4 و پاسخ‌برگ.
                 </p>
               </div>
 
-              <!-- Quick Basket Counter Button -->
-              <div class="shrink-0 flex items-center gap-2">
+              <!-- Quick Basket & Upload Actions -->
+              <div class="shrink-0 flex items-center gap-2 flex-wrap">
+                <button 
+                  @click="uploadModalOpen = true"
+                  class="btn btn-sun text-xs sm:text-sm font-black flex items-center gap-1.5 !py-2.5 !px-4 shadow-sm cursor-pointer hover:scale-105 transition-transform"
+                >
+                  <i data-lucide="upload-cloud" class="w-4 h-4 text-ink"></i>
+                  <span>+ بارگذاری کتاب جدید</span>
+                </button>
                 <button 
                   @click="openPrintModal('exam')"
                   :disabled="examBasket.length === 0"
                   class="btn btn-royal text-xs sm:text-sm font-bold flex items-center gap-2 !py-2.5 !px-4 shadow-sm disabled:opacity-50 cursor-pointer"
                 >
                   <i data-lucide="printer" class="w-4 h-4"></i>
-                  <span>پیش‌نمایش و چاپ آزمون ({{ faNum(examBasket.length) }})</span>
+                  <span>پیش‌نمایش و چاپ ({{ faNum(examBasket.length) }})</span>
                 </button>
               </div>
             </div>
 
-            <!-- 4 Metric Badges -->
+            <!-- Dynamic Metrics Badges for Active Book -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-line text-xs font-bold">
-              <div class="p-2.5 rounded-xl bg-white border border-line flex items-center gap-2 text-ink">
+              <div class="p-2.5 rounded-xl bg-white border border-line flex items-center gap-2 text-ink shadow-xs">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span>۲۰۱ مبحث مستقل</span>
+                <span>{{ faNum(activeBook.topicsCount || currentBookTopics.length) }} مبحث تخصصی</span>
               </div>
-              <div class="p-2.5 rounded-xl bg-white border border-line flex items-center gap-2 text-ink">
+              <div class="p-2.5 rounded-xl bg-white border border-line flex items-center gap-2 text-ink shadow-xs">
                 <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                <span>۷ بخش استاندارد هوش</span>
+                <span>{{ faNum(hooshSections.length) }} بخش استاندارد</span>
               </div>
-              <div class="p-2.5 rounded-xl bg-white border border-line flex items-center gap-2 text-ink">
+              <div class="p-2.5 rounded-xl bg-white border border-line flex items-center gap-2 text-ink shadow-xs">
                 <span class="w-2.5 h-2.5 rounded-full bg-royal"></span>
-                <span>۲۱ فصل طبقه‌بندی‌شده</span>
+                <span>{{ faNum(availableChapters.length) }} فصل طبقه‌بندی‌شده</span>
               </div>
-              <div class="p-2.5 rounded-xl bg-white border border-line flex items-center gap-2 text-ink">
+              <div class="p-2.5 rounded-xl bg-white border border-line flex items-center gap-2 text-ink shadow-xs">
                 <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
-                <span>۵۳۷ برگه سؤال باکیفیت</span>
+                <span>{{ faNum(activeBook.pagesCount || 539) }} برگه سؤال باکیفیت</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 1: Grade Selection Pills & Books Shelf -->
+          <div class="card p-4 sm:p-5 border border-line shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-line">
+              <div>
+                <h4 class="font-black text-sm sm:text-base text-ink flex items-center gap-2">
+                  <span class="w-6 h-6 rounded-lg bg-royal text-white text-xs font-black flex items-center justify-center">۱</span>
+                  <span>انتخاب پایه و کتاب منبع آزمون:</span>
+                </h4>
+                <p class="text-xs text-[#5A6E99] mt-0.5">کتاب مورد نظر را بر اساس مقطع دانش‌آموزان انتخاب کنید تا مباحث و برگه‌های همان کتاب بارگذاری شوند.</p>
+              </div>
+
+              <!-- Grade Filter Pills -->
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button 
+                  @click="selectedGradeFilter = 'all'"
+                  :class="[
+                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border',
+                    selectedGradeFilter === 'all' ? 'bg-royal text-white border-royal shadow-sm' : 'bg-mist text-ink border-line hover:border-royal/40'
+                  ]"
+                >
+                  همه کتاب‌ها
+                </button>
+                <button 
+                  @click="selectedGradeFilter = 'هشتم و نهم'"
+                  :class="[
+                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border',
+                    selectedGradeFilter === 'هشتم و نهم' ? 'bg-royal text-white border-royal shadow-sm' : 'bg-mist text-ink border-line hover:border-royal/40'
+                  ]"
+                >
+                  پایه هشتم و نهم (تیزهوشان دهم)
+                </button>
+                <button 
+                  @click="selectedGradeFilter = 'ششم'"
+                  :class="[
+                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border',
+                    selectedGradeFilter === 'ششم' ? 'bg-royal text-white border-royal shadow-sm' : 'bg-mist text-ink border-line hover:border-royal/40'
+                  ]"
+                >
+                  پایه پنجم و ششم (تیزهوشان هفتم)
+                </button>
+                <button 
+                  v-if="booksList.some(b => b.isCustom)"
+                  @click="selectedGradeFilter = 'custom'"
+                  :class="[
+                    'px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border',
+                    selectedGradeFilter === 'custom' ? 'bg-royal text-white border-royal shadow-sm' : 'bg-mist text-ink border-line hover:border-royal/40'
+                  ]"
+                >
+                  کتاب‌های بارگذاری‌شده
+                </button>
+              </div>
+            </div>
+
+            <!-- Books Shelf Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <div 
+                v-for="b in filteredBooks" 
+                :key="b.id"
+                @click="selectBook(b.id)"
+                :class="[
+                  'relative p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 text-right group hover:shadow-md',
+                  selectedBookId === b.id 
+                    ? 'border-royal bg-gradient-to-br from-white via-royal/5 to-indigo-50/50 shadow-md ring-2 ring-royal/20' 
+                    : 'border-line bg-white hover:border-royal/40'
+                ]"
+              >
+                <!-- Card Header -->
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between gap-2">
+                    <span 
+                      :class="[
+                        'px-2.5 py-0.5 rounded-full text-[11px] font-black',
+                        selectedBookId === b.id ? 'bg-royal text-white shadow-xs' : 'bg-mist text-slate-700'
+                      ]"
+                    >
+                      {{ b.gradeBadge || b.grade }}
+                    </span>
+                    <span v-if="selectedBookId === b.id" class="text-xs font-extrabold text-royal flex items-center gap-1">
+                      <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                      <span>کتاب فعال</span>
+                    </span>
+                  </div>
+
+                  <h5 class="font-black text-sm sm:text-base text-ink leading-snug group-hover:text-royal transition-colors">
+                    {{ b.title }}
+                  </h5>
+                  <p class="text-xs text-[#5A6E99] leading-relaxed line-clamp-2">
+                    {{ b.description }}
+                  </p>
+                </div>
+
+                <!-- Card Footer & Meta -->
+                <div class="pt-2 border-t border-line/60 flex items-center justify-between text-xs font-bold text-slate-600">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5 text-royal"></i>
+                    <span>{{ faNum(b.topicsCount) }} مبحث</span>
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5 text-royal"></i>
+                    <span>{{ faNum(b.pagesCount) }} برگه سؤال</span>
+                  </span>
+                  <a 
+                    v-if="b.pdfUrl" 
+                    :href="b.pdfUrl" 
+                    target="_blank" 
+                    @click.stop 
+                    class="text-royal hover:underline flex items-center gap-1 text-[11px]"
+                    title="دانلود PDF کتاب"
+                  >
+                    <i data-lucide="download" class="w-3 h-3"></i>
+                    <span>PDF</span>
+                  </a>
+                </div>
+              </div>
+
+              <!-- Upload New Book Action Card -->
+              <div 
+                @click="uploadModalOpen = true"
+                class="p-4 rounded-2xl border-2 border-dashed border-royal/40 bg-royal/5 hover:bg-royal/10 hover:border-royal transition-all cursor-pointer flex flex-col items-center justify-center text-center gap-2 group min-h-[140px]"
+              >
+                <div class="w-10 h-10 rounded-2xl bg-white text-royal flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <i data-lucide="plus" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h5 class="font-black text-xs sm:text-sm text-ink group-hover:text-royal transition-colors">
+                    + بارگذاری کتاب جدید
+                  </h5>
+                  <p class="text-[11px] text-[#5A6E99] mt-0.5">افزودن کتاب‌های دیگر برای پایه‌های دلخواه</p>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- 3-Level Cascaded Selectors & Quick Search Filter -->
           <div class="card p-4 sm:p-5 border border-line shadow-sm space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-line">
+              <h4 class="font-black text-sm sm:text-base text-ink flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-royal text-white text-xs font-black flex items-center justify-center">۲</span>
+                <span>فیلتر مباحث کتاب «{{ activeBook.title }}»:</span>
+              </h4>
+              <span class="text-xs text-[#5A6E99] font-bold">
+                یافت‌شده: {{ faNum(filteredTopics.length) }} مبحث
+              </span>
+            </div>
+
             <!-- Search input -->
             <div>
               <label class="lbl flex items-center justify-between">
-                <span>جستجوی سریع بین ۲۰۱ مبحث هوش کمپلکس (عنوان، شماره مبحث یا کلمات کلیدی):</span>
-                <span v-if="searchQuery" class="text-xs text-[#5A6E99] font-normal">
-                  یافت‌شده: {{ faNum(filteredTopics.length) }} مبحث
-                </span>
+                <span>جستجوی سریع بین تمام مباحث این کتاب (عنوان، شماره مبحث یا کلمات کلیدی):</span>
               </label>
               <div class="relative">
                 <input 
                   v-model="searchQuery"
                   type="text"
-                  placeholder="مثال: مکعب، تقارن، ضرب‌المثل، دنباله، مبحث ۱، کلامی..." 
+                  placeholder="مثال: مکعب، تقارن، ضرب‌المثل، دنباله، مبحث ۱، کلامی، نسبت..." 
                   class="input !pr-10 !pl-20 text-xs sm:text-sm font-medium"
                 />
                 <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[#5A6E99]">
@@ -772,8 +919,8 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
               <div>
                 <label class="lbl">۱. بخش هوش:</label>
-                <select v-model="selectedSectionId" class="input text-xs sm:text-sm">
-                  <option value="all">همه بخش‌ها (۷ بخش)</option>
+                <select v-model="selectedSectionId" class="input text-xs sm:text-sm font-bold">
+                  <option value="all">همه بخش‌ها ({{ faNum(hooshSections.length) }} بخش)</option>
                   <option v-for="sec in hooshSections" :key="sec.id" :value="sec.id">
                     بخش {{ faNum(sec.id) }}: {{ sec.title }} ({{ faNum(sec.count) }} مبحث)
                   </option>
@@ -782,7 +929,7 @@
 
               <div>
                 <label class="lbl">۲. فصل:</label>
-                <select v-model="selectedChapterId" class="input text-xs sm:text-sm">
+                <select v-model="selectedChapterId" class="input text-xs sm:text-sm font-bold">
                   <option value="all">همه فصل‌های این بخش</option>
                   <option v-for="ch in availableChapters" :key="ch.id" :value="ch.id">
                     {{ ch.title }} ({{ faNum(ch.count) }} مبحث)
@@ -792,7 +939,7 @@
 
               <div>
                 <label class="lbl">۳. مبحث موردنظر:</label>
-                <select v-model="selectedTopicId" class="input text-xs sm:text-sm font-bold text-royal">
+                <select v-model="selectedTopicId" class="input text-xs sm:text-sm font-black text-royal">
                   <option v-for="tp in filteredTopics" :key="tp.id" :value="tp.id">
                     مبحث {{ faNum(tp.id) }}: {{ tp.title }}
                   </option>
@@ -811,12 +958,15 @@
               <div v-if="currentTopic" class="card p-4 sm:p-5 border-2 border-royal/20 bg-royal/5 space-y-3">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-royal/15">
                   <div>
-                    <div class="flex items-center gap-2 mb-1">
+                    <div class="flex items-center gap-2 mb-1 flex-wrap">
                       <span class="tag bg-royal text-white font-extrabold text-xs">
                         مبحث {{ faNum(currentTopic.id) }}
                       </span>
                       <span class="text-xs text-[#5A6E99] font-medium">
                         {{ currentTopic.sectionTitle }} | {{ currentTopic.chapterTitle }}
+                      </span>
+                      <span class="tag bg-indigo-100 text-indigo-800 text-[11px] font-bold">
+                        {{ activeBook.title }}
                       </span>
                     </div>
                     <h4 class="text-base sm:text-lg font-black text-ink">{{ currentTopic.title }}</h4>
@@ -870,10 +1020,10 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div 
                   v-for="page in currentTopicPages" 
-                  :key="page.pdfPage"
+                  :key="`${page.bookId}_${page.pdfPage}`"
                   :class="[
                     'card p-3 sm:p-4 space-y-3 transition-all relative overflow-hidden',
-                    isPageInBasket(page.pdfPage) ? 'border-2 border-ok bg-emerald-50/30' : 'border border-line hover:border-royal/50'
+                    isPageInBasket(page.pdfPage, page.bookId) ? 'border-2 border-ok bg-emerald-50/30' : 'border border-line hover:border-royal/50'
                   ]"
                 >
                   <!-- Sheet Header -->
@@ -882,7 +1032,7 @@
                       صفحه {{ faNum(page.bookPage) }} کتاب
                     </span>
                     <span 
-                      v-if="isPageInBasket(page.pdfPage)"
+                      v-if="isPageInBasket(page.pdfPage, page.bookId)"
                       class="tag bg-ok text-white font-bold flex items-center gap-1"
                     >
                       <i data-lucide="check" class="w-3 h-3"></i>
@@ -896,7 +1046,7 @@
                     class="relative aspect-[3/4] bg-mist rounded-xl overflow-hidden cursor-pointer group border border-line flex items-center justify-center"
                   >
                     <img 
-                      :src="`/extracted_pages/page_${page.pdfPage}.jpg`" 
+                      :src="page.imgSrc" 
                       :alt="`برگه صفحه ${page.bookPage}`"
                       class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
@@ -913,11 +1063,11 @@
                       @click="togglePageInBasket(page)"
                       :class="[
                         'btn btn-sm w-full font-bold text-xs !min-h-[36px] flex items-center justify-center gap-1.5',
-                        isPageInBasket(page.pdfPage) ? 'btn-soft text-late' : 'btn-royal'
+                        isPageInBasket(page.pdfPage, page.bookId) ? 'btn-soft text-late' : 'btn-royal'
                       ]"
                     >
-                      <i :data-lucide="isPageInBasket(page.pdfPage) ? 'minus-circle' : 'plus-circle'" class="w-4 h-4"></i>
-                      <span>{{ isPageInBasket(page.pdfPage) ? 'حذف از آزمون' : 'افزودن به آزمون' }}</span>
+                      <i :data-lucide="isPageInBasket(page.pdfPage, page.bookId) ? 'minus-circle' : 'plus-circle'" class="w-4 h-4"></i>
+                      <span>{{ isPageInBasket(page.pdfPage, page.bookId) ? 'حذف از آزمون' : 'افزودن به آزمون' }}</span>
                     </button>
                     <button 
                       @click="openLightbox(page)"
@@ -974,15 +1124,15 @@
                   <div v-else class="max-h-48 overflow-y-auto space-y-1.5 p-1">
                     <div 
                       v-for="item in sortedExamBasket" 
-                      :key="item.pdfPage"
+                      :key="`${item.bookId}_${item.pdfPage}`"
                       class="flex items-center justify-between p-2 rounded-xl bg-mist border border-line text-xs"
                     >
                       <div class="min-w-0 flex-1 pl-2">
                         <p class="font-bold text-ink truncate">صفحه {{ faNum(item.bookPage) }}: {{ item.topicTitle }}</p>
-                        <span class="text-[10px] text-[#5A6E99]">مبحث {{ faNum(item.topicId) }}</span>
+                        <span class="text-[10px] text-[#5A6E99]">{{ item.bookTitle || 'هوش کمپلکس' }} • مبحث {{ faNum(item.topicId) }}</span>
                       </div>
                       <button 
-                        @click="removeFromBasket(item.pdfPage)" 
+                        @click="removeFromBasket(item.pdfPage, item.bookId)" 
                         class="text-late hover:bg-late/10 p-1 rounded-lg cursor-pointer border-none bg-transparent shrink-0"
                         title="حذف این برگه"
                       >
@@ -1339,10 +1489,10 @@
               @click="togglePageInBasket(lightboxPage)"
               :class="[
                 'btn btn-sm text-xs font-bold',
-                isPageInBasket(lightboxPage.pdfPage) ? 'btn-soft text-late' : 'btn-royal'
+                isPageInBasket(lightboxPage.pdfPage, lightboxPage.bookId) ? 'btn-soft text-late' : 'btn-royal'
               ]"
             >
-              {{ isPageInBasket(lightboxPage.pdfPage) ? 'حذف از آزمون' : 'افزودن به آزمون' }}
+              {{ isPageInBasket(lightboxPage.pdfPage, lightboxPage.bookId) ? 'حذف از آزمون' : 'افزودن به آزمون' }}
             </button>
             <button @click="closeLightbox" class="text-[#5A6E99] hover:text-ink p-1 border-none bg-transparent cursor-pointer">
               <i data-lucide="x" class="w-5 h-5"></i>
@@ -1351,7 +1501,7 @@
         </div>
         <div class="flex-1 overflow-auto p-2 sm:p-4 flex items-center justify-center bg-mist rounded-xl my-2">
           <img 
-            :src="`/extracted_pages/page_${lightboxPage.pdfPage}.jpg`" 
+            :src="lightboxPage.imgSrc || (lightboxPage.bookId === 'hoosh_8_9' ? `/extracted_pages/hoosh_8_9/page_${lightboxPage.pdfPage}.jpg` : `/extracted_pages/page_${lightboxPage.pdfPage}.jpg`)" 
             :alt="`برگه سوال صفحه ${lightboxPage.bookPage}`" 
             class="max-w-full max-h-[75vh] object-contain rounded-lg shadow-sm"
           />
@@ -1401,24 +1551,25 @@
           <div v-if="printMode === 'exam'" class="space-y-6">
             <div 
               v-for="(item, index) in sortedExamBasket" 
-              :key="item.pdfPage"
+              :key="`${item.bookId}_${item.pdfPage}`"
               class="hoosh-print-sheet bg-white text-slate-900 p-6 sm:p-10 mx-auto border border-slate-300 shadow-sm rounded-lg max-w-4xl"
               style="min-height: 280mm; display: flex; flex-direction: column; justify-content: space-between;"
             >
               <!-- Official Header -->
               <div class="pb-3 border-b-2 border-royal mb-4">
+                <div class="text-center font-nastaliq text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
                 <div class="flex items-center justify-between gap-4">
                   <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-xl bg-royal text-white flex items-center justify-center font-bold text-lg">
+                    <div class="w-12 h-12 rounded-xl bg-royal text-white flex items-center justify-center font-bold text-lg font-titr">
                       <span>رشد</span>
                     </div>
                     <div>
-                      <h2 class="text-base sm:text-lg font-black text-ink">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی</h2>
-                      <p class="text-xs text-slate-600 font-medium">پایگاه علمی تربیتی مسجد ائمه بقیع (ع) تربت حیدریه | طراح آزمون هوش کمپلکس</p>
+                      <h2 class="text-base sm:text-lg font-black text-ink font-titr">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی</h2>
+                      <p class="text-xs text-slate-600 font-medium font-nazanin">پایگاه علمی تربیتی مسجد ائمه بقیع (ع) تربت حیدریه | سامانه آزمون تیزهوشان</p>
                     </div>
                   </div>
 
-                  <div class="text-left text-xs space-y-1 font-semibold text-slate-700">
+                  <div class="text-left text-xs space-y-1 font-semibold text-slate-700 font-yekan">
                     <div>تاریخ آزمون: <span class="font-bold text-slate-950">{{ examConfig.date }}</span></div>
                     <div>مدت پاسخگویی: <span class="font-bold text-slate-950">{{ examConfig.duration }}</span></div>
                     <div>صفحه: <span class="font-bold text-royal">{{ faNum(index + 1) }} از {{ faNum(sortedExamBasket.length) }}</span></div>
@@ -1427,17 +1578,17 @@
 
                 <!-- Exam Title Bar -->
                 <div class="mt-3 pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between text-xs gap-2 bg-slate-50 p-2 rounded">
-                  <div class="font-bold text-royal">
+                  <div class="font-bold text-royal font-titr text-sm">
                     {{ examConfig.title }} | {{ examConfig.grade }}
                   </div>
-                  <div class="text-slate-600">
+                  <div class="text-slate-600 font-yekan">
                     مدرس/طراح: <span class="font-bold text-slate-900">{{ examConfig.teacher }}</span>
                     <span v-if="examConfig.hasNegativeScore" class="text-rose-700 font-bold mr-2">| دارای نمره منفی</span>
                   </div>
                 </div>
 
                 <!-- Student Blank Info Box (Page 1 Only) -->
-                <div v-if="index === 0" class="mt-2 grid grid-cols-4 gap-2 text-[11px] p-2 border border-slate-300 rounded bg-white">
+                <div v-if="index === 0" class="mt-2 grid grid-cols-4 gap-2 text-[11px] font-yekan p-2 border border-slate-300 rounded bg-white">
                   <div>نام و نام خانوادگی: .............................</div>
                   <div>نام کلاس / مدرسه: .............................</div>
                   <div>شماره داوطلب: .............................</div>
@@ -1448,16 +1599,16 @@
               <!-- Question Sheet High-Res Image -->
               <div class="flex-1 flex items-center justify-center my-2">
                 <img 
-                  :src="`/extracted_pages/page_${item.pdfPage}.jpg`" 
+                  :src="item.imgSrc || (item.bookId === 'hoosh_8_9' ? `/extracted_pages/hoosh_8_9/page_${item.pdfPage}.jpg` : `/extracted_pages/page_${item.pdfPage}.jpg`)" 
                   :alt="`سؤالات صفحه ${item.bookPage}`" 
                   class="max-w-full h-auto object-contain mx-auto border border-slate-200 rounded"
                 />
               </div>
 
               <!-- Page Footer -->
-              <div class="pt-3 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-500">
-                <span>مبحث {{ faNum(item.topicId) }}: {{ item.topicTitle }} (صفحه کتاب: {{ faNum(item.bookPage) }})</span>
-                <span class="font-medium">«شما آینده‌سازان تمدن نوین اسلامی و فرزندان امیدبخش این آب و خاکید»</span>
+              <div class="pt-3 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-500 font-yekan">
+                <span>{{ item.bookTitle || 'هوش کمپلکس' }} • مبحث {{ faNum(item.topicId) }}: {{ item.topicTitle }} (صفحه کتاب: {{ faNum(item.bookPage) }})</span>
+                <span class="font-nastaliq text-xs text-slate-700">«شما آینده‌سازان تمدن نوین اسلامی و فرزندان امیدبخش این آب و خاکید»</span>
                 <span>صفحه {{ faNum(index + 1) }}</span>
               </div>
             </div>
@@ -1468,13 +1619,14 @@
             <div class="hoosh-print-sheet bg-white text-slate-900 p-8 sm:p-12 max-w-4xl mx-auto border border-slate-300 shadow-sm rounded-lg" style="min-height: 280mm; display: flex; flex-direction: column; justify-content: space-between;">
               <div>
                 <!-- Header -->
+                <div class="text-center font-nastaliq text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
                 <div class="pb-4 border-b-2 border-royal mb-6 flex items-center justify-between">
                   <div>
-                    <h2 class="text-xl font-black text-ink">پاسخ‌برگ اختصاصی ۴ گزینه‌ای</h2>
-                    <p class="text-xs text-slate-600 mt-1">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی تربت حیدریه</p>
-                    <p class="text-xs text-royal font-bold mt-1">{{ examConfig.title }} - {{ examConfig.grade }}</p>
+                    <h2 class="text-xl font-black text-ink font-titr">پاسخ‌برگ اختصاصی ۴ گزینه‌ای</h2>
+                    <p class="text-xs text-slate-600 mt-1 font-nazanin">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی تربت حیدریه</p>
+                    <p class="text-xs text-royal font-bold mt-1 font-titr">{{ examConfig.title }} - {{ examConfig.grade }}</p>
                   </div>
-                  <div class="text-left text-xs space-y-1">
+                  <div class="text-left text-xs space-y-1 font-yekan">
                     <div>تاریخ برگزاری: <span class="font-bold">{{ examConfig.date }}</span></div>
                     <div>مدت پاسخگویی: <span class="font-bold">{{ examConfig.duration }}</span></div>
                     <div>طراح: <span class="font-bold">{{ examConfig.teacher }}</span></div>
@@ -1482,7 +1634,7 @@
                 </div>
 
                 <!-- Student Info Fields -->
-                <div class="grid grid-cols-3 gap-4 text-xs p-3 border-2 border-dashed border-slate-300 rounded-lg mb-6 bg-slate-50">
+                <div class="grid grid-cols-3 gap-4 text-xs font-yekan p-3 border-2 border-dashed border-slate-300 rounded-lg mb-6 bg-slate-50">
                   <div>نام و نام خانوادگی: ............................................</div>
                   <div>کلاس / شعبه: ............................................</div>
                   <div>شماره صندلی / کد: ............................................</div>
@@ -1523,42 +1675,151 @@
       </div>
     </div>
 
+    <!-- ================= UPLOAD NEW BOOK MODAL ================= -->
+    <div 
+      v-if="uploadModalOpen" 
+      class="fixed inset-0 z-[80] bg-ink/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 no-print"
+      @click.self="uploadModalOpen = false"
+    >
+      <div class="card p-5 sm:p-6 w-full max-w-lg bg-white shadow-2xl rounded-2xl border border-line space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-line">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-sun text-ink flex items-center justify-center font-black">
+              <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="font-black text-sm sm:text-base text-ink">بارگذاری و افزودن کتاب جدید</h4>
+              <p class="text-[11px] text-[#5A6E99]">افزودن کتاب‌های بیشتر برای طراحی آزمون پایه‌های مختلف</p>
+            </div>
+          </div>
+          <button @click="uploadModalOpen = false" class="text-[#5A6E99] hover:text-ink p-1 border-none bg-transparent cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <form @submit.prevent="submitUploadBook" class="space-y-3.5 text-xs">
+          <div>
+            <label class="lbl">عنوان کامل کتاب:</label>
+            <input 
+              v-model="newBookForm.title" 
+              type="text" 
+              placeholder="مثال: هوش و خلاقیت ریاضی نهم (خیلی سبز)" 
+              class="input text-xs font-bold" 
+              required 
+            />
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="lbl">پایه / مقطع تحصیلی:</label>
+              <select v-model="newBookForm.grade" class="input text-xs font-bold">
+                <option value="هشتم و نهم">پایه هشتم و نهم (تیزهوشان دهم)</option>
+                <option value="ششم">پایه پنجم و ششم (تیزهوشان هفتم)</option>
+                <option value="هفتم">پایه هفتم</option>
+                <option value="هشتم">پایه هشتم</option>
+                <option value="نهم">پایه نهم</option>
+                <option value="دوره اول متوسطه">دوره اول متوسطه</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl">تعداد تقریبی مباحث:</label>
+              <input 
+                v-model.number="newBookForm.topics_count" 
+                type="number" 
+                min="1" 
+                max="500" 
+                class="input text-xs font-bold" 
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="lbl">توضیحات کوتاه کتاب:</label>
+            <textarea 
+              v-model="newBookForm.description" 
+              rows="2" 
+              placeholder="توضیحاتی در مورد سرفصل‌ها یا کاربرد کتاب برای آزمون..." 
+              class="input text-xs"
+            ></textarea>
+          </div>
+
+          <div>
+            <label class="lbl">انتخاب فایل کتاب (PDF):</label>
+            <div class="border-2 border-dashed border-line rounded-xl p-4 text-center bg-mist hover:bg-royal/5 transition-colors cursor-pointer relative">
+              <input 
+                type="file" 
+                accept=".pdf" 
+                @change="handleBookFileSelect" 
+                class="absolute inset-0 opacity-0 cursor-pointer w-full h-full" 
+                required 
+              />
+              <i data-lucide="file-up" class="w-8 h-8 mx-auto text-royal mb-1.5"></i>
+              <p class="font-bold text-ink">
+                {{ newBookFile ? newBookFile.name : 'کلیک کنید یا فایل PDF را اینجا رها کنید' }}
+              </p>
+              <span class="text-[10px] text-[#5A6E99] block mt-0.5">فرمت مجاز: PDF تا حجم ۵۰۰ مگابایت</span>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-line flex items-center justify-end gap-2">
+            <button 
+              type="button" 
+              @click="uploadModalOpen = false" 
+              class="btn btn-soft text-xs font-bold !py-2.5 !px-4"
+              :disabled="uploadingBook"
+            >
+              انصراف
+            </button>
+            <button 
+              type="submit" 
+              class="btn btn-royal text-xs font-black !py-2.5 !px-5 flex items-center gap-2 shadow-sm"
+              :disabled="uploadingBook"
+            >
+              <i data-lucide="check" :class="['w-4 h-4', uploadingBook ? 'animate-spin' : '']"></i>
+              <span>{{ uploadingBook ? 'در حال بارگذاری و ثبت...' : 'بارگذاری و افزودن کتاب' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Hidden Stage for Browser window.print() -->
     <div id="hoosh-print-stage" class="hidden">
       <!-- Mode 1: Exam Print Sheets -->
       <template v-if="printMode === 'exam'">
         <div 
           v-for="(item, index) in sortedExamBasket" 
-          :key="item.pdfPage"
+          :key="`${item.bookId}_${item.pdfPage}`"
           class="hoosh-print-sheet hoosh-print-break bg-white text-slate-900 p-8"
           style="min-height: 280mm; display: flex; flex-direction: column; justify-content: space-between;"
         >
           <!-- Header -->
           <div class="pb-3 border-b-2 border-royal mb-4">
+            <div class="text-center font-nastaliq text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-royal text-white flex items-center justify-center font-bold text-lg">
+                <div class="w-12 h-12 rounded-xl bg-royal text-white flex items-center justify-center font-bold text-lg font-titr">
                   <span>رشد</span>
                 </div>
                 <div>
-                  <h2 class="text-base font-black text-ink">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی</h2>
-                  <p class="text-xs text-slate-600 font-medium">پایگاه علمی تربیتی مسجد ائمه بقیع (ع) تربت حیدریه | طراح آزمون هوش کمپلکس</p>
+                  <h2 class="text-base font-black text-ink font-titr">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی</h2>
+                  <p class="text-xs text-slate-600 font-medium font-nazanin">پایگاه علمی تربیتی مسجد ائمه بقیع (ع) تربت حیدریه | سامانه آزمون تیزهوشان</p>
                 </div>
               </div>
-              <div class="text-left text-xs space-y-1 font-semibold text-slate-700">
+              <div class="text-left text-xs space-y-1 font-semibold text-slate-700 font-yekan">
                 <div>تاریخ آزمون: <span class="font-bold text-slate-950">{{ examConfig.date }}</span></div>
                 <div>مدت پاسخگویی: <span class="font-bold text-slate-950">{{ examConfig.duration }}</span></div>
                 <div>صفحه: <span class="font-bold text-royal">{{ faNum(index + 1) }} از {{ faNum(sortedExamBasket.length) }}</span></div>
               </div>
             </div>
             <div class="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between text-xs bg-slate-50 p-2 rounded">
-              <div class="font-bold text-royal">{{ examConfig.title }} | {{ examConfig.grade }}</div>
-              <div class="text-slate-600">
+              <div class="font-bold text-royal font-titr text-sm">{{ examConfig.title }} | {{ examConfig.grade }}</div>
+              <div class="text-slate-600 font-yekan">
                 مدرس/طراح: <span class="font-bold text-slate-900">{{ examConfig.teacher }}</span>
                 <span v-if="examConfig.hasNegativeScore" class="text-rose-700 font-bold mr-2">| دارای نمره منفی</span>
               </div>
             </div>
-            <div v-if="index === 0" class="mt-2 grid grid-cols-4 gap-2 text-[11px] p-2 border border-slate-300 rounded bg-white">
+            <div v-if="index === 0" class="mt-2 grid grid-cols-4 gap-2 text-[11px] font-yekan p-2 border border-slate-300 rounded bg-white">
               <div>نام و نام خانوادگی: .............................</div>
               <div>نام کلاس / مدرسه: .............................</div>
               <div>شماره داوطلب: .............................</div>
@@ -1569,16 +1830,16 @@
           <!-- Image -->
           <div class="flex-1 flex items-center justify-center my-2">
             <img 
-              :src="`/extracted_pages/page_${item.pdfPage}.jpg`" 
+              :src="item.imgSrc || (item.bookId === 'hoosh_8_9' ? `/extracted_pages/hoosh_8_9/page_${item.pdfPage}.jpg` : `/extracted_pages/page_${item.pdfPage}.jpg`)" 
               :alt="`سؤالات صفحه ${item.bookPage}`" 
               class="max-w-full h-auto object-contain mx-auto"
             />
           </div>
 
           <!-- Footer -->
-          <div class="pt-3 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-500">
-            <span>مبحث {{ faNum(item.topicId) }}: {{ item.topicTitle }} (صفحه کتاب: {{ faNum(item.bookPage) }})</span>
-            <span class="font-medium">«شما آینده‌سازان تمدن نوین اسلامی و فرزندان امیدبخش این آب و خاکید»</span>
+          <div class="pt-3 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-500 font-yekan">
+            <span>{{ item.bookTitle || 'هوش کمپلکس' }} • مبحث {{ faNum(item.topicId) }}: {{ item.topicTitle }} (صفحه کتاب: {{ faNum(item.bookPage) }})</span>
+            <span class="font-nastaliq text-xs text-slate-700">«شما آینده‌سازان تمدن نوین اسلامی و فرزندان امیدبخش این آب و خاکید»</span>
             <span>صفحه {{ faNum(index + 1) }}</span>
           </div>
         </div>
@@ -1588,19 +1849,20 @@
       <template v-else-if="printMode === 'answersheet'">
         <div class="hoosh-print-sheet bg-white text-slate-900 p-8" style="min-height: 280mm; display: flex; flex-direction: column; justify-content: space-between;">
           <div>
+            <div class="text-center font-nastaliq text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
             <div class="pb-4 border-b-2 border-royal mb-6 flex items-center justify-between">
               <div>
-                <h2 class="text-xl font-black text-ink">پاسخ‌برگ اختصاصی ۴ گزینه‌ای</h2>
-                <p class="text-xs text-slate-600 mt-1">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی تربت حیدریه</p>
-                <p class="text-xs text-royal font-bold mt-1">{{ examConfig.title }} - {{ examConfig.grade }}</p>
+                <h2 class="text-xl font-black text-ink font-titr">پاسخ‌برگ اختصاصی ۴ گزینه‌ای</h2>
+                <p class="text-xs text-slate-600 mt-1 font-nazanin">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی تربت حیدریه</p>
+                <p class="text-xs text-royal font-bold mt-1 font-titr">{{ examConfig.title }} - {{ examConfig.grade }}</p>
               </div>
-              <div class="text-left text-xs space-y-1">
+              <div class="text-left text-xs space-y-1 font-yekan">
                 <div>تاریخ: <span class="font-bold">{{ examConfig.date }}</span></div>
                 <div>مدت: <span class="font-bold">{{ examConfig.duration }}</span></div>
                 <div>طراح: <span class="font-bold">{{ examConfig.teacher }}</span></div>
               </div>
             </div>
-            <div class="grid grid-cols-3 gap-4 text-xs p-3 border-2 border-dashed border-slate-300 rounded-lg mb-6 bg-slate-50">
+            <div class="grid grid-cols-3 gap-4 text-xs font-yekan p-3 border-2 border-dashed border-slate-300 rounded-lg mb-6 bg-slate-50">
               <div>نام و نام خانوادگی: ............................................</div>
               <div>کلاس / شعبه: ............................................</div>
               <div>شماره صندلی / کد: ............................................</div>
@@ -1610,7 +1872,7 @@
                 <div 
                   v-for="q in getBubbleColumnQuestions(colIndex)" 
                   :key="q"
-                  class="hoosh-bubble-row"
+                  class="hoosh-bubble-row font-yekan"
                 >
                   <span class="w-6 font-bold text-slate-800 text-left">{{ faNum(q) }}.</span>
                   <span class="hoosh-bubble-opt">۱</span>
@@ -1635,7 +1897,8 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { faNum, playBeep, refreshIcons } from '../utils';
-import hooshTopicsData from '../data/hoosh_topics.json';
+import hooshTopicsData6 from '../data/hoosh_topics.json';
+import hooshTopicsData89 from '../data/hoosh_topics_8_9.json';
 
 const props = defineProps({
   user: { type: Object, required: true }
@@ -1862,26 +2125,96 @@ async function sendMessage() {
 }
 
 
-// ----------------- HOOSH COMPLEX EXAM STUDIO -----------------
+// ----------------- HOOSH COMPLEX & MULTI-BOOK EXAM STUDIO -----------------
 const examSubTab = ref('hoosh'); // 'hoosh' | 'manual'
 const searchQuery = ref('');
+const selectedGradeFilter = ref('all'); // 'all' | 'ششم' | 'هشتم و نهم' | 'custom'
+const selectedBookId = ref('hoosh_8_9'); // Default to newly added 8th & 9th book!
 const selectedSectionId = ref('all');
 const selectedChapterId = ref('all');
 const selectedTopicId = ref(1);
 
-const hooshSections = [
-  { id: 1, title: 'هوش و استعداد تصویری', count: 43 },
-  { id: 2, title: 'هوش و استعداد کلامی', count: 50 },
-  { id: 3, title: 'هوش ریاضی', count: 34 },
-  { id: 4, title: 'هوش منطقی', count: 31 },
-  { id: 5, title: 'هوش فضایی و فنی', count: 13 },
-  { id: 6, title: 'سرعت، دقت و تمرکز', count: 27 },
-  { id: 7, title: 'خلاقیت', count: 3 }
-];
+// Books List with full metadata
+const booksList = ref([
+  {
+    id: 'hoosh_8_9',
+    title: 'هوش کمپلکس هشتم و نهم (تیزهوشان نهم)',
+    grade: 'هشتم و نهم',
+    gradeBadge: 'پایه ۸ و ۹',
+    targetGrade: 'ورودی دهم مدارس تیزهوشان و نمونه دولتی',
+    topicsCount: 201,
+    sectionsCount: 5,
+    chaptersCount: 19,
+    pagesCount: 539,
+    description: 'شامل ۵ بخش، ۱۹ فصل و ۲۰۱ مبحث تخصصی: کلامی، تصویری، ریاضی و محاسباتی، منطقی و فضایی فنی',
+    imageFolder: '/extracted_pages/hoosh_8_9',
+    pdfUrl: '/uploads/books/hoosh_complex_8_9.pdf',
+    gradient: 'from-indigo-600 via-purple-600 to-pink-600',
+    accentColor: 'indigo',
+    isCustom: false
+  },
+  {
+    id: 'hoosh_6',
+    title: 'هوش کمپلکس پنجم و ششم (تیزهوشان ششم)',
+    grade: 'ششم',
+    gradeBadge: 'پایه ۵ و ۶',
+    targetGrade: 'ورودی هفتم مدارس استعدادهای درخشان (سمپاد)',
+    topicsCount: 201,
+    sectionsCount: 7,
+    chaptersCount: 21,
+    pagesCount: 537,
+    description: 'شامل ۷ بخش، ۲۱ فصل و ۲۰۱ مبحث استاندارد هوش و استعداد تحلیلی ششم',
+    imageFolder: '/extracted_pages',
+    pdfUrl: '/uploads/books/hoosh_complex_6.pdf',
+    gradient: 'from-blue-600 via-cyan-600 to-teal-600',
+    accentColor: 'blue',
+    isCustom: false
+  }
+]);
+
+// Filtered books based on selected grade
+const filteredBooks = computed(() => {
+  if (selectedGradeFilter.value === 'all') return booksList.value;
+  if (selectedGradeFilter.value === 'ششم') {
+    return booksList.value.filter(b => b.grade.includes('ششم') || b.grade.includes('۵'));
+  }
+  if (selectedGradeFilter.value === 'هشتم و نهم') {
+    return booksList.value.filter(b => b.grade.includes('هشتم') || b.grade.includes('نهم'));
+  }
+  if (selectedGradeFilter.value === 'custom') {
+    return booksList.value.filter(b => b.isCustom);
+  }
+  return booksList.value;
+});
+
+const activeBook = computed(() => {
+  return booksList.value.find(b => b.id === selectedBookId.value) || booksList.value[0];
+});
+
+// Current Book Topics (Reactive per selected book)
+const currentBookTopics = computed(() => {
+  if (selectedBookId.value === 'hoosh_8_9') return hooshTopicsData89;
+  if (selectedBookId.value === 'hoosh_6') return hooshTopicsData6;
+  const b = booksList.value.find(item => item.id === selectedBookId.value);
+  if (b && b.topicsData && Array.isArray(b.topicsData)) return b.topicsData;
+  return hooshTopicsData89;
+});
+
+// Dynamic sections from current book topics
+const hooshSections = computed(() => {
+  const map = new Map();
+  currentBookTopics.value.forEach(t => {
+    if (!map.has(t.sectionId)) {
+      map.set(t.sectionId, { id: t.sectionId, title: t.sectionTitle, count: 0 });
+    }
+    map.get(t.sectionId).count++;
+  });
+  return Array.from(map.values());
+});
 
 const availableChapters = computed(() => {
   const chaptersMap = new Map();
-  hooshTopicsData.forEach(t => {
+  currentBookTopics.value.forEach(t => {
     if (selectedSectionId.value === 'all' || t.sectionId === Number(selectedSectionId.value)) {
       if (!chaptersMap.has(t.chapterId)) {
         chaptersMap.set(t.chapterId, { id: t.chapterId, title: t.chapterTitle, count: 0 });
@@ -1894,7 +2227,7 @@ const availableChapters = computed(() => {
 
 const filteredTopics = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
-  return hooshTopicsData.filter(t => {
+  return currentBookTopics.value.filter(t => {
     if (selectedSectionId.value !== 'all' && t.sectionId !== Number(selectedSectionId.value)) {
       return false;
     }
@@ -1912,6 +2245,37 @@ const filteredTopics = computed(() => {
   });
 });
 
+function selectBook(bookId) {
+  selectedBookId.value = bookId;
+  selectedSectionId.value = 'all';
+  selectedChapterId.value = 'all';
+  searchQuery.value = '';
+  if (currentBookTopics.value.length > 0) {
+    selectedTopicId.value = currentBookTopics.value[0].id;
+  }
+  // Auto-tune exam title & grade in config
+  if (bookId === 'hoosh_8_9') {
+    examConfig.value.title = 'آزمون هوش و استعداد تحلیلی (هوش کمپلکس ۸ و ۹)';
+    examConfig.value.grade = 'پایه نهم (ورودی تیزهوشان دهم)';
+  } else if (bookId === 'hoosh_6') {
+    examConfig.value.title = 'آزمون هوش و استعداد تحلیلی (هوش کمپلکس ششم)';
+    examConfig.value.grade = 'پایه ششم (ورودی تیزهوشان هفتم)';
+  } else {
+    examConfig.value.title = `آزمون از کتاب ${activeBook.value.title}`;
+    examConfig.value.grade = activeBook.value.grade;
+  }
+  toast(`کتاب «${activeBook.value.title}» انتخاب شد`);
+  nextTick(refreshIcons);
+}
+
+watch(selectedBookId, () => {
+  selectedSectionId.value = 'all';
+  selectedChapterId.value = 'all';
+  if (filteredTopics.value.length > 0) {
+    selectedTopicId.value = filteredTopics.value[0].id;
+  }
+});
+
 watch(selectedSectionId, () => {
   selectedChapterId.value = 'all';
   if (filteredTopics.value.length > 0) {
@@ -1925,12 +2289,12 @@ watch(selectedChapterId, () => {
   }
 });
 
-watch([examSubTab, selectedSectionId, selectedChapterId, selectedTopicId], () => {
+watch([examSubTab, selectedGradeFilter, selectedBookId, selectedSectionId, selectedChapterId, selectedTopicId], () => {
   nextTick(() => refreshIcons());
 });
 
 const currentTopic = computed(() => {
-  return hooshTopicsData.find(t => t.id === Number(selectedTopicId.value)) || hooshTopicsData[0];
+  return currentBookTopics.value.find(t => t.id === Number(selectedTopicId.value)) || currentBookTopics.value[0];
 });
 
 const currentTopicPages = computed(() => {
@@ -1939,6 +2303,7 @@ const currentTopicPages = computed(() => {
   const s = currentTopic.value.pdfStartPage;
   const e = currentTopic.value.pdfEndPage;
   const bs = currentTopic.value.bookStartPage;
+  const folder = activeBook.value.imageFolder || '/extracted_pages';
   for (let p = s; p <= e; p++) {
     list.push({
       pdfPage: p,
@@ -1946,15 +2311,122 @@ const currentTopicPages = computed(() => {
       topicId: currentTopic.value.id,
       topicTitle: currentTopic.value.title,
       sectionTitle: currentTopic.value.sectionTitle,
-      chapterTitle: currentTopic.value.chapterTitle
+      chapterTitle: currentTopic.value.chapterTitle,
+      bookId: activeBook.value.id,
+      bookTitle: activeBook.value.title,
+      imgSrc: `${folder}/page_${p}.jpg`
     });
   }
   return list;
 });
 
+// Book Upload State & Methods
+const uploadModalOpen = ref(false);
+const uploadingBook = ref(false);
+const newBookForm = ref({
+  title: '',
+  grade: 'پایه هشتم و نهم',
+  topics_count: 20,
+  description: ''
+});
+const newBookFile = ref(null);
+
+function handleBookFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) {
+    newBookFile.value = file;
+    if (!newBookForm.value.title) {
+      newBookForm.value.title = file.name.replace(/\.[^/.]+$/, '');
+    }
+  }
+}
+
+async function submitUploadBook() {
+  if (!newBookForm.value.title || !newBookFile.value) {
+    return alert('لطفاً عنوان کتاب و فایل PDF را انتخاب نمایید.');
+  }
+  uploadingBook.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('title', newBookForm.value.title);
+    formData.append('grade', newBookForm.value.grade);
+    formData.append('topics_count', newBookForm.value.topics_count);
+    formData.append('description', newBookForm.value.description);
+    formData.append('category', 'book');
+    formData.append('file', newBookFile.value);
+
+    const res = await fetch('/api/exam-books/upload', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok) {
+      toast('کتاب جدید با موفقیت بارگذاری و افزوده شد!');
+      booksList.value.push({
+        id: data.id,
+        title: newBookForm.value.title,
+        grade: newBookForm.value.grade,
+        gradeBadge: newBookForm.value.grade,
+        targetGrade: newBookForm.value.grade,
+        topicsCount: Number(newBookForm.value.topics_count) || 20,
+        sectionsCount: 1,
+        chaptersCount: 1,
+        pagesCount: (Number(newBookForm.value.topics_count) || 20) * 2,
+        description: newBookForm.value.description || 'کتاب بارگذاری‌شده توسط معلم',
+        imageFolder: `/extracted_pages/${data.id}`,
+        pdfUrl: `/uploads/books/${newBookFile.value.name}`,
+        gradient: 'from-emerald-600 via-teal-600 to-cyan-700',
+        accentColor: 'emerald',
+        isCustom: true
+      });
+      selectBook(data.id);
+      uploadModalOpen.value = false;
+      newBookFile.value = null;
+      newBookForm.value = { title: '', grade: 'پایه هشتم و نهم', topics_count: 20, description: '' };
+    } else {
+      alert(data.error || 'خطا در بارگذاری کتاب');
+    }
+  } catch (err) {
+    alert('خطا در ارتباط با سرور: ' + err.message);
+  } finally {
+    uploadingBook.value = false;
+    nextTick(refreshIcons);
+  }
+}
+
+async function fetchExamBooks() {
+  try {
+    const res = await fetch('/api/exam-books');
+    if (res.ok) {
+      const serverBooks = await res.json();
+      serverBooks.forEach(sb => {
+        if (!booksList.value.some(b => b.id === sb.id)) {
+          booksList.value.push({
+            id: sb.id,
+            title: sb.title,
+            grade: sb.grade,
+            gradeBadge: sb.grade,
+            targetGrade: sb.grade,
+            topicsCount: sb.topics_count,
+            sectionsCount: 1,
+            chaptersCount: 1,
+            pagesCount: sb.pages_count,
+            description: sb.description,
+            imageFolder: sb.image_folder || `/extracted_pages/${sb.id}`,
+            pdfUrl: sb.file_url,
+            gradient: 'from-emerald-600 via-teal-600 to-cyan-700',
+            accentColor: 'emerald',
+            isCustom: Boolean(sb.is_custom)
+          });
+        }
+      });
+    }
+  } catch (e) {}
+}
+
 const examBasket = ref([]);
 try {
-  const saved = localStorage.getItem('roshd_teacher_exam_basket');
+  const saved = localStorage.getItem('roshd_teacher_exam_basket_v2');
   if (saved) examBasket.value = JSON.parse(saved);
 } catch (e) {
   examBasket.value = [];
@@ -1962,25 +2434,35 @@ try {
 
 function saveBasket() {
   try {
-    localStorage.setItem('roshd_teacher_exam_basket', JSON.stringify(examBasket.value));
+    localStorage.setItem('roshd_teacher_exam_basket_v2', JSON.stringify(examBasket.value));
   } catch (e) {}
 }
 
 const sortedExamBasket = computed(() => {
-  return [...examBasket.value].sort((a, b) => a.pdfPage - b.pdfPage);
+  return [...examBasket.value].sort((a, b) => {
+    if (a.bookId !== b.bookId) return a.bookId.localeCompare(b.bookId);
+    return a.pdfPage - b.pdfPage;
+  });
 });
 
-function isPageInBasket(pdfPage) {
-  return examBasket.value.some(item => item.pdfPage === pdfPage);
+function getPageKey(pageObj) {
+  const bId = pageObj.bookId || activeBook.value.id;
+  return `${bId}_${pageObj.pdfPage}`;
+}
+
+function isPageInBasket(pdfPage, bookId = null) {
+  const bId = bookId || activeBook.value.id;
+  return examBasket.value.some(item => (item.bookId || 'hoosh_6') === bId && item.pdfPage === pdfPage);
 }
 
 function togglePageInBasket(pageObj) {
-  const idx = examBasket.value.findIndex(item => item.pdfPage === pageObj.pdfPage);
+  const bId = pageObj.bookId || activeBook.value.id;
+  const idx = examBasket.value.findIndex(item => (item.bookId || 'hoosh_6') === bId && item.pdfPage === pageObj.pdfPage);
   if (idx >= 0) {
     examBasket.value.splice(idx, 1);
     toast(`برگه صفحه ${faNum(pageObj.bookPage)} از آزمون حذف شد`);
   } else {
-    examBasket.value.push({ ...pageObj });
+    examBasket.value.push({ ...pageObj, bookId: bId, bookTitle: pageObj.bookTitle || activeBook.value.title });
     toast(`برگه صفحه ${faNum(pageObj.bookPage)} به آزمون افزوده شد`);
   }
   saveBasket();
@@ -1989,33 +2471,36 @@ function togglePageInBasket(pageObj) {
 
 const currentTopicSelectedPagesCount = computed(() => {
   if (!currentTopic.value) return 0;
-  return examBasket.value.filter(item => item.topicId === currentTopic.value.id).length;
+  const bId = activeBook.value.id;
+  return examBasket.value.filter(item => (item.bookId || 'hoosh_6') === bId && item.topicId === currentTopic.value.id).length;
 });
 
 const areAllCurrentPagesInBasket = computed(() => {
   if (currentTopicPages.value.length === 0) return false;
-  return currentTopicPages.value.every(p => isPageInBasket(p.pdfPage));
+  return currentTopicPages.value.every(p => isPageInBasket(p.pdfPage, p.bookId));
 });
 
 function toggleAllPagesForCurrentTopic() {
+  const bId = activeBook.value.id;
+  const tid = currentTopic.value.id;
   if (areAllCurrentPagesInBasket.value) {
-    const tid = currentTopic.value.id;
-    examBasket.value = examBasket.value.filter(item => item.topicId !== tid);
+    examBasket.value = examBasket.value.filter(item => !((item.bookId || 'hoosh_6') === bId && item.topicId === tid));
     toast(`تمام سؤالات مبحث ${faNum(tid)} از آزمون حذف شدند`);
   } else {
     currentTopicPages.value.forEach(p => {
-      if (!isPageInBasket(p.pdfPage)) {
-        examBasket.value.push({ ...p });
+      if (!isPageInBasket(p.pdfPage, p.bookId)) {
+        examBasket.value.push({ ...p, bookId: bId, bookTitle: activeBook.value.title });
       }
     });
-    toast(`تمام سؤالات مبحث ${faNum(currentTopic.value.id)} به آزمون افزوده شدند`);
+    toast(`تمام سؤالات مبحث ${faNum(tid)} به آزمون افزوده شدند`);
   }
   saveBasket();
   nextTick(refreshIcons);
 }
 
-function removeFromBasket(pdfPage) {
-  examBasket.value = examBasket.value.filter(item => item.pdfPage !== pdfPage);
+function removeFromBasket(pdfPage, bookId = null) {
+  const bId = bookId || activeBook.value.id;
+  examBasket.value = examBasket.value.filter(item => !((item.bookId || 'hoosh_6') === bId && item.pdfPage === pdfPage));
   saveBasket();
   nextTick(refreshIcons);
 }
@@ -2310,6 +2795,7 @@ onMounted(() => {
   loadStudentsPerformance();
   loadHwReports();
   loadMessages();
+  fetchExamBooks();
   refreshIcons();
 });
 </script>

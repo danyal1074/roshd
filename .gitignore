@@ -52,3 +52,15 @@ scripts/debug_*.py
 scripts/verify_*.py
 scripts/take_*.py
 scripts/test_click_*.py
+
+# Extra exclusions
+deliverables/
+cookies.txt
+*.tar.gz
+scripts/test_*.py
+scripts/test_*.js
+scripts/check_*.py
+scripts/create_*.py
+scripts/parsed_barpa_data.json
+scripts/deploy_files_to_server.py
+scripts/deploy_to_server.py
