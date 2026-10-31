@@ -9,8 +9,8 @@
           <i data-lucide="graduation-cap" class="w-7 h-7 text-sun"></i>
         </div>
         <div class="leading-tight">
-          <p class="font-extrabold text-base font-titr">کانون نخبه‌پروری</p>
-          <p class="text-xs text-white/85 font-nastaliq text-sm">دانشمند شهید دکتر سعید کاظمی آشتیانی</p>
+          <p class="font-extrabold text-base font-sans">کانون نخبه‌پروری</p>
+          <p class="text-xs text-white/85 font-sans text-sm">دانشمند شهید دکتر سعید کاظمی آشتیانی</p>
         </div>
       </div>
 
@@ -361,7 +361,7 @@
         <section v-if="activeTab === 'fee'" class="space-y-4">
           <div class="min-h-[48px] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 class="text-[26px] font-extrabold text-white lg:text-ink font-titr">حق عضویت و بررسی رسیدها</h2>
+              <h2 class="text-[26px] font-extrabold text-white lg:text-ink font-sans">حق عضویت و بررسی رسیدها</h2>
               <p class="text-sm text-white/80 lg:text-[#5A6E99]">بررسی دقیق فیش‌های واریزی دانش‌آموزان، احراز هویت پرداخت‌کننده و گزارش تسویه</p>
             </div>
             
@@ -382,8 +382,8 @@
                 <i data-lucide="info" class="w-6 h-6 text-sun"></i>
               </div>
               <div class="space-y-0.5">
-                <h4 class="font-bold text-sm sm:text-base font-titr">سامانه هوشمند نظارت بر واریز شهریه</h4>
-                <p class="text-xs text-white/85 leading-relaxed font-yekan">
+                <h4 class="font-bold text-sm sm:text-base font-sans">سامانه هوشمند نظارت بر واریز شهریه</h4>
+                <p class="text-xs text-white/85 leading-relaxed font-sans">
                   مبالغ مصوب شهریه پایه‌ها، شماره حساب و ضوابط قفل خودکار در بخش <b>«تنظیمات و پرداخت»</b> تعیین می‌گردد. در این بخش می‌توانید کلیه فیش‌های ارسالی را همراه با تصویر و اطلاعات پرداخت‌کننده به دقت بررسی و با یک کلیک تأیید یا رد فرمایید.
                 </p>
               </div>
@@ -400,7 +400,7 @@
           <div class="seg-ctl">
             <button @click="feeSubTab = 'rec'" :aria-pressed="feeSubTab === 'rec'">
               رسیدهای واریزی
-              <span v-if="receiptsCounts.pending > 0" class="tag bg-sun text-ink !py-0 mr-1 text-xs font-yekan font-bold">
+              <span v-if="receiptsCounts.pending > 0" class="tag bg-sun text-ink !py-0 mr-1 text-xs font-sans font-bold">
                 {{ faNum(receiptsCounts.pending) }} در انتظار
               </span>
             </button>
@@ -445,7 +445,7 @@
               </div>
 
               <!-- Status Filter Pills -->
-              <div class="flex items-center gap-1.5 flex-wrap pt-2 border-t border-line text-xs font-yekan">
+              <div class="flex items-center gap-1.5 flex-wrap pt-2 border-t border-line text-xs font-sans">
                 <button 
                   @click="receiptStatusFilter = 'all'" 
                   class="px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5"
@@ -492,7 +492,7 @@
               <div class="w-14 h-14 rounded-2xl bg-mist text-[#5A6E99] flex items-center justify-center mx-auto">
                 <i data-lucide="receipt" class="w-7 h-7"></i>
               </div>
-              <h4 class="font-extrabold text-base text-ink font-titr">رسیدی مطابق فیلتر یافت نشد</h4>
+              <h4 class="font-extrabold text-base text-ink font-sans">رسیدی مطابق فیلتر یافت نشد</h4>
               <p class="text-xs text-[#5A6E99]">رسیدهای واریزی جدید بلافاصله پس از ارسال دانش‌آموز در این قسمت نمایش داده می‌شوند.</p>
             </div>
 
@@ -522,8 +522,8 @@
 
                     <div>
                       <div class="flex items-center gap-2 flex-wrap">
-                        <h4 class="font-black text-base text-ink font-titr">{{ rec.student_name }}</h4>
-                        <span class="tag bg-mist text-royal text-xs font-bold font-yekan">پایه {{ rec.grade }} - کلاس {{ rec.class_name }}</span>
+                        <h4 class="font-black text-base text-ink font-sans">{{ rec.student_name }}</h4>
+                        <span class="tag bg-mist text-royal text-xs font-bold font-sans">پایه {{ rec.grade }} - کلاس {{ rec.class_name }}</span>
                         <span v-if="rec.national_id" class="tag bg-slate-100 text-slate-700 text-xs font-mono font-bold" dir="ltr">
                           کد ملی: {{ rec.national_id }}
                         </span>
@@ -595,7 +595,7 @@
                     <div class="space-y-1.5 text-slate-700">
                       <div class="flex items-center justify-between">
                         <span class="text-[#5A6E99]">مبلغ واریزی:</span>
-                        <b class="text-base text-ok font-black font-yekan">{{ money(rec.amount) }} تومان</b>
+                        <b class="text-base text-ok font-black font-sans">{{ money(rec.amount) }} تومان</b>
                       </div>
                       <div class="flex items-center justify-between">
                         <span class="text-[#5A6E99]">کد پیگیری / ارجاع:</span>
@@ -713,8 +713,8 @@
           <div v-if="feeSubTab === 'rep'" class="grid lg:grid-cols-2 gap-4">
             <div v-for="g in feeReports" :key="g.grade" class="card p-5 space-y-4 bg-white border border-line shadow-xs">
               <div class="flex items-center justify-between border-b border-line pb-3">
-                <h4 class="font-extrabold text-[18px] text-ink font-titr">گزارش وضعیت تسویه پایه {{ g.grade }}</h4>
-                <span class="tag bg-royal/10 text-royal text-xs font-bold font-yekan">
+                <h4 class="font-extrabold text-[18px] text-ink font-sans">گزارش وضعیت تسویه پایه {{ g.grade }}</h4>
+                <span class="tag bg-royal/10 text-royal text-xs font-bold font-sans">
                   کل دانش‌آموزان: {{ faNum(g.paid + g.pending + g.unpaid) }} نفر
                 </span>
               </div>
@@ -722,21 +722,21 @@
               <div class="grid grid-cols-3 gap-2.5 text-center text-xs">
                 <div class="p-3 bg-[#E6F7EE] rounded-2xl border border-emerald-200">
                   <p class="text-[#5A6E99] font-bold">پرداخت‌شده (کامل)</p>
-                  <p class="text-2xl font-black text-ok font-yekan mt-1">{{ faNum(g.paid) }}</p>
+                  <p class="text-2xl font-black text-ok font-sans mt-1">{{ faNum(g.paid) }}</p>
                 </div>
                 <div class="p-3 bg-sun/20 rounded-2xl border border-amber-300">
                   <p class="text-[#5A6E99] font-bold">در انتظار تأیید</p>
-                  <p class="text-2xl font-black text-[#7A5600] font-yekan mt-1">{{ faNum(g.pending) }}</p>
+                  <p class="text-2xl font-black text-[#7A5600] font-sans mt-1">{{ faNum(g.pending) }}</p>
                 </div>
                 <div class="p-3 bg-[#FDECEC] rounded-2xl border border-red-200">
                   <p class="text-[#5A6E99] font-bold">پرداخت‌نشده (بدهکار)</p>
-                  <p class="text-2xl font-black text-late font-yekan mt-1">{{ faNum(g.unpaid) }}</p>
+                  <p class="text-2xl font-black text-late font-sans mt-1">{{ faNum(g.unpaid) }}</p>
                 </div>
               </div>
 
               <!-- Quick Progress Bar -->
               <div class="space-y-1.5 pt-2">
-                <div class="flex items-center justify-between text-xs font-bold text-[#5A6E99] font-yekan">
+                <div class="flex items-center justify-between text-xs font-bold text-[#5A6E99] font-sans">
                   <span>درصد تسویه مالی پایه:</span>
                   <span class="text-ok font-black">
                     {{ faNum(Math.round((g.paid / (g.paid + g.pending + g.unpaid || 1)) * 100)) }}٪
@@ -1593,10 +1593,10 @@
               <i data-lucide="receipt" class="w-5 h-5"></i>
             </div>
             <div>
-              <h3 class="font-black text-base sm:text-lg text-ink font-titr">
+              <h3 class="font-black text-base sm:text-lg text-ink font-sans">
                 بررسی فیش واریزی: {{ inspectingReceipt.student_name }}
               </h3>
-              <p class="text-xs text-[#5A6E99] font-yekan">
+              <p class="text-xs text-[#5A6E99] font-sans">
                 پایه {{ inspectingReceipt.grade }} • کلاس {{ inspectingReceipt.class_name }} • کد پیگیری: {{ inspectingReceipt.tracking_code || 'ندارد' }}
               </p>
             </div>
@@ -1645,7 +1645,7 @@
                   <i data-lucide="user-check" class="w-4 h-4 text-royal"></i>
                   <span>مشخصات کامل پرونده دانش‌آموز</span>
                 </span>
-                <span class="tag bg-mist text-royal text-xs font-bold font-yekan">
+                <span class="tag bg-mist text-royal text-xs font-bold font-sans">
                   {{ inspectingReceipt.grade }} {{ inspectingReceipt.class_name }}
                 </span>
               </div>
@@ -1703,7 +1703,7 @@
               <div class="space-y-2 text-slate-700">
                 <div class="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200">
                   <span class="text-[#5A6E99] font-bold">مبلغ واریز شده:</span>
-                  <span class="text-lg font-black text-ok font-yekan">{{ money(inspectingReceipt.amount) }} تومان</span>
+                  <span class="text-lg font-black text-ok font-sans">{{ money(inspectingReceipt.amount) }} تومان</span>
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-[#5A6E99]">کد پیگیری / شماره ارجاع:</span>
@@ -1717,7 +1717,7 @@
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-[#5A6E99]">تاریخ و زمان ثبت فیش:</span>
-                  <span class="font-bold text-slate-800 font-yekan">{{ inspectingReceipt.date_fa }}</span>
+                  <span class="font-bold text-slate-800 font-sans">{{ inspectingReceipt.date_fa }}</span>
                 </div>
               </div>
             </div>
@@ -2922,3 +2922,4 @@ onMounted(() => {
   refreshIcons();
 });
 </script>
+

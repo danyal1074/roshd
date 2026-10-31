@@ -428,28 +428,22 @@ function seedDefaultExamBooks() {
 initDb();
 
 async function ensureAdminUser(database = db) {
-  try {
-    const bcrypt = require('bcryptjs');
-    const hashed = await bcrypt.hash('danyal1074', 10);
-    
-    // Check if user with username 'admin' or role 'admin' exists
-    const admin = database.prepare("SELECT id, username, role FROM users WHERE username = 'admin' OR role = 'admin'").get();
-    if (admin) {
-      database.prepare(`
-        UPDATE users 
-        SET username = 'admin', password = ?, must_change_password = 0, is_active = 1, role = 'admin'
-        WHERE id = ?
-      `).run(hashed, admin.id);
-    } else {
-      database.prepare(`
-        INSERT INTO users (
-          username, role, national_id, phone, password, first_name, last_name, full_name, must_change_password, is_active
-        ) VALUES ('admin', 'admin', '0011223344', '09120000000', ?, 'مدیر', 'سامانه', 'مدیر سامانه', 0, 1)
-      `).run(hashed);
-    }
-  } catch (err) {
-    console.error('ensureAdminUser error:', err.message);
+  const bcrypt = require('bcryptjs');
+  const crypto = require('node:crypto');
+  const admin = database.prepare("SELECT * FROM users WHERE role = 'admin' ORDER BY id LIMIT 1").get();
+  // Preserve established credentials and disabled accounts on every restart.
+  if (admin) return;
+
+  const password = process.env.ADMIN_INITIAL_PASSWORD;
+  if (!password || password.length < 12 || password === 'danyal1074') {
+    throw new Error('Set ADMIN_INITIAL_PASSWORD to a unique password of at least 12 characters for the first administrator account.');
   }
+  const hashed = await bcrypt.hash(password, 10);
+  database.prepare(`INSERT INTO users (
+    username, role, national_id, password, first_name, last_name, full_name,
+    must_change_password, is_active
+  ) VALUES ('admin', 'admin', ?, ?, 'مدیر', 'سامانه', 'مدیر سامانه', 1, 1)`)
+    .run(process.env.ADMIN_NATIONAL_ID || crypto.randomBytes(10).toString('hex'), hashed);
 }
 
 /**
@@ -470,3 +464,4 @@ function backupDatabase(destinationPath) {
 }
 
 module.exports = { db, dbPath, initDb, ensureAdminUser, backupDatabase };
+

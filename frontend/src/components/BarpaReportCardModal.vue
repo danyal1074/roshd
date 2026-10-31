@@ -9,7 +9,7 @@
         <div class="absolute left-1/3 -top-10 w-36 h-36 bg-sun/20 rounded-full blur-xl pointer-events-none"></div>
 
         <div class="relative z-10 min-w-0">
-          <div class="flex flex-wrap items-center gap-2 mb-1.5 font-yekan">
+          <div class="flex flex-wrap items-center gap-2 mb-1.5 font-sans">
             <span class="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-black bg-sun text-ink shadow-sm">
               <i data-lucide="award" class="w-3.5 h-3.5"></i>
               <span>کارنامه رسمی آزمون جامع</span>
@@ -22,11 +22,11 @@
             </span>
           </div>
 
-          <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2 font-titr">
+          <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2 font-sans">
             <span>{{ report.exam_title || 'مرحله اول آزمون برپا' }}</span>
           </h2>
 
-          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/85 mt-2 font-yekan">
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/85 mt-2 font-sans">
             <span class="flex items-center gap-1 font-bold">
               <i data-lucide="user" class="w-3.5 h-3.5 text-sun"></i>
               <span>دانش‌آموز:</span>
@@ -76,7 +76,7 @@
               <span>تراز کل آزمون</span>
               <i data-lucide="gauge" class="w-4 h-4 text-sun"></i>
             </div>
-            <div class="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1 font-yekan">
+            <div class="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1 font-sans">
               {{ faNum(report.overall_traz) }}
             </div>
             <div class="mt-2 text-[11px] text-white/80 font-bold flex items-center gap-1">
@@ -91,10 +91,10 @@
               <span>رتبه کل کشوری</span>
               <i data-lucide="globe" class="w-4 h-4 text-sun"></i>
             </div>
-            <div class="text-2xl sm:text-3xl font-black tracking-tight text-sun mt-1 font-yekan">
+            <div class="text-2xl sm:text-3xl font-black tracking-tight text-sun mt-1 font-sans">
               {{ faNum(report.overall_rank_all) }}
             </div>
-            <div class="mt-2 text-[11px] text-slate-300 font-bold font-yekan">
+            <div class="mt-2 text-[11px] text-slate-300 font-bold font-sans">
               از بین {{ faNum(report.total_attendees || 1924) }} داوطلب نهم
             </div>
           </div>
@@ -105,10 +105,10 @@
               <span>رتبه در مجموعه</span>
               <i data-lucide="medal" class="w-4 h-4 text-sun"></i>
             </div>
-            <div class="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1 font-yekan">
+            <div class="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1 font-sans">
               {{ faNum(report.overall_rank_center) }}
             </div>
-            <div class="mt-2 text-[11px] text-emerald-200 font-bold font-yekan">
+            <div class="mt-2 text-[11px] text-emerald-200 font-bold font-sans">
               مرکز شهید کاظمی آشتیانی
             </div>
           </div>
@@ -119,10 +119,10 @@
               <span>درصد کل و دقت</span>
               <i data-lucide="target" class="w-4 h-4 text-white"></i>
             </div>
-            <div class="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1 font-yekan">
+            <div class="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1 font-sans">
               {{ faNum(report.overall_percentage) }}٪
             </div>
-            <div class="mt-2 text-[11px] text-white/90 font-bold font-yekan">
+            <div class="mt-2 text-[11px] text-white/90 font-bold font-sans">
               دقت پاسخ‌گویی: {{ faNum(accuracyRate) }}٪
             </div>
           </div>
@@ -520,3 +520,4 @@ function printReport() {
   }
 }
 </style>
+

@@ -39,7 +39,7 @@ async function runFunctionalTests() {
     const adminRes = await fetch(`${BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-client': 'test-runner' },
-      body: JSON.stringify({ identifier: 'admin', password: 'danyal1074', role: 'admin' })
+      body: JSON.stringify({ identifier: 'admin', password: process.env.TEST_ADMIN_PASSWORD, role: 'admin' })
     });
     const admin = await adminRes.json();
 
@@ -308,3 +308,4 @@ async function runFunctionalTests() {
 }
 
 runFunctionalTests();
+

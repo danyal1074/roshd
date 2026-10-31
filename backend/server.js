@@ -6,10 +6,7 @@ const fs = require('fs');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-const { db, ensureAdminUser } = require('./db');
 const XLSX = require('xlsx');
-const { createBackup } = require('./backup');
-const { loadDemoData, clearDemoData } = require('./demoData');
 const {
   hashPassword,
   verifyPassword,
@@ -23,6 +20,9 @@ const {
   sanitizeUser,
   COOKIE_NAME
 } = require('./auth');
+const { db, ensureAdminUser } = require('./db');
+const { createBackup } = require('./backup');
+const { loadDemoData, clearDemoData } = require('./demoData');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -206,7 +206,7 @@ const storage = multer.diskStorage({
     let sub = 'images';
     const mime = file.mimetype || '';
     const cat = req.body.category || req.query.category || '';
-    if (cat === 'receipt') sub = 'receipts';
+    if (req.path === '/api/fees/receipts' || cat === 'receipt') sub = 'receipts';
     else if (cat === 'homework') sub = 'homeworks';
     else if (cat === 'book') sub = 'books';
     else if (mime.startsWith('video/')) sub = 'videos';
@@ -379,6 +379,22 @@ function checkTuitionLock(req, res, next) {
     }
   }
   next();
+}
+
+app.use(['/api/homeworks', '/api/exams', '/api/exam-books', '/api/barpa-exams', '/api/study'], checkTuitionLock);
+
+function validateExamAccess(req, res, exam) {
+  if ((exam.grade && exam.grade !== 'all' && exam.grade !== req.user.grade) ||
+      (exam.class_name && exam.class_name !== 'all' && exam.class_name !== req.user.class_name)) {
+    res.status(403).json({ error: 'این آزمون مختص پایه یا کلاس شما نیست.' });
+    return false;
+  }
+  const now = Date.now();
+  if ((exam.start_at && now < exam.start_at) || (exam.end_at && now > exam.end_at)) {
+    res.status(403).json({ error: 'آزمون در این بازه زمانی در دسترس نیست.' });
+    return false;
+  }
+  return true;
 }
 
 // ----------------- PRODUCTION HEALTH & DIAGNOSTICS -----------------
@@ -1052,7 +1068,7 @@ app.get('/api/teacher/students-performance', requireAuth, requireRole('teacher',
   }
 });
 
-app.post('/api/students', requireAuth, requireRole('admin'), (req, res) => {
+app.post('/api/students', requireAuth, requireRole('admin'), async (req, res) => {
   const { national_id, phone, first_name, last_name, grade, class_name, parent_phone } = req.body;
   if (!national_id || !first_name || !last_name) {
     return res.status(400).json({ error: 'کد ملی، نام و نام خانوادگی الزامی است.' });
@@ -1080,7 +1096,7 @@ app.post('/api/students', requireAuth, requireRole('admin'), (req, res) => {
   const fullName = `${first_name.trim()} ${last_name.trim()}`;
   const crypto = require('crypto');
   const tempPassword = crypto.randomBytes(5).toString('hex'); // Secure 10-char random password
-  const hashedPw = hashPassword(tempPassword);
+  const hashedPw = await hashPassword(tempPassword);
 
   try {
     const info = db.prepare(`
@@ -1097,7 +1113,7 @@ app.post('/api/students', requireAuth, requireRole('admin'), (req, res) => {
       db.prepare(`
         INSERT OR IGNORE INTO users (role, national_id, phone, password, first_name, last_name, full_name, must_change_password, is_active)
         VALUES ('parent', ?, ?, ?, 'ولی', ?, ?, 1, 1)
-      `).run(cleanParentPhone, cleanParentPhone, hashPassword(crypto.randomBytes(5).toString('hex')), last_name.trim(), `ولی ${fullName}`);
+      `).run(cleanParentPhone, cleanParentPhone, await hashPassword(crypto.randomBytes(5).toString('hex')), last_name.trim(), `ولی ${fullName}`);
 
       const parentUser = db.prepare("SELECT id FROM users WHERE phone = ? AND role = 'parent'").get(cleanParentPhone);
       if (parentUser) {
@@ -1795,6 +1811,7 @@ app.get('/api/exams/:id', requireAuth, (req, res) => {
     }
   }
 
+  if (req.user.role === 'student' && !validateExamAccess(req, res, exam)) return;
   const rawQuestions = JSON.parse(exam.questions_json || '[]');
 
   // If student: remove 'correct' answer key!
@@ -1820,6 +1837,7 @@ app.post('/api/exams/:id/start', requireAuth, requireRole('student'), (req, res)
 
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(examId);
   if (!exam) return res.status(404).json({ error: 'آزمون یافت نشد.' });
+  if (!validateExamAccess(req, res, exam)) return;
 
   // Check if student has already completed the exam
   const existingResult = db.prepare('SELECT id FROM exam_results WHERE exam_id = ? AND student_id = ?').get(examId, studentId);
@@ -1873,6 +1891,7 @@ app.post('/api/exams/:id/submit', requireAuth, requireRole('student'), (req, res
 
   const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(examId);
   if (!exam) return res.status(404).json({ error: 'آزمون یافت نشد.' });
+  if (!validateExamAccess(req, res, exam)) return;
 
   // 1. Prevent duplicate submission (409 Conflict)
   const existingResult = db.prepare('SELECT id FROM exam_results WHERE exam_id = ? AND student_id = ?').get(examId, studentId);
@@ -1882,6 +1901,7 @@ app.post('/api/exams/:id/submit', requireAuth, requireRole('student'), (req, res
 
   // 2. Strict duration check against exam_attempts
   const attempt = db.prepare('SELECT started_at FROM exam_attempts WHERE exam_id = ? AND student_id = ?').get(examId, studentId);
+  if (!attempt) return res.status(400).json({ error: 'ابتدا آزمون را شروع کنید.' });
   if (attempt) {
     const allowedMs = (exam.duration_minutes * 60 * 1000) + 45000; // 45s grace period for network latency
     if (Date.now() - attempt.started_at > allowedMs) {
@@ -2925,13 +2945,11 @@ app.post('/api/upload', requireAuth, upload.single('file'), (req, res) => {
   }
 
   let fileType = 'document';
-  let subDir = 'homeworks';
+  const subDir = path.basename(path.dirname(req.file.path));
   if (mime.startsWith('image/')) {
     fileType = 'image';
-    subDir = category === 'receipt' ? 'receipts' : 'images';
   } else if (mime.startsWith('video/')) {
     fileType = 'video';
-    subDir = 'videos';
   }
 
   const fileUrl = `/uploads/${subDir}/${req.file.filename}`;
@@ -3057,11 +3075,18 @@ app.use((err, req, res, next) => {
 });
 
 // Listen with backlog of 2048 to prevent ECONNREFUSED during student rush hour/morning check-ins
-const server = app.listen(PORT, HOST, 2048, () => {
-  console.log(`Roshd Secure Server listening on http://${HOST}:${PORT}`);
-  ensureAdminUser(db).catch(err => console.error('ensureAdminUser error:', err));
+async function startServer() {
+  await ensureAdminUser(db);
+  const server = app.listen(PORT, HOST, 2048, () => {
+    console.log(`Roshd Secure Server listening on http://${HOST}:${PORT}`);
+  });
+  server.maxConnections = 4096;
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
+}
+startServer().catch(err => {
+  console.error(err.message);
+  process.exitCode = 1;
+  db.close();
 });
 
-server.maxConnections = 4096;
-server.keepAliveTimeout = 65000;
-server.headersTimeout = 66000;

@@ -29,8 +29,8 @@
             <i data-lucide="graduation-cap" class="w-6 h-6 text-sun"></i>
           </div>
           <div class="leading-tight">
-            <p class="font-extrabold truncate font-titr">کانون نخبه‌پروری شهید کاظم آشتیانی</p>
-            <p class="text-white/70 text-xs font-nastaliq text-sm">پلتفرم رشد | پنل دانش‌آموز</p>
+            <p class="font-extrabold truncate font-sans">کانون نخبه‌پروری شهید کاظم آشتیانی</p>
+            <p class="text-white/70 text-xs font-sans text-sm">پلتفرم رشد | پنل دانش‌آموز</p>
           </div>
         </div>
 
@@ -82,7 +82,7 @@
 
       <!-- Lock Banner (If fee overdue) -->
       <div 
-        v-if="user.is_locked" 
+        v-if="tuitionLocked || (user.is_locked && user.fee_status !== 'paid')" 
         class="rounded-[26px] bg-white border border-[#F6C9CB] p-5 shadow-lg rise"
       >
         <div class="flex items-start gap-3">
@@ -91,7 +91,7 @@
           </div>
           <div class="flex-1">
             <p class="font-extrabold text-[18px] text-late">پنل شما قفل است</p>
-            <p class="text-[#5A6E99] text-sm">مهلت پرداخت حق عضویت گذشته است. با بارگذاری رسید پرداخت، پنل شما مجدداً فعال خواهد شد.</p>
+            <p class="text-[#5A6E99] text-sm">مهلت پرداخت حق عضویت گذشته است. پس از تأیید رسید پرداخت توسط مدیریت، پنل شما مجدداً فعال خواهد شد.</p>
           </div>
         </div>
         <button @click="openReceiptModal = true" class="btn btn-royal w-full mt-4">
@@ -103,8 +103,8 @@
       <!-- ================= 1. خانه (HOME) ================= -->
       <section v-if="activeTab === 'home'" class="space-y-4">
         <div class="text-white px-1">
-          <p class="text-white/80 text-sm font-yekan">دوشنبه ۴ آبان ۱۴۰۵</p>
-          <h2 class="text-[26px] font-extrabold leading-snug font-titr">سلام {{ user.first_name }}، آماده‌ای؟</h2>
+          <p class="text-white/80 text-sm font-sans">دوشنبه ۴ آبان ۱۴۰۵</p>
+          <h2 class="text-[26px] font-extrabold leading-snug font-sans">سلام {{ user.first_name }}، آماده‌ای؟</h2>
         </div>
 
         <!-- Level & Score Card (Interactive Gamification Hub) -->
@@ -124,7 +124,7 @@
               :style="{ background: `conic-gradient(#1E90FF ${levelProgressPercent}%, #E3ECFF 0)` }"
             >
               <div class="w-full h-full rounded-full bg-white flex flex-col items-center justify-center leading-tight shadow-inner">
-                <span class="text-[19px] sm:text-[22px] font-black text-royal font-yekan">{{ faNum(user.total_points) }}</span>
+                <span class="text-[19px] sm:text-[22px] font-black text-royal font-sans">{{ faNum(user.total_points) }}</span>
                 <span class="text-[10px] sm:text-[11px] text-[#5A6E99] font-bold">امتیاز</span>
               </div>
             </div>
@@ -132,15 +132,15 @@
             <!-- Title, Level, and Next Target -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <p class="font-black text-[17px] sm:text-[20px] text-ink group-hover:text-royal transition-colors font-homa">
+                <p class="font-black text-[17px] sm:text-[20px] text-ink group-hover:text-royal transition-colors font-sans">
                   سطح {{ faNum(user.level) }}، {{ user.level_title }}
                 </p>
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-royal/10 text-royal font-yekan">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-royal/10 text-royal font-sans">
                   <i data-lucide="sparkles" class="w-3 h-3 text-sun"></i>
                   <span>فعال</span>
                 </span>
               </div>
-              <p class="text-xs sm:text-sm text-[#5A6E99] mt-0.5 font-medium font-yekan">
+              <p class="text-xs sm:text-sm text-[#5A6E99] mt-0.5 font-medium font-sans">
                 {{ nextLevelData.nextTitle ? `${faNum(nextLevelData.pointsNeeded)} امتیاز تا سطح بعد (${nextLevelData.nextTitle})` : 'بالاترین قله افتخار کانون 👑' }}
               </p>
               
@@ -157,9 +157,9 @@
           <div class="text-center rounded-2xl px-4 py-3 bg-sun/25 border border-sun/40 shrink-0 self-stretch sm:self-center flex sm:flex-col items-center justify-between sm:justify-center gap-2 group-hover:bg-sun/35 transition-all">
             <div class="flex items-center sm:block gap-2">
               <i data-lucide="trophy" class="w-6 h-6 mx-auto text-[#B07A00]"></i>
-              <p class="font-black text-sm mt-0.5 text-ink font-yekan">رتبه {{ faNum(user.rank) }}</p>
+              <p class="font-black text-sm mt-0.5 text-ink font-sans">رتبه {{ faNum(user.rank) }}</p>
             </div>
-            <p class="text-xs text-[#5A6E99] font-bold font-yekan">از ۳۸ نفر</p>
+            <p class="text-xs text-[#5A6E99] font-bold font-sans">از ۳۸ نفر</p>
           </div>
         </div>
 
@@ -1178,7 +1178,7 @@
             <div class="w-9 h-9 rounded-xl bg-royal text-white flex items-center justify-center font-bold">
               <i data-lucide="receipt" class="w-5 h-5"></i>
             </div>
-            <h3 class="font-extrabold text-base sm:text-lg text-ink font-titr">بارگذاری رسید واریز شهریه</h3>
+            <h3 class="font-extrabold text-base sm:text-lg text-ink font-sans">بارگذاری رسید واریز شهریه</h3>
           </div>
           <button @click="openReceiptModal = false" class="w-8 h-8 rounded-xl bg-mist hover:bg-slate-200 flex items-center justify-center transition-colors">
             <i data-lucide="x" class="w-4 h-4"></i>
@@ -1197,7 +1197,7 @@
 
         <div>
           <label class="lbl font-bold mb-1 block">مبلغ واریزی (تومان):</label>
-          <input type="number" v-model.number="receiptAmount" class="input font-black font-yekan text-base" placeholder="1500000" required />
+          <input type="number" v-model.number="receiptAmount" class="input font-black font-sans text-base" placeholder="1500000" required />
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -1419,7 +1419,17 @@ async function loadBarpaReports() {
   }
 }
 
+const tuitionLocked = ref(false);
 const activeTab = ref('home');
+
+async function readEducationResponse(res) {
+  const data = await res.json();
+  if (!res.ok) {
+    if (data.code === 'TUITION_LOCKED') tuitionLocked.value = true;
+    throw new Error(data.error || 'خطا در دریافت اطلاعات');
+  }
+  return data;
+}
 const studyTab = ref('today');
 const examSubTab = ref('list');
 const meSubTab = ref('pts');
@@ -1667,7 +1677,7 @@ async function finishPomodoro() {
 async function loadHomeworks() {
   try {
     const res = await fetch(`/api/homeworks?student_id=${props.user.id}&grade=${props.user.grade || 'هفتم'}&class_name=${props.user.class_name || 'الف'}`);
-    homeworks.value = await res.json();
+    homeworks.value = await readEducationResponse(res);
   } catch (e) {
     console.error(e);
   } finally {
@@ -1707,7 +1717,7 @@ async function confirmHomeworkSubmit() {
 async function loadExams() {
   try {
     const res = await fetch(`/api/exams?grade=${props.user.grade || 'هفتم'}&class_name=${props.user.class_name || 'الف'}`);
-    exams.value = await res.json();
+    exams.value = await readEducationResponse(res);
   } catch (e) {
     console.error(e);
   } finally {
@@ -1717,13 +1727,18 @@ async function loadExams() {
 
 async function startExam(id) {
   try {
+    const startRes = await fetch(`/api/exams/${id}/start`, { method: 'POST' });
+    const attempt = await startRes.json();
+    if (!startRes.ok) throw new Error(attempt.error || 'خطا در شروع آزمون');
     const res = await fetch(`/api/exams/${id}`);
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'خطا در دریافت آزمون');
     currentExamData.value = data;
     currentExamQuestions.value = data.questions || [];
     examQIndex.value = 0;
     selectedAnswers.value = {};
-    examTimer.value = (data.duration_minutes || 10) * 60;
+    const remaining = attempt.duration_minutes * 60 - (Date.now() - attempt.started_at) / 1000;
+    examTimer.value = Math.max(0, Math.ceil(remaining));
     takingExam.value = true;
 
     clearInterval(examInterval);
@@ -1736,6 +1751,7 @@ async function startExam(id) {
       }
     }, 1000);
   } catch (e) {
+    toast(e.message);
     console.error(e);
   } finally {
     nextTick(() => refreshIcons());
@@ -1776,8 +1792,8 @@ async function loadStudy() {
       fetch(`/api/study/stats/${props.user.id}`),
       fetch(`/api/study/leaderboard?type=${studyTab.value}`)
     ]);
-    studyStats.value = await statsRes.json();
-    studyLeaders.value = await leadersRes.json();
+    studyStats.value = await readEducationResponse(statsRes);
+    studyLeaders.value = await readEducationResponse(leadersRes);
   } catch (e) {
     console.error(e);
   } finally {
@@ -1884,3 +1900,4 @@ onUnmounted(() => {
   clearInterval(examInterval);
 });
 </script>
+
