@@ -1,0 +1,15 @@
+[Unit]
+Description=Pull-deploy Roshd when origin/main has new commits
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Change User and Group if the dedicated account is not named deploy.
+User=deploy
+Group=deploy
+WorkingDirectory=/var/www/roshd
+ExecStart=/usr/bin/bash /var/www/roshd/scripts/pull-deploy.sh
+# npm ci and the frontend build can take several minutes on a small VPS.
+TimeoutStartSec=30min
+Nice=10
