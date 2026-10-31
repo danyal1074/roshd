@@ -58,12 +58,15 @@ async function run() {
   const oldVersion = admin.token_version;
   await ensureAdminUser(testDb);
   admin = testDb.prepare('SELECT * FROM users WHERE id=?').get(admin.id);
-  assert.equal(admin.token_version, oldVersion + 1);
+  assert.equal(admin.token_version, oldVersion);
   assert.equal(admin.is_active, 0);
   env.ADMIN_INITIAL_PASSWORD = '';
   testDb.prepare('UPDATE users SET password=? WHERE id=?').run('$test$danyal1074', admin.id);
-  await assert.rejects(ensureAdminUser(testDb), /ADMIN_INITIAL_PASSWORD/);
-  console.log('PASS: bootstrap preserves secure passwords/disabled status, rotates exposed password and revokes sessions, fails closed without configuration');
+  await ensureAdminUser(testDb);
+  admin = testDb.prepare('SELECT * FROM users WHERE id=?').get(admin.id);
+  assert.equal(admin.password, '$test$danyal1074');
+  assert.equal(admin.token_version, oldVersion);
+  console.log('PASS: existing admin password, disabled status and sessions are unchanged; no bootstrap setting required for existing installations');
 
   const registered = response();
   await handler('/api/students')({ user: { id: admin.id }, body: {

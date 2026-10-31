@@ -2,18 +2,14 @@
 
 ## Deployment
 
-Before restarting an installation that still uses the old hard-coded admin
-password, set `ADMIN_INITIAL_PASSWORD` in the server environment to a unique
-password of at least 12 characters. Do not commit the actual value. The same
-setting is required for the first boot of an empty database. `ADMIN_NATIONAL_ID`
-is optional; the administrator can always sign in with username `admin`.
+Existing installations require no new administrator password setting. This update
+leaves every existing administrator password, session version and disabled status
+unchanged, including legacy accounts. Password rotation is deferred by request.
+Restarts no longer overwrite an existing administrator password.
 
-The bootstrap rotates the old exposed password, revokes previous admin sessions
-and requires a password change at login. It preserves existing secure passwords
-and disabled status on subsequent restarts. If the exposed password is present
-and a replacement is missing, startup fails before the HTTP listener opens.
-Remove the initial password setting after setup. Accounts disabled intentionally
-must be reactivated through the normal administrative process.
+Only an empty database without an administrator requires `ADMIN_INITIAL_PASSWORD`
+(at least 12 characters) for initial provisioning. This does not apply to the
+existing production installation. Never commit an actual password.
 
 Run the normal frontend production build and deploy its output together with
 the backend. The existing `frontend/public/fonts/BYekan.ttf` asset must be copied

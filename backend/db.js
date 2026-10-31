@@ -432,23 +432,18 @@ async function ensureAdminUser(database = db) {
   const crypto = require('node:crypto');
   const admin = database.prepare("SELECT * FROM users WHERE role = 'admin' ORDER BY id LIMIT 1").get();
   // Preserve established credentials and disabled accounts on every restart.
-  if (admin && !(await bcrypt.compare('danyal1074', admin.password))) return;
+  if (admin) return;
 
   const password = process.env.ADMIN_INITIAL_PASSWORD;
   if (!password || password.length < 12 || password === 'danyal1074') {
-    throw new Error('Set ADMIN_INITIAL_PASSWORD to a unique password of at least 12 characters to create or secure the administrator account.');
+    throw new Error('Set ADMIN_INITIAL_PASSWORD to a unique password of at least 12 characters for the first administrator account.');
   }
   const hashed = await bcrypt.hash(password, 10);
-  if (admin) {
-    database.prepare(`UPDATE users SET password = ?, must_change_password = 1,
-      token_version = token_version + 1 WHERE id = ?`).run(hashed, admin.id);
-  } else {
-    database.prepare(`INSERT INTO users (
-      username, role, national_id, password, first_name, last_name, full_name,
-      must_change_password, is_active
-    ) VALUES ('admin', 'admin', ?, ?, 'مدیر', 'سامانه', 'مدیر سامانه', 1, 1)`)
-      .run(process.env.ADMIN_NATIONAL_ID || crypto.randomBytes(10).toString('hex'), hashed);
-  }
+  database.prepare(`INSERT INTO users (
+    username, role, national_id, password, first_name, last_name, full_name,
+    must_change_password, is_active
+  ) VALUES ('admin', 'admin', ?, ?, 'مدیر', 'سامانه', 'مدیر سامانه', 1, 1)`)
+    .run(process.env.ADMIN_NATIONAL_ID || crypto.randomBytes(10).toString('hex'), hashed);
 }
 
 /**
