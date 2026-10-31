@@ -696,7 +696,7 @@
                   <i data-lucide="layers" class="w-3.5 h-3.5"></i>
                   <span>سامانه جامع طراحی آزمون چندکتابی کانون شهید کاظمی آشتیانی</span>
                 </div>
-                <h3 class="text-lg sm:text-2xl font-black text-ink leading-tight font-titr">
+                <h3 class="text-lg sm:text-2xl font-black text-ink leading-tight font-sans">
                   میز کار هوشمند طراحی آزمون چاپی و آنلاین
                 </h3>
                 <p class="text-xs sm:text-sm text-[#5A6E99] mt-1.5 leading-relaxed">
@@ -1557,19 +1557,19 @@
             >
               <!-- Official Header -->
               <div class="pb-3 border-b-2 border-royal mb-4">
-                <div class="text-center font-nastaliq text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
+                <div class="text-center font-sans text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
                 <div class="flex items-center justify-between gap-4">
                   <div class="flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-xl bg-royal text-white flex items-center justify-center font-bold text-lg font-titr">
+                    <div class="w-12 h-12 rounded-xl bg-royal text-white flex items-center justify-center font-bold text-lg font-sans">
                       <span>رشد</span>
                     </div>
                     <div>
-                      <h2 class="text-base sm:text-lg font-black text-ink font-titr">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی</h2>
-                      <p class="text-xs text-slate-600 font-medium font-nazanin">پایگاه علمی تربیتی مسجد ائمه بقیع (ع) تربت حیدریه | سامانه آزمون تیزهوشان</p>
+                      <h2 class="text-base sm:text-lg font-black text-ink font-sans">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی</h2>
+                      <p class="text-xs text-slate-600 font-medium font-sans">پایگاه علمی تربیتی مسجد ائمه بقیع (ع) تربت حیدریه | سامانه آزمون تیزهوشان</p>
                     </div>
                   </div>
 
-                  <div class="text-left text-xs space-y-1 font-semibold text-slate-700 font-yekan">
+                  <div class="text-left text-xs space-y-1 font-semibold text-slate-700 font-sans">
                     <div>تاریخ آزمون: <span class="font-bold text-slate-950">{{ examConfig.date }}</span></div>
                     <div>مدت پاسخگویی: <span class="font-bold text-slate-950">{{ examConfig.duration }}</span></div>
                     <div>صفحه: <span class="font-bold text-royal">{{ faNum(index + 1) }} از {{ faNum(sortedExamBasket.length) }}</span></div>
@@ -1578,17 +1578,17 @@
 
                 <!-- Exam Title Bar -->
                 <div class="mt-3 pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between text-xs gap-2 bg-slate-50 p-2 rounded">
-                  <div class="font-bold text-royal font-titr text-sm">
+                  <div class="font-bold text-royal font-sans text-sm">
                     {{ examConfig.title }} | {{ examConfig.grade }}
                   </div>
-                  <div class="text-slate-600 font-yekan">
+                  <div class="text-slate-600 font-sans">
                     مدرس/طراح: <span class="font-bold text-slate-900">{{ examConfig.teacher }}</span>
                     <span v-if="examConfig.hasNegativeScore" class="text-rose-700 font-bold mr-2">| دارای نمره منفی</span>
                   </div>
                 </div>
 
                 <!-- Student Blank Info Box (Page 1 Only) -->
-                <div v-if="index === 0" class="mt-2 grid grid-cols-4 gap-2 text-[11px] font-yekan p-2 border border-slate-300 rounded bg-white">
+                <div v-if="index === 0" class="mt-2 grid grid-cols-4 gap-2 text-[11px] font-sans p-2 border border-slate-300 rounded bg-white">
                   <div>نام و نام خانوادگی: .............................</div>
                   <div>نام کلاس / مدرسه: .............................</div>
                   <div>شماره داوطلب: .............................</div>
@@ -1606,9 +1606,9 @@
               </div>
 
               <!-- Page Footer -->
-              <div class="pt-3 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-500 font-yekan">
+              <div class="pt-3 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-500 font-sans">
                 <span>{{ item.bookTitle || 'هوش کمپلکس' }} • مبحث {{ faNum(item.topicId) }}: {{ item.topicTitle }} (صفحه کتاب: {{ faNum(item.bookPage) }})</span>
-                <span class="font-nastaliq text-xs text-slate-700">«شما آینده‌سازان تمدن نوین اسلامی و فرزندان امیدبخش این آب و خاکید»</span>
+                <span class="font-sans text-xs text-slate-700">«شما آینده‌سازان تمدن نوین اسلامی و فرزندان امیدبخش این آب و خاکید»</span>
                 <span>صفحه {{ faNum(index + 1) }}</span>
               </div>
             </div>
@@ -1619,14 +1619,14 @@
             <div class="hoosh-print-sheet bg-white text-slate-900 p-8 sm:p-12 max-w-4xl mx-auto border border-slate-300 shadow-sm rounded-lg" style="min-height: 280mm; display: flex; flex-direction: column; justify-content: space-between;">
               <div>
                 <!-- Header -->
-                <div class="text-center font-nastaliq text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
+                <div class="text-center font-sans text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
                 <div class="pb-4 border-b-2 border-royal mb-6 flex items-center justify-between">
                   <div>
-                    <h2 class="text-xl font-black text-ink font-titr">پاسخ‌برگ اختصاصی ۴ گزینه‌ای</h2>
-                    <p class="text-xs text-slate-600 mt-1 font-nazanin">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی تربت حیدریه</p>
-                    <p class="text-xs text-royal font-bold mt-1 font-titr">{{ examConfig.title }} - {{ examConfig.grade }}</p>
+                    <h2 class="text-xl font-black text-ink font-sans">پاسخ‌برگ اختصاصی ۴ گزینه‌ای</h2>
+                    <p class="text-xs text-slate-600 mt-1 font-sans">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی تربت حیدریه</p>
+                    <p class="text-xs text-royal font-bold mt-1 font-sans">{{ examConfig.title }} - {{ examConfig.grade }}</p>
                   </div>
-                  <div class="text-left text-xs space-y-1 font-yekan">
+                  <div class="text-left text-xs space-y-1 font-sans">
                     <div>تاریخ برگزاری: <span class="font-bold">{{ examConfig.date }}</span></div>
                     <div>مدت پاسخگویی: <span class="font-bold">{{ examConfig.duration }}</span></div>
                     <div>طراح: <span class="font-bold">{{ examConfig.teacher }}</span></div>
@@ -1634,7 +1634,7 @@
                 </div>
 
                 <!-- Student Info Fields -->
-                <div class="grid grid-cols-3 gap-4 text-xs font-yekan p-3 border-2 border-dashed border-slate-300 rounded-lg mb-6 bg-slate-50">
+                <div class="grid grid-cols-3 gap-4 text-xs font-sans p-3 border-2 border-dashed border-slate-300 rounded-lg mb-6 bg-slate-50">
                   <div>نام و نام خانوادگی: ............................................</div>
                   <div>کلاس / شعبه: ............................................</div>
                   <div>شماره صندلی / کد: ............................................</div>
@@ -1795,31 +1795,31 @@
         >
           <!-- Header -->
           <div class="pb-3 border-b-2 border-royal mb-4">
-            <div class="text-center font-nastaliq text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
+            <div class="text-center font-sans text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-xl bg-royal text-white flex items-center justify-center font-bold text-lg font-titr">
+                <div class="w-12 h-12 rounded-xl bg-royal text-white flex items-center justify-center font-bold text-lg font-sans">
                   <span>رشد</span>
                 </div>
                 <div>
-                  <h2 class="text-base font-black text-ink font-titr">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی</h2>
-                  <p class="text-xs text-slate-600 font-medium font-nazanin">پایگاه علمی تربیتی مسجد ائمه بقیع (ع) تربت حیدریه | سامانه آزمون تیزهوشان</p>
+                  <h2 class="text-base font-black text-ink font-sans">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی</h2>
+                  <p class="text-xs text-slate-600 font-medium font-sans">پایگاه علمی تربیتی مسجد ائمه بقیع (ع) تربت حیدریه | سامانه آزمون تیزهوشان</p>
                 </div>
               </div>
-              <div class="text-left text-xs space-y-1 font-semibold text-slate-700 font-yekan">
+              <div class="text-left text-xs space-y-1 font-semibold text-slate-700 font-sans">
                 <div>تاریخ آزمون: <span class="font-bold text-slate-950">{{ examConfig.date }}</span></div>
                 <div>مدت پاسخگویی: <span class="font-bold text-slate-950">{{ examConfig.duration }}</span></div>
                 <div>صفحه: <span class="font-bold text-royal">{{ faNum(index + 1) }} از {{ faNum(sortedExamBasket.length) }}</span></div>
               </div>
             </div>
             <div class="mt-3 pt-2 border-t border-slate-200 flex items-center justify-between text-xs bg-slate-50 p-2 rounded">
-              <div class="font-bold text-royal font-titr text-sm">{{ examConfig.title }} | {{ examConfig.grade }}</div>
-              <div class="text-slate-600 font-yekan">
+              <div class="font-bold text-royal font-sans text-sm">{{ examConfig.title }} | {{ examConfig.grade }}</div>
+              <div class="text-slate-600 font-sans">
                 مدرس/طراح: <span class="font-bold text-slate-900">{{ examConfig.teacher }}</span>
                 <span v-if="examConfig.hasNegativeScore" class="text-rose-700 font-bold mr-2">| دارای نمره منفی</span>
               </div>
             </div>
-            <div v-if="index === 0" class="mt-2 grid grid-cols-4 gap-2 text-[11px] font-yekan p-2 border border-slate-300 rounded bg-white">
+            <div v-if="index === 0" class="mt-2 grid grid-cols-4 gap-2 text-[11px] font-sans p-2 border border-slate-300 rounded bg-white">
               <div>نام و نام خانوادگی: .............................</div>
               <div>نام کلاس / مدرسه: .............................</div>
               <div>شماره داوطلب: .............................</div>
@@ -1837,9 +1837,9 @@
           </div>
 
           <!-- Footer -->
-          <div class="pt-3 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-500 font-yekan">
+          <div class="pt-3 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-500 font-sans">
             <span>{{ item.bookTitle || 'هوش کمپلکس' }} • مبحث {{ faNum(item.topicId) }}: {{ item.topicTitle }} (صفحه کتاب: {{ faNum(item.bookPage) }})</span>
-            <span class="font-nastaliq text-xs text-slate-700">«شما آینده‌سازان تمدن نوین اسلامی و فرزندان امیدبخش این آب و خاکید»</span>
+            <span class="font-sans text-xs text-slate-700">«شما آینده‌سازان تمدن نوین اسلامی و فرزندان امیدبخش این آب و خاکید»</span>
             <span>صفحه {{ faNum(index + 1) }}</span>
           </div>
         </div>
@@ -1849,20 +1849,20 @@
       <template v-else-if="printMode === 'answersheet'">
         <div class="hoosh-print-sheet bg-white text-slate-900 p-8" style="min-height: 280mm; display: flex; flex-direction: column; justify-content: space-between;">
           <div>
-            <div class="text-center font-nastaliq text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
+            <div class="text-center font-sans text-base text-slate-800 mb-1">بسم الله الرحمن الرحیم</div>
             <div class="pb-4 border-b-2 border-royal mb-6 flex items-center justify-between">
               <div>
-                <h2 class="text-xl font-black text-ink font-titr">پاسخ‌برگ اختصاصی ۴ گزینه‌ای</h2>
-                <p class="text-xs text-slate-600 mt-1 font-nazanin">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی تربت حیدریه</p>
-                <p class="text-xs text-royal font-bold mt-1 font-titr">{{ examConfig.title }} - {{ examConfig.grade }}</p>
+                <h2 class="text-xl font-black text-ink font-sans">پاسخ‌برگ اختصاصی ۴ گزینه‌ای</h2>
+                <p class="text-xs text-slate-600 mt-1 font-sans">کانون نخبه‌پروری دانشمند شهید دکتر سعید کاظمی آشتیانی تربت حیدریه</p>
+                <p class="text-xs text-royal font-bold mt-1 font-sans">{{ examConfig.title }} - {{ examConfig.grade }}</p>
               </div>
-              <div class="text-left text-xs space-y-1 font-yekan">
+              <div class="text-left text-xs space-y-1 font-sans">
                 <div>تاریخ: <span class="font-bold">{{ examConfig.date }}</span></div>
                 <div>مدت: <span class="font-bold">{{ examConfig.duration }}</span></div>
                 <div>طراح: <span class="font-bold">{{ examConfig.teacher }}</span></div>
               </div>
             </div>
-            <div class="grid grid-cols-3 gap-4 text-xs font-yekan p-3 border-2 border-dashed border-slate-300 rounded-lg mb-6 bg-slate-50">
+            <div class="grid grid-cols-3 gap-4 text-xs font-sans p-3 border-2 border-dashed border-slate-300 rounded-lg mb-6 bg-slate-50">
               <div>نام و نام خانوادگی: ............................................</div>
               <div>کلاس / شعبه: ............................................</div>
               <div>شماره صندلی / کد: ............................................</div>
@@ -1872,7 +1872,7 @@
                 <div 
                   v-for="q in getBubbleColumnQuestions(colIndex)" 
                   :key="q"
-                  class="hoosh-bubble-row font-yekan"
+                  class="hoosh-bubble-row font-sans"
                 >
                   <span class="w-6 font-bold text-slate-800 text-left">{{ faNum(q) }}.</span>
                   <span class="hoosh-bubble-opt">۱</span>
@@ -2874,3 +2874,4 @@ onMounted(() => {
   }
 }
 </style>
+
