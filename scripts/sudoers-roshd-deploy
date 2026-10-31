@@ -1,0 +1,24 @@
+# Narrow sudoers policy for the Roshd deploy user.
+# Install (as root), after replacing the username if it is not "deploy":
+#   visudo -cf /var/www/roshd/scripts/sudoers-roshd-deploy
+#   cp /var/www/roshd/scripts/sudoers-roshd-deploy /etc/sudoers.d/roshd-deploy
+#   chown root:root /etc/sudoers.d/roshd-deploy
+#   chmod 440 /etc/sudoers.d/roshd-deploy
+#   visudo -c
+#
+# Allows ONLY these four commands, with these exact arguments, and nothing else:
+#   cp the repo nginx.conf to the roshd site file
+#   ln -s that site file into sites-enabled (only when the link is absent)
+#   nginx -t
+#   systemctl reload nginx
+# Do not grant NOPASSWD: ALL. Do not add this user to the sudo group.
+
+Defaults:deploy !requiretty
+
+Cmnd_Alias ROSHD_NGINX = \
+    /usr/bin/cp /var/www/roshd/nginx.conf /etc/nginx/sites-available/roshd.digiral.ir.conf, \
+    /usr/bin/ln -s /etc/nginx/sites-available/roshd.digiral.ir.conf /etc/nginx/sites-enabled/roshd.digiral.ir.conf, \
+    /usr/sbin/nginx -t, \
+    /usr/bin/systemctl reload nginx
+
+deploy ALL=(root) NOPASSWD: ROSHD_NGINX
